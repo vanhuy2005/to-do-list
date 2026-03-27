@@ -1,39 +1,78 @@
 import mongoose from "mongoose";
 
-const taskSchema = new mongoose.Schema({
+const taskSchema = new mongoose.Schema(
+  {
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     title: {
-        type: String,
-        required: true,
-        trim: true,
+      type: String,
+      required: true,
+      trim: true,
     },
     description: {
-        type: String,
+      type: String,
+      default: "",
     },
     status: {
-        type: String,
-        required: true,
-        enum: ["todo", "doing", "done"],
-        default: "todo",
-    },
-    dueDate: {
-        type: Date,
-        required: true,
+      type: String,
+      required: true,
+      enum: ["todo", "doing", "done"],
+      default: "todo",
     },
     priority: {
-        type: String,
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
     },
     tags: {
-        type: [String],
+      type: [String],
+      default: [],
     },
-    ownerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+    dueDate: {
+      type: Date,
+      default: null,
+    },
+    explicitOverdue: {
+      type: Boolean,
+      default: false,
+    },
+    orderIndex: {
+      type: Number,
+      default: 0,
     },
     completedAt: {
-        type: Date,
-        default: null,
+      type: Date,
+      default: null,
     },
-}, { timestamps: true });
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    restoreUntil: {
+      type: Date,
+      default: null,
+    },
+  },
+  { timestamps: true },
+);
+
+taskSchema.index({ ownerId: 1, status: 1, dueDate: 1, updatedAt: -1 });
+taskSchema.index({ title: "text", description: "text" });
+
+taskSchema.pre("save", function (next) {
+  if (this.status === "done" && !this.completedAt) {
+    this.completedAt = new Date();
+  }
+
+  if (this.status !== "done") {
+    this.completedAt = null;
+  }
+
+  next();
+});
 
 const Task = mongoose.model("Task", taskSchema);
 
