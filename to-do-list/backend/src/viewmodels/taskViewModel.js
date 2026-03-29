@@ -1,6 +1,16 @@
 import Task from "../models/Task.js";
 
-const REQUIRED_CREATE_FIELDS = ["title", "status", "dueDate"];
+const REQUIRED_CREATE_FIELDS = ["title", "status"];
+const ALLOWED_SORT_FIELDS = [
+  "createdAt",
+  "updatedAt",
+  "dueDate",
+  "title",
+  "priority",
+];
+const ALLOWED_PRIORITY = ["low", "medium", "high"];
+const ALLOWED_STATUS = ["todo", "doing", "done"];
+const RESTORE_WINDOW_DAYS = 7;
 
 class ViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -11,6 +21,39 @@ class ViewModelError extends Error {
   }
 }
 
+const ensureValidObjectId = (taskId) => {
+  if (!taskId || !taskId.match(/^[0-9a-fA-F]{24}$/)) {
+    throw new ViewModelError(400, "INVALID_TASK_ID", "Task ID không hợp lệ");
+  }
+};
+
+const getPagination = (page, limit, total) => {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  return {
+    page,
+    limit,
+    total,
+    totalPages,
+  };
+};
+
+const parseBooleanQuery = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no"].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+};
+
 const validateCreatePayload = (payload) => {
   const missingFields = REQUIRED_CREATE_FIELDS.filter(
     (field) => !payload[field],
@@ -19,33 +62,158 @@ const validateCreatePayload = (payload) => {
     throw new ViewModelError(
       400,
       "MISSING_FIELDS",
-      "Title, status và due date là bắt buộc"
+      "Title và status là bắt buộc",
     );
+  }
+
+  if (payload.priority && !ALLOWED_PRIORITY.includes(payload.priority)) {
+    throw new ViewModelError(400, "INVALID_PRIORITY", "Priority không hợp lệ");
+  }
+
+  if (payload.status && !ALLOWED_STATUS.includes(payload.status)) {
+    throw new ViewModelError(400, "INVALID_STATUS", "Status không hợp lệ");
   }
 };
 
 const taskViewModel = {
-  async getAllTasks() {
-    const tasks = await Task.find().sort({ createdAt: -1 });
+  async getAllTasks({ query, userId }) {
+    const {
+      status,
+      priority,
+      search,
+      tag,
+      dueDate,
+      dueDateFrom,
+      dueDateTo,
+      completed,
+      page = 1,
+      limit = 20,
+      sort = "createdAt",
+      order = "desc",
+    } = query || {};
+
+    const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const normalizedLimit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(limit, 10) || 20),
+    );
+    const normalizedSort = ALLOWED_SORT_FIELDS.includes(sort)
+      ? sort
+      : "createdAt";
+    const normalizedOrder = String(order).toLowerCase() === "asc" ? 1 : -1;
+
+    const filter = {
+      deletedAt: null,
+      ownerId: userId,
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (priority) {
+      filter.priority = priority;
+    }
+
+    if (search) {
+      filter.$text = { $search: search };
+    }
+
+    if (tag) {
+      const tags = String(tag)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (tags.length > 0) {
+        filter.tags = { $in: tags };
+      }
+    }
+
+    const dueDateFilter = {};
+    if (dueDateFrom) {
+      const from = new Date(dueDateFrom);
+      if (!Number.isNaN(from.getTime())) {
+        dueDateFilter.$gte = from;
+      }
+    }
+
+    if (dueDateTo) {
+      const to = new Date(dueDateTo);
+      if (!Number.isNaN(to.getTime())) {
+        dueDateFilter.$lte = to;
+      }
+    }
+
+    if (dueDate) {
+      const exactDate = new Date(dueDate);
+      if (!Number.isNaN(exactDate.getTime())) {
+        const startOfDay = new Date(exactDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(exactDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        dueDateFilter.$gte = startOfDay;
+        dueDateFilter.$lte = endOfDay;
+      }
+    }
+
+    if (Object.keys(dueDateFilter).length > 0) {
+      filter.dueDate = dueDateFilter;
+    }
+
+    const completedValue = parseBooleanQuery(completed);
+    if (completedValue === true) {
+      filter.completedAt = { $ne: null };
+    }
+
+    if (completedValue === false) {
+      filter.completedAt = null;
+    }
+
+    const [tasks, total] = await Promise.all([
+      Task.find(filter)
+        .sort({ [normalizedSort]: normalizedOrder })
+        .skip((normalizedPage - 1) * normalizedLimit)
+        .limit(normalizedLimit),
+      Task.countDocuments(filter),
+    ]);
+
     return {
       statusCode: 200,
       success: true,
       data: {
         tasks,
-        pagination: {
-          page: 1,
-          limit: tasks.length,
-          total: tasks.length,
-          totalPages: 1,
-        },
+        pagination: getPagination(normalizedPage, normalizedLimit, total),
       },
     };
   },
 
-  async createTask(payload) {
+  async getTaskById(taskId, userId) {
+    ensureValidObjectId(taskId);
+
+    const task = await Task.findOne({
+      _id: taskId,
+      ownerId: userId,
+      deletedAt: null,
+    });
+    if (!task) {
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+    }
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: task,
+    };
+  },
+
+  async createTask(payload, userId) {
     validateCreatePayload(payload);
 
-    const task = await Task.create(payload);
+    const task = await Task.create({
+      ...payload,
+      ownerId: userId,
+    });
     return {
       statusCode: 201,
       success: true,
@@ -54,15 +222,35 @@ const taskViewModel = {
     };
   },
 
-  async updateTask(taskId, payload) {
-    const existingTask = await Task.findById(taskId);
-    if (!existingTask) {
-      throw new ViewModelError(404, "Task không tồn tại");
+  async updateTask(taskId, payload, userId) {
+    ensureValidObjectId(taskId);
+
+    if (payload.priority && !ALLOWED_PRIORITY.includes(payload.priority)) {
+      throw new ViewModelError(
+        400,
+        "INVALID_PRIORITY",
+        "Priority không hợp lệ",
+      );
     }
 
-    const updatedTask = await Task.findByIdAndUpdate(taskId, payload, {
-      new: true,
+    if (payload.status && !ALLOWED_STATUS.includes(payload.status)) {
+      throw new ViewModelError(400, "INVALID_STATUS", "Status không hợp lệ");
+    }
+
+    const existingTask = await Task.findOne({
+      _id: taskId,
+      ownerId: userId,
+      deletedAt: null,
     });
+    if (!existingTask) {
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+    }
+
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: taskId, ownerId: userId, deletedAt: null },
+      payload,
+      { new: true },
+    );
     return {
       statusCode: 200,
       success: true,
@@ -70,16 +258,137 @@ const taskViewModel = {
     };
   },
 
-  async deleteTask(taskId) {
-    const deletedTask = await Task.findByIdAndDelete(taskId);
+  async deleteTask(taskId, userId) {
+    ensureValidObjectId(taskId);
+
+    const deletedAt = new Date();
+    const restoreUntil = new Date(deletedAt);
+    restoreUntil.setDate(restoreUntil.getDate() + RESTORE_WINDOW_DAYS);
+
+    const deletedTask = await Task.findOneAndUpdate(
+      { _id: taskId, ownerId: userId, deletedAt: null },
+      { deletedAt, restoreUntil },
+      { new: true },
+    );
     if (!deletedTask) {
-      throw new ViewModelError(404, "Task không tồn tại");
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
     }
 
     return {
       statusCode: 200,
       success: true,
-      message: "Task đã được xóa thành công",
+      message: "Task đã được đưa vào thùng rác",
+    };
+  },
+
+  async restoreTask(taskId, userId) {
+    ensureValidObjectId(taskId);
+
+    const existingTask = await Task.findOne({
+      _id: taskId,
+      ownerId: userId,
+      deletedAt: { $ne: null },
+    });
+
+    if (!existingTask) {
+      throw new ViewModelError(
+        404,
+        "TASK_NOT_FOUND",
+        "Task không tồn tại trong thùng rác",
+      );
+    }
+
+    if (
+      existingTask.restoreUntil &&
+      new Date(existingTask.restoreUntil) < new Date()
+    ) {
+      throw new ViewModelError(
+        410,
+        "RESTORE_EXPIRED",
+        "Đã hết thời gian khôi phục task",
+      );
+    }
+
+    const restoredTask = await Task.findOneAndUpdate(
+      { _id: taskId, ownerId: userId },
+      { deletedAt: null, restoreUntil: null },
+      { new: true },
+    );
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: restoredTask,
+      message: "Khôi phục task thành công",
+    };
+  },
+
+  async getDeletedTasks({ query, userId }) {
+    const { page = 1, limit = 20 } = query || {};
+    const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const normalizedLimit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(limit, 10) || 20),
+    );
+
+    const filter = {
+      ownerId: userId,
+      deletedAt: { $ne: null },
+    };
+
+    const [tasks, total] = await Promise.all([
+      Task.find(filter)
+        .sort({ deletedAt: -1 })
+        .skip((normalizedPage - 1) * normalizedLimit)
+        .limit(normalizedLimit),
+      Task.countDocuments(filter),
+    ]);
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        tasks,
+        pagination: getPagination(normalizedPage, normalizedLimit, total),
+      },
+    };
+  },
+
+  async purgeExpiredDeletedTasks() {
+    const now = new Date();
+    await Task.deleteMany({
+      deletedAt: { $ne: null },
+      restoreUntil: { $lt: now },
+    });
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Đã dọn task quá hạn khôi phục",
+    };
+  },
+
+  async hardDeleteTask(taskId, userId) {
+    ensureValidObjectId(taskId);
+
+    const deletedTask = await Task.findOneAndDelete({
+      _id: taskId,
+      ownerId: userId,
+      deletedAt: { $ne: null },
+    });
+
+    if (!deletedTask) {
+      throw new ViewModelError(
+        404,
+        "TASK_NOT_FOUND",
+        "Task không tồn tại trong thùng rác",
+      );
+    }
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Task đã được xóa vĩnh viễn",
     };
   },
 };
