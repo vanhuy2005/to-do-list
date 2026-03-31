@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --primary: #FF2D55;
+  --secondary: #00C2FF;
+  --background: #FFFDF7;
+  --foreground: #111111;
+  --destructive: #FF3B30;
+  --border: #111111;
+  --radius: 12px;
+}
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Comic style */
+.comic-border {
+  border: 3px solid #111111;
+}
+
+.comic-shadow {
+  box-shadow: 3px 3px 0 #111111;
+}
+
+.comic-shadow-hover:hover {
+  box-shadow: 4px 4px 0 #111111;
+}
+
+.comic-shadow-press:active {
+  box-shadow: 1px 1px 0 #111111;
+}
+
+.pill {
+  border-radius: 9999px;
+}
