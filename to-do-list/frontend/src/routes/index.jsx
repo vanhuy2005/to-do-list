@@ -21,6 +21,7 @@ export const router = createBrowserRouter([
       { path: "filter", element: <FilterPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "profile", element: <ProfilePage /> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
   { path: "/login", element: <LoginPage /> },
