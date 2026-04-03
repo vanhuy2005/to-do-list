@@ -1,8 +1,10 @@
 # 📋 TASKED — Checklist Chi Tiết Xây Dựng Dự Án
 
-> **Cập nhật:** 2026-03-25 · **Quy tắc:** MVP-first → API → UI → Kết nối → Auth → Full Features
+> **Cập nhật:** 2026-04-03 · **Quy tắc:** MVP-first → API → UI → Kết nối → Auth → Full Features
 >
 > **Tech Stack:** Vite + React, Shadcn/ui (custom Pop Art), Axios, dnd-kit, Recharts, Sonner, react-hook-form + Zod
+>
+> **Kiến trúc Backend:** MVVM (Model-View-ViewModel) — [ADR-006](./07-architectural-decisions.md#adr-006)
 
 ---
 
@@ -10,54 +12,63 @@
 
 ### 1.1 Chuẩn hóa cấu trúc Backend
 
-- [ ] Thêm `cors` package → `npm i cors`
-- [ ] Cấu hình CORS trong `server.js` (allow frontend origin)
-- [ ] Đổi prefix route `/api/tasks` → `/api/v1/tasks` (theo chuẩn versioning)
+- [x] Thêm `cors` package → `npm i cors`
+- [x] Cấu hình CORS trong `server.js` (allow frontend origin)
+- [x] Đổi prefix route `/api/tasks` → `/api/v1/tasks` (theo chuẩn versioning)
 - [ ] Tạo file `.env.example` (bỏ sensitive values, chỉ giữ key mẫu)
-- [ ] Thêm `.env` vào `.gitignore` (kiểm tra lại)
+- [x] Thêm `.env` vào `.gitignore` (kiểm tra lại)
 - [ ] Thêm script `npm run lint` vào `package.json`
 
 ### 1.2 Refactor Task Model (`models/Task.js`)
 
-- [ ] Thêm field `priority` — enum `["low", "medium", "high"]`, default `"medium"`
-- [ ] Thêm field `orderIndex` — Number, default `0` (vị trí Kanban kéo-thả)
-- [ ] Thêm field `deletedAt` — Date, default `null` (soft-delete)
-- [ ] Thêm field `restoreUntil` — Date, default `null` (deletedAt + 7 ngày)
-- [ ] Xóa `required: true` cho `dueDate` (cho phép tạo task không có deadline)
-- [ ] Thêm validation `enum` cho `priority`
+- [x] Thêm field `priority` — enum `["low", "medium", "high"]`, default `"medium"`
+- [x] Thêm field `orderIndex` — Number, default `0` (vị trí Kanban kéo-thả)
+- [x] Thêm field `deletedAt` — Date, default `null` (soft-delete)
+- [x] Thêm field `restoreUntil` — Date, default `null` (deletedAt + 7 ngày)
+- [x] Xóa `required: true` cho `dueDate` (cho phép tạo task không có deadline)
+- [x] Thêm validation `enum` cho `priority`
 
 ### 1.3 Refactor User Model (`models/User.js`)
 
-- [ ] Thêm field `email` — String, required, unique, lowercase, trim
-- [ ] Đổi `name` → `displayName`
-- [ ] Thêm field `passwordHash` — String (thay thế `password` raw)
-- [ ] Thêm field `status` — enum `["active", "disabled"]`, default `"active"`
-- [ ] Thêm field `providers` — `[String]`, default `["local"]`
-- [ ] Thêm field `avatarUrl` — String, default `null`
-- [ ] Thêm field `lastOnlineAt` — Date, default `null`
-- [ ] Thêm field `deletedAt` — Date, default `null`
-- [ ] Xóa field `password` cũ (thay bằng `passwordHash`)
+- [x] Thêm field `email` — String, required, unique, lowercase, trim
+- [x] Đổi `name` → `displayName`
+- [x] Thêm field `passwordHash` — String (hash bằng bcrypt)
+- [x] Thêm field `status` — enum `["active", "disabled"]`, default `"active"`
+- [x] Thêm field `providers` — `[String]`, enum `["local", "google", "github"]`, default `[]`
+- [x] Thêm field `avatarUrl` — String, default `null`
+- [x] Thêm field `lastOnlineAt` — Date, default `null`
+- [x] Thêm field `disabledAt` — Date, default `null` (thời điểm bị disable, auto-delete sau 7 ngày)
+- [x] Thêm field `preferredLanguage` — enum `["vi", "en"]`, default `"vi"`
+- [x] Thêm field `themePreference` — enum `["light", "dark"]`, default `"light"`
+- [x] Thêm field `customStatuses` — `[String]`, tối đa 8 phần tử
+- [x] Xóa field `password` cũ (thay bằng `passwordHash`)
 
-### 1.4 Refactor Task Controller — Soft Delete
+### 1.4 Refactor Task ViewModel — Soft Delete (`viewmodels/taskViewModel.js`)
 
-- [ ] Sửa `deleteTask`: thay `findByIdAndDelete` → gán `deletedAt = new Date()` + `restoreUntil = +7 ngày`
-- [ ] Sửa `getAllTasks`: thêm filter `{ deletedAt: null }` để ẩn task đã xóa
-- [ ] Thêm controller `restoreTask` — xóa `deletedAt` và `restoreUntil` nếu còn trong cửa sổ 7 ngày
-- [ ] Thêm controller `getDeletedTasks` — query `{ deletedAt: { $ne: null } }` cho Delete Panel
-- [ ] Sửa `createTask`: validate `priority` nếu có gửi lên
+- [x] Tạo `viewmodels/taskViewModel.js` — MVVM pattern, chứa toàn bộ business logic
+- [x] Tạo class `ViewModelError` — custom error với `statusCode`, `errorCode`, `message`
+- [x] Method `deleteTask`: gán `deletedAt = new Date()` + `restoreUntil = +7 ngày` (soft-delete)
+- [x] Method `getAllTasks`: thêm filter `{ deletedAt: null }` để ẩn task đã xóa
+- [x] Method `restoreTask` — xóa `deletedAt` và `restoreUntil` nếu còn trong cửa sổ 7 ngày
+- [x] Method `getDeletedTasks` — query `{ deletedAt: { $ne: null } }` cho Delete Panel
+- [x] Method `createTask`: validate `priority`, whitelist allowed fields
+- [x] Method `purgeExpiredDeletedTasks` — hard delete tasks quá hạn khôi phục
+- [x] Method `hardDeleteTask` — xóa vĩnh viễn task từ thùng rác
 
-### 1.5 Cập nhật Routes
+### 1.5 Cập nhật Routes (`routes/tasksRouters.js`)
 
-- [ ] Thêm route `POST /api/v1/tasks/:id/restore` → `restoreTask`
-- [ ] Thêm route `GET /api/v1/tasks/trash` → `getDeletedTasks`
-- [ ] Cập nhật prefix tất cả routes → `/api/v1/tasks`
+- [x] Tạo `routes/tasksRouters.js` — thin binding layer (MVVM View)
+- [x] Route `POST /api/v1/tasks/:id/restore` → `taskViewModel.restoreTask`
+- [x] Route `GET /api/v1/tasks/trash` → `taskViewModel.getDeletedTasks`
+- [x] Cập nhật prefix tất cả routes → `/api/v1/tasks`
+- [x] Error handler wrapper: bắt `ViewModelError` → format response chuẩn
 
-### 1.6 Chuẩn hóa Response Format
+### 1.6 Chuẩn hóa Response Format (MVVM Pattern)
 
-- [ ] Tạo helper `utils/response.js` — hàm `successResponse(res, data, message, statusCode)`
-- [ ] Tạo helper `utils/response.js` — hàm `errorResponse(res, error, statusCode)`
-- [ ] Refactor tất cả controllers sử dụng helper thay vì `res.json()` trực tiếp
-- [ ] Format thống nhất: `{ success: true/false, data: {...}, message: "..." }`
+- [x] Mỗi ViewModel method return object chuẩn: `{ statusCode, success, data, message }`
+- [x] Routes layer chỉ nhận result và gọi `res.status(result.statusCode).json({...})`
+- [x] Error format thống nhất: `{ success: false, error: { code: "...", message: "..." } }`
+- [x] Mỗi ViewModel có custom Error class riêng (`ViewModelError`, `AuthViewModelError`, etc.)
 
 ### ✅ Checkpoint 1: Test toàn bộ API refactored bằng Thunder Client
 - [ ] Test GET `/api/v1/tasks` — chỉ trả task chưa xóa
@@ -73,23 +84,35 @@
 
 ### 2.1 Thêm Query Parameters cho GET `/tasks`
 
-- [ ] Hỗ trợ `?status=todo` — lọc theo status
-- [ ] Hỗ trợ `?priority=high` — lọc theo priority
-- [ ] Hỗ trợ `?search=keyword` — full-text search trên title
-- [ ] Hỗ trợ `?page=1&limit=20` — phân trang
-- [ ] Hỗ trợ `?sort=dueDate&order=asc` — sắp xếp
-- [ ] Trả về object pagination: `{ page, limit, total, totalPages }`
+- [x] Hỗ trợ `?status=todo` — lọc theo status
+- [x] Hỗ trợ `?priority=high` — lọc theo priority
+- [x] Hỗ trợ `?search=keyword` — full-text search trên title
+- [x] Hỗ trợ `?page=1&limit=20` — phân trang
+- [x] Hỗ trợ `?sort=dueDate&order=asc` — sắp xếp
+- [x] Trả về object pagination: `{ page, limit, total, totalPages }`
+- [x] Hỗ trợ `?tag=urgent,report` — lọc theo tags
+- [x] Hỗ trợ `?dueDateFrom=...&dueDateTo=...` — lọc theo date range
+- [x] Hỗ trợ `?completed=true/false` — lọc theo trạng thái hoàn thành
+- [x] Hỗ trợ `?includeDeleted=true` — bao gồm task đã soft-delete
 
 ### 2.2 Tạo Text Index cho Search
 
-- [ ] Thêm index `{ title: "text", description: "text" }` vào Task model
+- [x] Thêm index `{ title: "text", description: "text" }` vào Task model
 - [ ] Test search hoạt động đúng bằng Thunder Client
 
 ### 2.3 GET chi tiết Task
 
-- [ ] Thêm controller `getTaskById` — `GET /api/v1/tasks/:id`
-- [ ] Thêm route tương ứng
-- [ ] Trả 404 nếu task không tồn tại hoặc đã soft-delete
+- [x] Method `getTaskById` trong `taskViewModel` — trả task theo ID + ownerId
+- [x] Route `GET /api/v1/tasks/:id`
+- [x] Trả 404 nếu task không tồn tại hoặc đã soft-delete
+
+### 2.4 Tạo Task Query Middleware (`middleware/taskQueryMiddleware.js`)
+
+- [x] Validate `page` — phải là số nguyên dương
+- [x] Validate `limit` — phải là số nguyên dương, tối đa 100
+- [x] Validate `completed` — chỉ nhận true/false
+- [x] Validate `order` — chỉ nhận asc/desc
+- [x] Validate `sort` — chỉ nhận fields cho phép
 
 ### ✅ Checkpoint 2: Test filter, search, pagination
 - [ ] Test lọc: `GET /api/v1/tasks?status=doing&priority=high`
@@ -356,42 +379,43 @@
 
 ### 8.1 Cài dependencies Auth
 
-- [ ] `npm i bcryptjs jsonwebtoken cookie-parser` (backend)
-- [ ] Thêm `cookie-parser` middleware vào `server.js`
+- [x] `npm i bcrypt jsonwebtoken cookie-parser` (backend)
+- [x] Thêm `cookie-parser` middleware vào `server.js`
 
-### 8.2 Auth Controllers
+### 8.2 Auth ViewModel (`viewmodels/authViewModel.js`)
 
-- [ ] Tạo `controllers/authController.js`:
-  - [ ] `register` — validate input → hash password (bcryptjs) → create user → generate JWT → set httpOnly cookie → return user + accessToken
-  - [ ] `login` — find user by email → compare password → generate JWT + refresh cookie → return user + accessToken
-  - [ ] `logout` — clear cookie → return success
-  - [ ] `refreshToken` — verify refresh cookie → issue new access token
-- [ ] Tạo helper `utils/jwt.js`:
-  - [ ] `generateAccessToken(userId)` — sign JWT, expires 15m
-  - [ ] `generateRefreshToken(userId)` — sign JWT, expires 7d
-  - [ ] `verifyToken(token)` — verify + decode
+- [x] Tạo `viewmodels/authViewModel.js` — MVVM pattern
+- [x] Tạo class `AuthViewModelError` — custom error
+- [x] Helper `validateRegisterPayload` — validate email, password (≥8 ký tự), displayName (2-50 ký tự)
+- [x] Helper `generateTokens(userId)` — sign JWT access token (15m) + refresh token (7d)
+- [x] Helper `hashToken(token)` — hash refresh token bằng bcrypt
+- [x] Helper `formatUserResponse(user)` — strip sensitive fields (passwordHash)
+- [x] Method `register` — validate → check email exists → hash password (bcrypt) → create user → generate tokens → create RefreshSession → return user + accessToken
+- [x] Method `login` — find user → check status disabled → compare password (bcrypt) → generate tokens → create RefreshSession → return user + accessToken
+- [x] Method `refresh` — verify refresh token JWT → find sessions → compare token hash → issue new access token
+- [x] Method `logout` — delete all RefreshSessions of userId
 
-### 8.3 Auth Middleware
+### 8.3 Auth Middleware (`middleware/authMiddleware.js`)
 
-- [ ] Tạo `middleware/auth.js`:
-  - [ ] `protect` — đọc Bearer token từ header → verify → gắn `req.user`
-  - [ ] `adminOnly` — check `req.user.role === "admin"` → 403 nếu không phải
-- [ ] Áp `protect` middleware cho tất cả routes Task
-- [ ] Refactor Task controller: filter theo `req.user._id` (mỗi user chỉ thấy task của mình)
+- [x] Tạo `middleware/authMiddleware.js`
+- [x] Đọc Bearer token từ header `Authorization`
+- [x] Verify JWT → fetch User từ DB → check status `disabled` → gắn `req.user` + `req.userId`
+- [x] Trả 401 nếu token missing/invalid, 403 nếu user disabled
 
-### 8.4 Auth Routes
+### 8.4 Auth Routes (`routes/authRouters.js`)
 
-- [ ] Tạo `routes/authRoutes.js`:
-  - [ ] `POST /api/v1/auth/register`
-  - [ ] `POST /api/v1/auth/login`
-  - [ ] `POST /api/v1/auth/logout`
-  - [ ] `POST /api/v1/auth/refresh`
-- [ ] Mount vào `server.js`
+- [x] Tạo `routes/authRouters.js` — thin binding layer
+- [x] `POST /api/v1/auth/register` → set httpOnly cookie + return user + accessToken
+- [x] `POST /api/v1/auth/login` → set httpOnly cookie + return user + accessToken
+- [x] `POST /api/v1/auth/refresh` → đọc cookie → return new accessToken
+- [x] `POST /api/v1/auth/logout` → clear cookie
+- [x] Mount vào `server.js`
 
 ### 8.5 Env Variables
 
-- [ ] Thêm `JWT_ACCESS_SECRET` vào `.env`
-- [ ] Thêm `JWT_REFRESH_SECRET` vào `.env`
+- [x] Thêm `JWT_SECRET` vào `.env`
+- [x] Thêm `JWT_REFRESH_SECRET` vào `.env`
+- [x] Thêm validation: server exit nếu missing secrets (trừ development mode)
 - [ ] Cập nhật `.env.example`
 
 ### ✅ Checkpoint 8: Auth API hoạt động
@@ -468,11 +492,19 @@
 - [ ] Section Theme: Light / Dark toggle (UI only v1)
 - [ ] Section Danger Zone: Nút "Xóa tài khoản" (confirm modal)
 
-### 10.3 Backend API bổ sung
+### 10.3 Backend Profile API (`viewmodels/profileViewModel.js` + `routes/profileRouters.js`)
 
-- [ ] `GET /api/v1/profile` — trả thông tin user đang đăng nhập
-- [ ] `PUT /api/v1/profile` — cập nhật displayName
-- [ ] Tạo `controllers/profileController.js` + `routes/profileRoutes.js`
+- [x] Tạo `viewmodels/profileViewModel.js` — MVVM pattern
+- [x] Tạo class `ProfileViewModelError` — custom error
+- [x] Method `getProfile(userId)` — trả thông tin user (stripped sensitive fields)
+- [x] Method `updateProfile(userId, payload)` — cập nhật displayName, preferredLanguage, themePreference
+- [x] Method `getSessions(userId)` — danh sách refresh sessions (thiết bị đang đăng nhập)
+- [x] Method `deleteSession(sessionId, userId)` — xóa session cụ thể + ownership check
+- [x] Tạo `routes/profileRouters.js` — thin binding layer
+- [x] Route `GET /api/v1/profile` → `profileViewModel.getProfile`
+- [x] Route `PUT /api/v1/profile` → `profileViewModel.updateProfile`
+- [x] Route `GET /api/v1/profile/sessions` → `profileViewModel.getSessions`
+- [x] Route `DELETE /api/v1/profile/sessions/:id` → `profileViewModel.deleteSession`
 
 ### ✅ Checkpoint 10: Profile & Settings hoạt động
 - [ ] Vào Profile → thấy thông tin đúng
@@ -512,27 +544,50 @@
 
 ## PHASE 12 — ADMIN SYSTEM
 
-### 12.1 Backend Admin APIs
+### 12.1 Backend Admin ViewModel (`viewmodels/adminViewModel.js`)
 
-- [ ] Tạo `controllers/adminController.js`:
-  - [ ] `getUsers` — GET `/admin/users` + search, filter, pagination
-  - [ ] `updateUser` — PUT `/admin/users/:id` (role, status)
-  - [ ] `getModeration` — GET `/admin/moderation` (users offline > 30d)
-  - [ ] `disableUser` — PUT `/admin/moderation/:id/disable`
-  - [ ] `getTrash` — GET `/admin/trash` (users disabled/deleted)
-  - [ ] `getAnalytics` — GET `/admin/analytics` (stats tổng hợp)
-  - [ ] `getAuditLogs` — GET `/admin/audit-logs`
-- [ ] Tạo `routes/adminRoutes.js` — áp middleware `protect` + `adminOnly`
-- [ ] Mount vào `server.js`
+- [x] Tạo `viewmodels/adminViewModel.js` — MVVM pattern
+- [x] Tạo class `AdminViewModelError` — custom error
+- [x] Method `getUsers(query)` — GET users + search, filter (role, status), pagination
+- [x] Method `updateUser(userId, payload)` — cập nhật role, status (strip passwordHash)
+- [x] Method `getModeration(query)` — users offline > 30 ngày + `daysSinceLastOnline`
+- [x] Method `disableInactiveUser(userId)` — gán `status: "disabled"`, `disabledAt: new Date()`
+- [x] Method `getTrash(query)` — users có `status: "disabled"`
+- [x] Method `getTasksForModeration(query)` — dashboard tất cả tasks của hệ thống
+- [x] Method `getAnalytics()` — totalUsers, totalTasks, taskDistribution, providerUsage
+- [x] Method `deleteUserOffline(userId)` — hard delete user offline > 7 ngày
+- [x] Method `getAuditLogs(query)` — nhật ký kiểm toán + pagination
 
-### 12.2 Audit Log Model + Logic
+### 12.2 Admin Routes (`routes/adminRouters.js`)
 
-- [ ] Tạo `models/AuditLog.js` — schema theo doc CSDL
+- [x] Tạo `routes/adminRouters.js` — thin binding layer
+- [x] Middleware `requireAdmin` — check `req.user.role === "admin"` → 403 nếu không phải
+- [x] Route `GET /api/v1/admin/users` → `adminViewModel.getUsers`
+- [x] Route `PUT /api/v1/admin/users/:id` → `adminViewModel.updateUser`
+- [x] Route `DELETE /api/v1/admin/users/:id` → `adminViewModel.deleteUserOffline`
+- [x] Route `GET /api/v1/admin/moderation` → `adminViewModel.getModeration`
+- [x] Route `PUT /api/v1/admin/moderation/:id/disable` → `adminViewModel.disableInactiveUser`
+- [x] Route `GET /api/v1/admin/trash` → `adminViewModel.getTrash`
+- [x] Route `GET /api/v1/admin/tasks` → `adminViewModel.getTasksForModeration`
+- [x] Route `GET /api/v1/admin/analytics` → `adminViewModel.getAnalytics`
+- [x] Route `GET /api/v1/admin/audit-logs` → `adminViewModel.getAuditLogs`
+
+### 12.3 Audit Log Model + Logic
+
+- [x] Tạo `models/AuditLog.js` — schema: actorId, targetId, action, entityType, entityId, summaryBefore, summaryAfter, createdAt
+- [x] TTL index `{ createdAt: 1 }, { expireAfterSeconds: 2592000 }` (30 ngày tự xóa)
+- [x] Compound index `{ actorId: 1, createdAt: -1 }`
 - [ ] Tạo helper `utils/auditLogger.js` — hàm `logAction(actorId, action, entityType, entityId, before, after)`
 - [ ] Gắn auditLogger vào: Admin thay đổi user, Admin disable user
-- [ ] Thêm TTL index `{ createdAt: 1 }, { expireAfterSeconds: 2592000 }`
 
-### 12.3 Frontend Admin Pages
+### 12.4 User Account Lifecycle (Disable → Auto-Delete)
+
+- [x] Admin disable user → gán `status: "disabled"`, `disabledAt: new Date()`
+- [ ] Admin re-enable user → gán `status: "active"`, `disabledAt: null`
+- [ ] Cron job quét `disabledAt + 7 ngày < now` → hard delete user + tasks
+- [ ] Hiển thị thời gian còn lại trước auto-delete trong Admin Trash
+
+### 12.5 Frontend Admin Pages
 
 - [ ] Route guard: chỉ `role === "admin"` mới vào `/admin/*`
 - [ ] `AdminHomePage.jsx`:
@@ -556,8 +611,9 @@
   - [ ] Timeline theo ngày (Today, Yesterday, Older)
   - [ ] Event Cards: icon + action description + timestamp
 - [ ] `AdminTrashPage.jsx`:
-  - [ ] Danh sách users bị ban/disabled
-  - [ ] Nút khôi phục
+  - [ ] Danh sách users bị disabled
+  - [ ] Hiển thị thời gian còn lại trước auto-delete (7 ngày kể từ `disabledAt`)
+  - [ ] Nút khôi phục (re-enable)
 
 ### ✅ Checkpoint 12: Admin system hoạt động
 - [ ] Login admin → thấy AdminHomePage
@@ -565,6 +621,7 @@
 - [ ] Disable user → user đó thấy bị khóa
 - [ ] Analyze → 3 chart hiển thị data đúng
 - [ ] Audit Log → timeline events
+- [ ] Trash → hiển thị countdown trước auto-delete
 
 ---
 
@@ -580,9 +637,9 @@
   - [ ] Join room `user:{userId}` khi connect
   - [ ] Join room `admin-channel` nếu role === admin
 - [ ] Refactor `server.js` — tạo HTTP server + gắn Socket.IO
-- [ ] Export `io` instance để dùng trong controllers
+- [ ] Export `io` instance để dùng trong ViewModels
 
-### 13.2 Emit Events từ Controllers
+### 13.2 Emit Events từ Routes/ViewModels
 
 - [ ] Task create → emit `task:changed` to `user:{ownerId}`
 - [ ] Task update → emit `task:changed`
@@ -704,6 +761,7 @@
 - [ ] Flow: OAuth Google → Auto-link
 - [ ] Flow: OAuth GitHub → Tạo tài khoản mới
 - [ ] Flow: Admin Dashboard → Users → Disable user → Audit Log
+- [ ] Flow: Admin Trash → countdown auto-delete → kiểm tra purge sau 7 ngày
 - [ ] Flow: Realtime — 2 tabs đồng bộ
 - [ ] Flow: 404 page → Back to Home
 - [ ] Mobile: Test tất cả flow trên viewport 390px

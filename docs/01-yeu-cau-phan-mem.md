@@ -223,7 +223,7 @@ graph TB
 | **Performance** | Thời gian tải trang | First Contentful Paint < 2s trên 4G |
 | **Performance** | Kích thước bundle | Tối ưu qua Vite tree-shaking + code splitting |
 | **Security** | Lưu trữ token | Access token trong memory, Refresh token trong httpOnly cookie |
-| **Security** | Hash password | argon2 cho password và refresh token |
+| **Security** | Hash password | bcrypt cho password và refresh token |
 | **Security** | Input validation | Server-side validation mọi endpoint, sanitize input |
 | **Accessibility** | Touch target | Tối thiểu 44×44px cho mọi interactive element |
 | **Accessibility** | Focus indicator | 2px Cyan (#00C2FF) offset ring |

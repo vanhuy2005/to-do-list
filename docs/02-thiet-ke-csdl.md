@@ -1,6 +1,6 @@
 # 02 — Thiết Kế Cơ Sở Dữ Liệu
 
-> **Phiên bản:** 1.0 · **Cập nhật lần cuối:** 2026-03-25 · **Database:** MongoDB + Mongoose ODM
+> **Phiên bản:** 1.1 · **Cập nhật lần cuối:** 2026-04-03 · **Database:** MongoDB + Mongoose ODM
 
 ---
 
@@ -16,7 +16,7 @@ erDiagram
     users {
         ObjectId _id PK
         String email UK "Duy nhất, viết thường"
-        String passwordHash "argon2, null nếu chỉ OAuth"
+        String passwordHash "bcrypt, null nếu chỉ OAuth"
         String displayName
         String avatarUrl
         Enum role "user | admin"
@@ -26,8 +26,7 @@ erDiagram
         String themePreference "light | dark"
         Array customStatuses "Tối đa 8 tag"
         Date lastOnlineAt "Phục vụ Moderation"
-        Date deletedAt "null = chưa xóa"
-        Date restoreUntil "deletedAt + 7 ngày"
+        Date disabledAt "Thời điểm bị disable, auto-delete sau 7 ngày"
         Date createdAt "Mongoose timestamps"
         Date updatedAt "Mongoose timestamps"
     }
@@ -53,7 +52,7 @@ erDiagram
     refresh_sessions {
         ObjectId _id PK
         ObjectId userId FK "ref users"
-        String tokenHash "argon2 hash, KHÔNG lưu raw"
+        String tokenHash "bcrypt hash, KHÔNG lưu raw"
         String userAgent "Thông tin trình duyệt"
         String ipAddress "IP kết nối"
         Date expiresAt "TTL index tự xóa"
@@ -85,7 +84,7 @@ erDiagram
 |--------|------|----------|----------|-------|
 | `_id` | ObjectId | ✅ | auto | Khóa chính |
 | `email` | String | ✅ | — | Unique, luôn lowercase. Index: `{ email: 1 }, { unique: true }` |
-| `passwordHash` | String | ❌ | null | Hash bằng argon2. `null` nếu user chỉ đăng ký qua OAuth |
+| `passwordHash` | String | ❌ | null | Hash bằng bcrypt. `null` nếu user chỉ đăng ký qua OAuth |
 | `displayName` | String | ✅ | — | Tên hiển thị |
 | `avatarUrl` | String | ❌ | null | URL ảnh đại diện |
 | `role` | Enum | ✅ | `"user"` | `"user"` \| `"admin"` |
@@ -95,8 +94,7 @@ erDiagram
 | `themePreference` | String | ❌ | `"light"` | `"light"` \| `"dark"` |
 | `customStatuses` | [String] | ❌ | `[]` | Tag tùy chỉnh, tối đa 8 phần tử |
 | `lastOnlineAt` | Date | ❌ | null | Thời điểm online cuối. Phục vụ trang Moderation (> 30 ngày = cảnh báo) |
-| `deletedAt` | Date | ❌ | null | Soft-delete timestamp. → [ADR-001](./07-architectural-decisions.md#adr-001) |
-| `restoreUntil` | Date | ❌ | null | `deletedAt + 7 ngày`. Quá hạn → cron purge |
+| `disabledAt` | Date | ❌ | null | Thời điểm bị vô hiệu hóa. Nếu `disabledAt + 7 ngày < now` → cron job auto-delete vĩnh viễn |
 
 ### 2.2 Collection `tasks`
 
@@ -126,7 +124,7 @@ erDiagram
 |--------|------|----------|----------|-------|
 | `_id` | ObjectId | ✅ | auto | Khóa chính |
 | `userId` | ObjectId | ✅ | — | FK → `users._id` |
-| `tokenHash` | String | ✅ | — | Hash bằng argon2. **TUYỆT ĐỐI** không lưu raw token |
+| `tokenHash` | String | ✅ | — | Hash bằng bcrypt. **TUYỆT ĐỐI** không lưu raw token |
 | `userAgent` | String | ❌ | — | Browser/device info |
 | `ipAddress` | String | ❌ | — | IP address kết nối |
 | `expiresAt` | Date | ✅ | — | TTL index tự xóa khi hết hạn |
@@ -170,8 +168,8 @@ erDiagram
 | Quy tắc | Chi tiết | Tham chiếu |
 |---------|----------|------------|
 | **Timezone** | DB lưu 100% UTC. Frontend chịu trách nhiệm convert theo timezone thiết bị. | [ADR-005](./07-architectural-decisions.md#adr-005) |
-| **Soft-delete** | Mọi delete đều gán `deletedAt`. Cron job quét `restoreUntil` quá hạn → purge. | [ADR-001](./07-architectural-decisions.md#adr-001) |
-| **Token Security** | `tokenHash` trong `refresh_sessions` luôn hash bằng argon2. Cấm lưu raw token. | [05-kien-truc-he-thong.md](./05-kien-truc-he-thong.md) |
+| **Soft-delete** | Task: mọi delete đều gán `deletedAt`. Cron job quét `restoreUntil` quá hạn → purge. User: `disabledAt + 7 ngày` → auto-delete vĩnh viễn. | [ADR-001](./07-architectural-decisions.md#adr-001) |
+| **Token Security** | `tokenHash` trong `refresh_sessions` luôn hash bằng bcrypt. Cấm lưu raw token. | [05-kien-truc-he-thong.md](./05-kien-truc-he-thong.md) |
 | **Tenancy** | Single-tenant v1. Schema thiết kế độc lập để mở rộng multi-tenant trong tương lai. | [ADR-004](./07-architectural-decisions.md#adr-004) |
 
 ---
