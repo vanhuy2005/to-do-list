@@ -126,78 +126,78 @@
 
 ### 3.1 Khởi tạo Vite + React
 
-- [ ] Chạy `npx create-vite@latest ./` trong folder `frontend/` — chọn React + JavaScript
-- [ ] Xóa file template mặc định (App.css, assets/react.svg, etc.)
-- [ ] Cài dependencies cơ bản: `npm i axios react-router-dom`
-- [ ] Tạo file `.env` với `VITE_API_URL=http://localhost:5001/api/v1`
-- [ ] Test `npm run dev` — app chạy thành công
+- [x] Chạy `npx create-vite@latest ./` trong folder `frontend/` — chọn React + JavaScript
+- [x] Xóa file template mặc định (App.css, assets/react.svg, etc.)
+- [x] Cài dependencies cơ bản: `npm i axios react-router-dom`
+- [x] Tạo file `.env` với `VITE_API_URL=http://localhost:5001/api/v1`
+- [x] Test `npm run dev` — app chạy thành công
 
 ### 3.2 Cài TailwindCSS v4
 
-- [ ] Cài TailwindCSS theo docs mới nhất cho Vite
-- [ ] Cấu hình `tailwind.config.js` (nếu v3) hoặc CSS config (nếu v4)
-- [ ] Test: thêm class `bg-red-500` vào App.jsx → verify hoạt động
-- [ ] Xóa test class
+- [x] Cài TailwindCSS theo docs mới nhất cho Vite
+- [x] Cấu hình `tailwind.config.js` (nếu v3) hoặc CSS config (nếu v4)
+- [x] Test: thêm class `bg-red-500` vào App.jsx → verify hoạt động
+- [x] Xóa test class
 
 ### 3.3 Cài Shadcn/ui
 
-- [ ] Chạy `npx shadcn@latest init` — chọn config phù hợp
-- [ ] Cấu hình `components.json` — path aliases
-- [ ] Override CSS variables của Shadcn bằng Pop Art Design Tokens:
-  - [ ] `--primary: #FF2D55` (Pink)
-  - [ ] `--secondary: #00C2FF` (Cyan)
-  - [ ] `--background: #FFFDF7` (Kem)
-  - [ ] `--foreground: #111111` (Đen)
-  - [ ] `--destructive: #FF3B30`
-  - [ ] `--border: #111111`
-  - [ ] `--radius: 12px`
-- [ ] Override font: import `Plus Jakarta Sans` từ Google Fonts
-- [ ] Thêm custom CSS cho Pop Art:
-  - [ ] Class `.comic-border` → `border: 3px solid #111111`
-  - [ ] Class `.comic-shadow` → `box-shadow: 3px 3px 0 #111111`
-  - [ ] Class `.comic-shadow-hover` → `box-shadow: 4px 4px 0 #111111`
-  - [ ] Class `.comic-shadow-press` → `box-shadow: 1px 1px 0 #111111`
-  - [ ] Class `.pill` → `border-radius: 9999px`
+- [x] Chạy `npx shadcn@latest init` — chọn config phù hợp
+- [x] Cấu hình `components.json` — path aliases
+- [x] Override CSS variables của Shadcn bằng Pop Art Design Tokens:
+  - [x] `--primary: #FF2D55` (Pink)
+  - [x] `--secondary: #00C2FF` (Cyan)
+  - [x] `--background: #FFFDF7` (Kem)
+  - [x] `--foreground: #111111` (Đen)
+  - [x] `--destructive: #FF3B30`
+  - [x] `--border: #111111`
+  - [x] `--radius: 12px`
+- [x] Override font: import `Plus Jakarta Sans` từ Google Fonts
+- [x] Thêm custom CSS cho Pop Art:
+  - [x] Class `.comic-border` → `border: 3px solid #111111`
+  - [x] Class `.comic-shadow` → `box-shadow: 3px 3px 0 #111111`
+  - [x] Class `.comic-shadow-hover` → `box-shadow: 4px 4px 0 #111111`
+  - [x] Class `.comic-shadow-press` → `box-shadow: 1px 1px 0 #111111`
+  - [x] Class `.pill` → `border-radius: 9999px`
 
 ### 3.4 Setup Routing
 
-- [ ] Tạo `src/App.jsx` — setup `BrowserRouter`
-- [ ] Tạo layout `src/layouts/MainLayout.jsx` — Header + Content + Bottom Nav
-- [ ] Tạo file routes:
-  - [ ] `/` → HomePage
-  - [ ] `/tasks/:id` → TaskDetailPage (hoặc drawer)
-  - [ ] `/tasks/new` → (redirect, dùng modal)
-  - [ ] `/filter` → FilterPage
-  - [ ] `/settings` → SettingsPage
-  - [ ] `/profile` → ProfilePage
-  - [ ] `/login` → LoginPage
-  - [ ] `/register` → RegisterPage
-  - [ ] `*` → NotFoundPage
-- [ ] Tạo placeholder components cho mỗi page (chỉ hiện tên page)
+- [x] Tạo `src/App.jsx` — setup `BrowserRouter`
+- [x] Tạo layout `src/layouts/MainLayout.jsx` — Header + Content + Bottom Nav
+- [x] Tạo file routes:
+  - [x] `/` → HomePage
+  - [x] `/tasks/:id` → TaskDetailPage (hoặc drawer)
+  - [x] `/tasks/new` → (redirect, dùng modal)
+  - [x] `/filter` → FilterPage
+  - [x] `/settings` → SettingsPage
+  - [x] `/profile` → ProfilePage
+  - [x] `/login` → LoginPage
+  - [x] `/register` → RegisterPage
+  - [x] `*` → NotFoundPage
+- [x] Tạo placeholder components cho mỗi page (chỉ hiện tên page)
 
 ### 3.5 Setup Axios Instance
 
-- [ ] Tạo `src/lib/axios.js` — base instance với `baseURL` từ env
-- [ ] Thêm request interceptor (chuẩn bị cho JWT sau)
-- [ ] Thêm response interceptor — catch lỗi chung
-- [ ] Export instance
+- [x] Tạo `src/lib/axios.js` — base instance với `baseURL` từ env
+- [x] Thêm request interceptor (chuẩn bị cho JWT sau)
+- [x] Thêm response interceptor — catch lỗi chung
+- [x] Export instance
 
 ### 3.6 Tạo API Service Layer
 
-- [ ] Tạo `src/services/taskService.js`:
-  - [ ] `getTasks(params)` — GET `/tasks` + query params
-  - [ ] `getTaskById(id)` — GET `/tasks/:id`
-  - [ ] `createTask(data)` — POST `/tasks`
-  - [ ] `updateTask(id, data)` — PUT `/tasks/:id`
-  - [ ] `deleteTask(id)` — DELETE `/tasks/:id`
-  - [ ] `restoreTask(id)` — POST `/tasks/:id/restore`
-  - [ ] `getDeletedTasks()` — GET `/tasks/trash`
+- [x] Tạo `src/services/taskService.js`:
+  - [x] `getTasks(params)` — GET `/tasks` + query params
+  - [x] `getTaskById(id)` — GET `/tasks/:id`
+  - [x] `createTask(data)` — POST `/tasks`
+  - [x] `updateTask(id, data)` — PUT `/tasks/:id`
+  - [x] `deleteTask(id)` — DELETE `/tasks/:id`
+  - [x] `restoreTask(id)` — POST `/tasks/:id/restore`
+  - [x] `getDeletedTasks()` — GET `/tasks/trash`
 
 ### ✅ Checkpoint 3: Frontend khởi chạy, routing hoạt động
-- [ ] Mở browser → thấy trang chủ placeholder
-- [ ] Navigate qua các routes → đúng page
-- [ ] Vào `/abc` → thấy NotFoundPage
-- [ ] Console.log `taskService.getTasks()` → nhận data từ backend
+- [x] Mở browser → thấy trang chủ placeholder
+- [x] Navigate qua các routes → đúng page
+- [x] Vào `/abc` → thấy NotFoundPage
+- [x] Console.log `taskService.getTasks()` → nhận data từ backend
 
 ---
 
