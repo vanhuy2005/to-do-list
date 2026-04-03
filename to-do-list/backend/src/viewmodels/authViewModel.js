@@ -95,7 +95,8 @@ const authViewModel = {
     const refreshTokenHash = await hashToken(refreshToken);
 
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7);
+    const days = parseInt(REFRESH_TOKEN_EXPIRY) || 7;
+    expiryDate.setDate(expiryDate.getDate() + days);
 
     await RefreshSession.create({
       userId: newUser._id,
@@ -106,6 +107,7 @@ const authViewModel = {
     return {
       statusCode: 201,
       success: true,
+      refreshToken,
       data: {
         accessToken,
         user: formatUserResponse(newUser),
@@ -155,7 +157,8 @@ const authViewModel = {
     const refreshTokenHash = await hashToken(refreshToken);
 
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7);
+    const days = parseInt(REFRESH_TOKEN_EXPIRY) || 7;
+    expiryDate.setDate(expiryDate.getDate() + days);
 
     await RefreshSession.create({
       userId: user._id,
@@ -166,6 +169,7 @@ const authViewModel = {
     return {
       statusCode: 200,
       success: true,
+      refreshToken,
       data: {
         accessToken,
         user: formatUserResponse(user),
@@ -196,8 +200,8 @@ const authViewModel = {
       );
     }
 
-    const session = await RefreshSession.findOne({ userId: decoded.userId });
-    if (!session) {
+    const sessions = await RefreshSession.find({ userId: decoded.userId });
+    if (!sessions || sessions.length === 0) {
       throw new AuthViewModelError(
         401,
         "SESSION_NOT_FOUND",
@@ -205,8 +209,16 @@ const authViewModel = {
       );
     }
 
-    const isTokenValid = await verifyTokenHash(refreshToken, session.tokenHash);
-    if (!isTokenValid) {
+    let validSession = null;
+    for (const session of sessions) {
+      const isTokenValid = await verifyTokenHash(refreshToken, session.tokenHash);
+      if (isTokenValid) {
+        validSession = session;
+        break;
+      }
+    }
+
+    if (!validSession) {
       throw new AuthViewModelError(
         401,
         "INVALID_TOKEN_HASH",

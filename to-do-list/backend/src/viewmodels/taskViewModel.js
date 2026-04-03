@@ -86,9 +86,10 @@ const taskViewModel = {
       dueDateFrom,
       dueDateTo,
       completed,
+      includeDeleted,
       page = 1,
       limit = 20,
-      sort = "createdAt",
+      sort = "updatedAt",
       order = "desc",
     } = query || {};
 
@@ -99,13 +100,17 @@ const taskViewModel = {
     );
     const normalizedSort = ALLOWED_SORT_FIELDS.includes(sort)
       ? sort
-      : "createdAt";
+      : "updatedAt";
     const normalizedOrder = String(order).toLowerCase() === "asc" ? 1 : -1;
 
     const filter = {
-      deletedAt: null,
       ownerId: userId,
     };
+
+    const includeDeletedValue = parseBooleanQuery(includeDeleted);
+    if (!includeDeletedValue) {
+      filter.deletedAt = null;
+    }
 
     if (status) {
       filter.status = status;
@@ -210,8 +215,14 @@ const taskViewModel = {
   async createTask(payload, userId) {
     validateCreatePayload(payload);
 
+    const allowedFields = ["title", "description", "status", "priority", "tags", "dueDate"];
+    const taskData = {};
+    for (const field of allowedFields) {
+      if (payload[field] !== undefined) taskData[field] = payload[field];
+    }
+
     const task = await Task.create({
-      ...payload,
+      ...taskData,
       ownerId: userId,
     });
     return {
@@ -246,9 +257,21 @@ const taskViewModel = {
       throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
     }
 
+    const allowedFields = ["title", "description", "status", "priority", "tags", "dueDate", "orderIndex", "explicitOverdue"];
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (payload[field] !== undefined) updateData[field] = payload[field];
+    }
+    
+    if (updateData.status === "done") {
+      updateData.completedAt = new Date();
+    } else if (updateData.status && updateData.status !== "done") {
+      updateData.completedAt = null;
+    }
+
     const updatedTask = await Task.findOneAndUpdate(
       { _id: taskId, ownerId: userId, deletedAt: null },
-      payload,
+      updateData,
       { new: true },
     );
     return {
@@ -413,7 +436,7 @@ const errorHandler = (fn) => async (req, res, next) => {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: error.message,
+        message: "Internal server error",
       },
     });
   }

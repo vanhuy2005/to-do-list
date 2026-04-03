@@ -31,6 +31,16 @@ export const authMiddleware = async (req, res, next) => {
       });
     }
 
+    if (user.status === "disabled") {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: "USER_DISABLED",
+          message: "Tài khoản đã bị vô hiệu hóa",
+        },
+      });
+    }
+
     // Attach user info vào request
     req.user = {
       id: user._id,

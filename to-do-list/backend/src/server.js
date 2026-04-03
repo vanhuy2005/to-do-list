@@ -11,6 +11,13 @@ import connectDB from "./config/db.js";
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  if (process.env.NODE_ENV !== "development") {
+    console.error("CRITICAL: Missing JWT_SECRET or JWT_REFRESH_SECRET in environment");
+    process.exit(1);
+  }
+}
+
 const PORT = process.env.PORT || 5001;
 
 const app = express();

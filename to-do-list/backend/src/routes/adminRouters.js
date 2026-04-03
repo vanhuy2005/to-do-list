@@ -24,7 +24,7 @@ const errorHandler = (fn) => async (req, res, next) => {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: error.message,
+        message: "Internal server error",
       },
     });
   }
@@ -78,6 +78,7 @@ router.delete(
     const result = await adminViewModel.deleteUserOffline(req.params.id);
     res.status(result.statusCode).json({
       success: result.success,
+      data: result.data,
       message: result.message,
     });
   }),

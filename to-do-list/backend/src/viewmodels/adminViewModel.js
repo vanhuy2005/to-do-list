@@ -94,7 +94,7 @@ const adminViewModel = {
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
-    });
+    }).select("-passwordHash");
 
     return {
       statusCode: 200,
@@ -166,9 +166,9 @@ const adminViewModel = {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { status: "disabled" },
+      { status: "disabled", disabledAt: new Date() },
       { new: true },
-    );
+    ).select("-passwordHash");
 
     return {
       statusCode: 200,
@@ -182,14 +182,15 @@ const adminViewModel = {
     const { page = 1, limit = 20 } = query;
 
     const filter = {
-      $or: [{ status: "disabled" }, { deletedAt: { $ne: null } }],
+      status: "disabled",
     };
 
     const skip = (page - 1) * limit;
     const users = await User.find(filter)
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ deletedAt: -1 });
+      .sort({ disabledAt: -1, updatedAt: -1 })
+      .select("-passwordHash");
 
     const total = await User.countDocuments(filter);
     const totalPages = Math.ceil(total / limit);
@@ -265,7 +266,7 @@ const adminViewModel = {
   async deleteUserOffline(userId) {
     if (!userId) {
       throw new AdminViewModelError(
-        404,
+        400,
         "MISSING_USER_ID",
         "User ID là bắt buộc",
       );
@@ -285,7 +286,7 @@ const adminViewModel = {
         "Người dùng vẫn còn hoạt động",
       );
     }
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const deletedUser = await User.findByIdAndDelete(userId).select("-passwordHash");
     if (!deletedUser) {
       throw new AdminViewModelError(
         404,
@@ -298,6 +299,7 @@ const adminViewModel = {
       statusCode: 200,
       success: true,
       data: deletedUser,
+      message: "Người dùng đã được xóa",
     };
   },
 

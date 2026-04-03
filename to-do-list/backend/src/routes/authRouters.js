@@ -2,6 +2,7 @@ import express from "express";
 import authViewModel, {
   AuthViewModelError,
 } from "../viewmodels/authViewModel.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ const errorHandler = (fn) => async (req, res, next) => {
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: error.message,
+        message: "Internal server error",
       },
     });
   }
@@ -36,11 +37,11 @@ router.post(
     const result = await authViewModel.register(req.body);
     res
       .status(result.statusCode)
-      .cookie("refreshToken", req.body.refreshToken || "", {
+      .cookie("refreshToken", result.refreshToken || "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: (parseInt(process.env.REFRESH_TOKEN_EXPIRY) || 7) * 24 * 60 * 60 * 1000,
       })
       .json({
         success: result.success,
@@ -54,14 +55,14 @@ router.post(
   "/login",
   errorHandler(async (req, res) => {
     const result = await authViewModel.login(req.body);
-   
+
     res
       .status(result.statusCode)
-      .cookie("refreshToken", req.body.refreshToken || "", {
+      .cookie("refreshToken", result.refreshToken || "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: (parseInt(process.env.REFRESH_TOKEN_EXPIRY) || 7) * 24 * 60 * 60 * 1000,
       })
       .json({
         success: result.success,
@@ -86,6 +87,7 @@ router.post(
 
 router.post(
   "/logout",
+  authMiddleware,
   errorHandler(async (req, res) => {
     const result = await authViewModel.logout({
       userId: req.user?.id,
