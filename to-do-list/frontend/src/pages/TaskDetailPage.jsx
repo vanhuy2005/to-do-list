@@ -1,3 +1,1 @@
-export default function TaskDetailPage() {
-  return <h1>Task Detail Page</h1>;
-}
+export default function TaskDetailPage() { return <div className="p-8"><h1 className="text-2xl font-bold">TaskDetailPage</h1></div> }

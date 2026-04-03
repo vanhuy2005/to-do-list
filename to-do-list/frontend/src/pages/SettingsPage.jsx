@@ -1,3 +1,3 @@
 export default function SettingsPage() {
-  return <h1>Settings Page</h1>;
+    return <div className="p-8"><h1 className="text-2xl font-bold">SettingsPage</h1></div> 
 }
