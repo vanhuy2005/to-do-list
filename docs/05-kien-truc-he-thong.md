@@ -1,6 +1,6 @@
 # 05 — Kiến Trúc Hệ Thống
 
-> **Phiên bản:** 1.0 · **Cập nhật lần cuối:** 2026-03-25
+> **Phiên bản:** 1.1 · **Cập nhật lần cuối:** 2026-04-03
 
 ---
 
@@ -22,18 +22,18 @@ graph TB
         Validator["Input Validator<br/>(express-validator)"]
     end
 
-    subgraph "Business Logic Layer"
-        AuthCtrl["Auth Controller"]
-        TaskCtrl["Task Controller"]
-        AdminCtrl["Admin Controller"]
-        ProfileCtrl["Profile Controller"]
+    subgraph "ViewModel Layer (MVVM)"
+        AuthVM["Auth ViewModel"]
+        TaskVM["Task ViewModel"]
+        AdminVM["Admin ViewModel"]
+        ProfileVM["Profile ViewModel"]
     end
 
     subgraph "Auth Providers"
         Passport["Passport.js"]
         GoogleOAuth["Google Strategy"]
         GitHubOAuth["GitHub Strategy"]
-        LocalAuth["Local Strategy<br/>(argon2)"]
+        LocalAuth["Local Strategy<br/>(bcrypt)"]
     end
 
     subgraph "Realtime Layer"
@@ -62,12 +62,12 @@ graph TB
     SocketClient <--> SocketServer
 
     Express --> AuthMW --> RoleMW --> Validator
-    Validator --> AuthCtrl
-    Validator --> TaskCtrl
-    Validator --> AdminCtrl
-    Validator --> ProfileCtrl
+    Validator --> AuthVM
+    Validator --> TaskVM
+    Validator --> AdminVM
+    Validator --> ProfileVM
 
-    AuthCtrl --> Passport
+    AuthVM --> Passport
     Passport --> GoogleOAuth
     Passport --> GitHubOAuth
     Passport --> LocalAuth
@@ -75,10 +75,10 @@ graph TB
     SocketServer --> UserRoom
     SocketServer --> AdminRoom
 
-    AuthCtrl --> Mongoose
-    TaskCtrl --> Mongoose
-    AdminCtrl --> Mongoose
-    ProfileCtrl --> Mongoose
+    AuthVM --> Mongoose
+    TaskVM --> Mongoose
+    AdminVM --> Mongoose
+    ProfileVM --> Mongoose
 
     Mongoose --> UserModel --> MongoDB
     Mongoose --> TaskModel --> MongoDB
@@ -111,7 +111,7 @@ sequenceDiagram
         API-->>SPA: 409 EMAIL_EXISTS
         SPA-->>U: Hiển thị lỗi
     else Email chưa tồn tại
-        API->>API: Hash password (argon2)
+        API->>API: Hash password (bcrypt)
         API->>DB: Insert user (providers: ["local"])
         API->>API: Generate JWT access token
         API->>API: Create refresh session (hash token)
@@ -125,7 +125,7 @@ sequenceDiagram
     U->>SPA: Nhập email, password
     SPA->>API: POST /api/v1/auth/login
     API->>DB: Find user by email
-    API->>API: Verify password (argon2)
+    API->>API: Verify password (bcrypt)
     alt Sai thông tin
         API-->>SPA: 401 INVALID_CREDENTIALS
     else Đúng
@@ -240,7 +240,7 @@ graph LR
     A --> C[Generate Refresh Token]
     B --> D["Memory (SPA variable)<br/>Short-lived: 15min"]
     C --> E["httpOnly Cookie<br/>Long-lived: 7 days"]
-    C --> F["Hash bằng argon2<br/>→ DB refresh_sessions"]
+    C --> F["Hash bằng bcrypt<br/>→ DB refresh_sessions"]
 ```
 
 | Token | Lưu trữ | TTL | Sử dụng |
@@ -251,7 +251,7 @@ graph LR
 ### 3.2 Token Rotation
 
 1. Access token hết hạn → SPA interceptor gọi `POST /auth/refresh`
-2. Server verify refresh token (compare argon2 hash)
+2. Server verify refresh token (compare bcrypt hash)
 3. Nếu hợp lệ: issue access token mới + refresh token mới (xóa token cũ)
 4. Nếu không hợp lệ: 401 → redirect Login
 
@@ -299,7 +299,7 @@ graph TD
 |-------|---------|----------|
 | **Transport** | HTTPS | TLS encryption cho mọi request |
 | **Auth** | JWT + httpOnly Cookie | Access token không lưu localStorage |
-| **Password** | argon2 hashing | Cả user password và refresh token |
+| **Password** | bcrypt hashing | Cả user password và refresh token |
 | **Input** | express-validator | Server-side validation mọi endpoint |
 | **CORS** | Whitelist origin | Chỉ cho phép SPA origin |
 | **Rate Limiting** | express-rate-limit | Giới hạn request/IP cho auth endpoints |

@@ -1,6 +1,6 @@
 # 03 — Đặc Tả API
 
-> **Phiên bản:** 1.0 · **Cập nhật lần cuối:** 2026-03-25 · **Base URL:** `/api/v1`
+> **Phiên bản:** 1.1 · **Cập nhật lần cuối:** 2026-04-03 · **Base URL:** `/api/v1`
 
 ---
 
@@ -11,6 +11,7 @@
 - **Xác thực:** Bearer Token (JWT) trong header `Authorization`
 - **Realtime:** Socket.IO namespace `/v1/realtime`
 - **Phân quyền:** RBAC — `user` và `admin`
+- **Kiến trúc:** MVVM — Business logic xử lý bởi ViewModel layer, Routes chỉ là thin binding layer → [ADR-006](./07-architectural-decisions.md#adr-006)
 
 ### Quy ước Response
 

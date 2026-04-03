@@ -96,7 +96,7 @@ To-Do Web là ứng dụng quản lý công việc mã nguồn mở, hỗ trợ 
 ### Quy tắc bắt buộc (Blockers)
 - [ ] Tuyệt đối KHÔNG xóa dữ liệu vật lý — mọi delete đều là soft-delete (`deletedAt`)
 - [ ] DB lưu 100% UTC — frontend chịu trách nhiệm convert timezone
-- [ ] Token Hash bằng argon2 — KHÔNG bao giờ lưu raw refresh token
+- [ ] Token Hash bằng bcrypt — KHÔNG bao giờ lưu raw refresh token
 - [ ] Touch target tối thiểu 44x44px
 - [ ] Mọi animation/transition: 150-220ms, `cubic-bezier(0.2, 0.8, 0.2, 1)`
 - [ ] Focus ring: 2px Cyan (`#00C2FF`) offset

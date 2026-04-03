@@ -1,14 +1,98 @@
 import express from "express";
-import tasksControllers from "../controllers/tasksControllers.js";
+import taskViewModel, { errorHandler } from "../viewmodels/taskViewModel.js";
+import taskQueryMiddleware from "../middleware/taskQueryMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", tasksControllers.getAllTasks);
+router.get(
+  "/",
+  taskQueryMiddleware,
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getAllTasks({
+      query: req.query,
+      userId: req.userId,
+    });
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
 
-router.post("/", tasksControllers.createTask);
+router.post(
+  "/",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.createTask(req.body, req.userId);
+    console.log("Task được tạo thành công:", result.data._id);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
 
-router.put("/:id", tasksControllers.updateTask);
+router.get(
+  "/trash",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getDeletedTasks({
+      query: req.query,
+      userId: req.userId,
+    });
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
 
-router.delete("/:id", tasksControllers.deleteTask);
+router.get(
+  "/:id",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getTaskById(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
+router.put(
+  "/:id",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.updateTask(
+      req.params.id,
+      req.body,
+      req.userId,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
+router.post(
+  "/:id/restore",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.restoreTask(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+router.delete(
+  "/:id",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.deleteTask(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      message: result.message,
+    });
+  }),
+);
 
 export default router;

@@ -1,6 +1,6 @@
 # 00 — Tổng Quan Dự Án
 
-> **Phiên bản:** 1.0 · **Cập nhật lần cuối:** 2026-03-25 · **Trạng thái:** Đang phát triển
+> **Phiên bản:** 1.1 · **Cập nhật lần cuối:** 2026-04-03 · **Trạng thái:** Đang phát triển
 
 ---
 
@@ -62,9 +62,9 @@ graph TB
 |------|-----------|---------|
 | **Frontend** | React, Vite, TailwindCSS | SPA với Hot Module Replacement, styling theo Brand Guideline |
 | **Routing** | react-router-dom | Điều hướng SPA + Route Guards bảo vệ trang yêu cầu đăng nhập |
-| **Backend** | Node.js, Express.js | REST API server, middleware xác thực, xử lý business logic |
+| **Backend** | Node.js, Express.js | REST API server, middleware xác thực, xử lý business logic theo pattern MVVM (Model-View-ViewModel) |
 | **Database** | MongoDB, Mongoose | Lưu trữ NoSQL, schema validation qua Mongoose ODM |
-| **Authentication** | Passport.js, JWT, argon2 | OAuth (Google/GitHub), JWT access/refresh token, password hashing |
+| **Authentication** | Passport.js, JWT, bcrypt | OAuth (Google/GitHub), JWT access/refresh token, password hashing |
 | **Realtime** | Socket.IO | Đồng bộ dữ liệu bidirectional, namespace & room-based |
 | **Đa ngôn ngữ** | i18n | Hỗ trợ chuyển đổi VI/EN runtime |
 
@@ -115,6 +115,7 @@ Các thuật ngữ dưới đây được sử dụng **nhất quán** trong to�
 | **Design Tokens** | Bộ biến thiết kế chuẩn (màu sắc, font, spacing, shadow) dùng thống nhất trong toàn bộ UI. | [04a-brand-guideline.md](./04a-brand-guideline.md) |
 | **TTL Index** | Time-To-Live index trong MongoDB — tự động xóa document sau khoảng thời gian quy định. | [02-thiet-ke-csdl.md](./02-thiet-ke-csdl.md) |
 | **Route Guard** | Middleware frontend kiểm tra trạng thái đăng nhập trước khi cho phép truy cập route. | [05-kien-truc-he-thong.md](./05-kien-truc-he-thong.md) |
+| **ViewModel** | Trong MVVM pattern, lớp chứa toàn bộ business logic, validation, và data transformation. Routes chỉ là thin binding layer gọi ViewModel. | [ADR-006](./07-architectural-decisions.md#adr-006) |
 | **Purge** | Xóa vĩnh viễn dữ liệu đã soft-delete khi quá hạn khôi phục (> 7 ngày). Thực hiện bởi cron job. | [ADR-001](./07-architectural-decisions.md#adr-001) |
 
 ---
@@ -142,5 +143,5 @@ Các thuật ngữ dưới đây được sử dụng **nhất quán** trong to�
 | **Repository** | [github.com/vanhuy2005/to-do-list](https://github.com/vanhuy2005/to-do-list) |
 | **Tác giả** | vanhuy2005 |
 | **Môn học** | Công Nghệ Web — Bài giữa kỳ |
-| **Kiến trúc** | Monolithic MERN Stack |
+| **Kiến trúc** | Monolithic MERN Stack (MVVM pattern) |
 | **Deployment** | Node.js serve React static (Single process) |

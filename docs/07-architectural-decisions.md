@@ -1,6 +1,6 @@
 # 07 — Quyết Định Kiến Trúc (ADR Registry)
 
-> **Phiên bản:** 1.0 · **Cập nhật lần cuối:** 2026-03-25
+> **Phiên bản:** 1.1 · **Cập nhật lần cuối:** 2026-04-03
 
 Tài liệu này ghi nhận các quyết định kỹ thuật quan trọng của dự án theo format **Architecture Decision Record (ADR)**. Mỗi quyết định bao gồm bối cảnh, lựa chọn, và hệ quả.
 
@@ -15,6 +15,7 @@ Tài liệu này ghi nhận các quyết định kỹ thuật quan trọng của
 | [ADR-003](#adr-003) | OAuth Auto-link | ✅ Accepted |
 | [ADR-004](#adr-004) | Single-tenant v1 | ✅ Accepted |
 | [ADR-005](#adr-005) | UTC Storage | ✅ Accepted |
+| [ADR-006](#adr-006) | MVVM Architecture Pattern | ✅ Accepted |
 
 ---
 
@@ -177,3 +178,50 @@ Users có thể ở nhiều timezone khác nhau. Cần quy ước thống nhất
 > **Tham chiếu:**
 > - Thuật ngữ → [00-tong-quan.md](./00-tong-quan.md#4-bảng-thuật-ngữ-glossary)
 > - Kiến trúc → [05-kien-truc-he-thong.md](./05-kien-truc-he-thong.md)
+
+---
+
+## ADR-006
+
+### MVVM Architecture Pattern
+
+| Thông tin | Giá trị |
+|-----------|---------|
+| **Ngày** | 2026-04-03 |
+| **Trạng thái** | ✅ Accepted |
+| **Áp dụng** | Backend architecture (Node.js + Express.js) |
+
+**Bối cảnh:**
+Ban đầu, backend được thiết kế theo pattern MVC (Model-View-Controller) truyền thống, với Controller chứa business logic và Routes nhận request. Tuy nhiên, khi logic phức tạp hơn (validation, data transformation, error handling riêng biệt cho từng domain), Controller trở nên phình to và khó test.
+
+**Quyết định:**
+Chuyển từ MVC sang **MVVM (Model-View-ViewModel)**:
+- **Model** (`models/`): Mongoose schemas — chỉ define data structure, validation mongoose-level, và indexes.
+- **ViewModel** (`viewmodels/`): Chứa toàn bộ business logic, input validation, data transformation, và format response object. Mỗi ViewModel method return `{ statusCode, success, data, message }`.
+- **View** (`routes/`): Thin binding layer — chỉ nhận request, gọi ViewModel method, và gửi response. KHÔNG chứa business logic.
+
+**Error Handling Pattern:**
+- Mỗi ViewModel có custom Error class riêng (`ViewModelError`, `AuthViewModelError`, `ProfileViewModelError`, `AdminViewModelError`).
+- Routes layer sử dụng `errorHandler` wrapper function bắt ViewModel Errors → format error response chuẩn `{ success: false, error: { code, message } }`.
+
+**Cấu trúc thư mục:**
+```
+backend/src/
+├── models/          ← Model (Mongoose schemas)
+├── viewmodels/      ← ViewModel (business logic)
+├── routes/          ← View (thin binding)
+├── middleware/      ← Cross-cutting concerns (auth, query validation)
+├── config/          ← Database config
+└── server.js        ← Entry point
+```
+
+**Hệ quả:**
+- ✅ Tách biệt rõ ràng giữa data layer (Model), business logic (ViewModel), và HTTP layer (View/Routes).
+- ✅ ViewModel có thể test độc lập (unit test) mà không cần HTTP context.
+- ✅ Error handling nhất quán và tập trung.
+- ✅ Routes layer mỏng, dễ đọc và bảo trì.
+- ⚠️ Cần quy ước rõ ràng giữa những gì thuộc ViewModel vs Middleware.
+
+**Tham chiếu:**
+- Component Diagram: [05-kien-truc-he-thong.md](./05-kien-truc-he-thong.md#1-component-diagram)
+- Glossary: [00-tong-quan.md](./00-tong-quan.md#4-bảng-thuật-ngữ-glossary)
