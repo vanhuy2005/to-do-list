@@ -35,6 +35,38 @@
   }
 }
 
+[data-sonner-toaster] [data-sonner-toast].comic-toast {
+  border: 4px solid #111111 !important;
+  border-radius: 18px !important;
+  background: #fffdf7 !important;
+  color: #111111 !important;
+  box-shadow: 4px 4px 0 #111111 !important;
+  padding: 12px 14px !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"].comic-toast {
+  background: #7de228 !important;
+}
+
+[data-sonner-toaster] .comic-toast-title {
+  font-size: 1.9rem !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase;
+}
+
+[data-sonner-toaster] .comic-toast-description {
+  margin-top: 4px !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
+
+[data-sonner-toaster] .comic-toast-close {
+  border: 0 !important;
+  background: transparent !important;
+  color: #2f7d13 !important;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: 'Plus Jakarta Sans', sans-serif;
