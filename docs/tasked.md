@@ -71,6 +71,7 @@
 - [x] Mỗi ViewModel có custom Error class riêng (`ViewModelError`, `AuthViewModelError`, etc.)
 
 ### ✅ Checkpoint 1: Test toàn bộ API refactored bằng Thunder Client
+
 - [ ] Test GET `/api/v1/tasks` — chỉ trả task chưa xóa
 - [ ] Test POST `/api/v1/tasks` — tạo task với priority
 - [ ] Test PUT `/api/v1/tasks/:id` — cập nhật task
@@ -115,6 +116,7 @@
 - [x] Validate `sort` — chỉ nhận fields cho phép
 
 ### ✅ Checkpoint 2: Test filter, search, pagination
+
 - [ ] Test lọc: `GET /api/v1/tasks?status=doing&priority=high`
 - [ ] Test search: `GET /api/v1/tasks?search=báo cáo`
 - [ ] Test pagination: `GET /api/v1/tasks?page=2&limit=5`
@@ -194,6 +196,7 @@
   - [x] `getDeletedTasks()` — GET `/tasks/trash`
 
 ### ✅ Checkpoint 3: Frontend khởi chạy, routing hoạt động
+
 - [x] Mở browser → thấy trang chủ placeholder
 - [x] Navigate qua các routes → đúng page
 - [x] Vào `/abc` → thấy NotFoundPage
@@ -205,17 +208,17 @@
 
 ### 4.1 Cài Shadcn Components cần thiết
 
-- [ ] `npx shadcn@latest add button`
-- [ ] `npx shadcn@latest add input`
-- [ ] `npx shadcn@latest add textarea`
-- [ ] `npx shadcn@latest add dialog` (cho Modal)
-- [ ] `npx shadcn@latest add sheet` (cho Drawer)
-- [ ] `npx shadcn@latest add select`
-- [ ] `npx shadcn@latest add badge`
-- [ ] `npx shadcn@latest add skeleton`
-- [ ] `npx shadcn@latest add dropdown-menu`
-- [ ] `npx shadcn@latest add popover`
-- [ ] `npx shadcn@latest add calendar` (date picker)
+- [x] `npx shadcn@latest add button`
+- [x] `npx shadcn@latest add input`
+- [x] `npx shadcn@latest add textarea`
+- [x] `npx shadcn@latest add dialog` (cho Modal)
+- [x] `npx shadcn@latest add sheet` (cho Drawer)
+- [x] `npx shadcn@latest add select`
+- [x] `npx shadcn@latest add badge`
+- [x] `npx shadcn@latest add skeleton`
+- [x] `npx shadcn@latest add dropdown-menu`
+- [x] `npx shadcn@latest add popover`
+- [x] `npx shadcn@latest add calendar` (date picker)
 
 ### 4.2 Custom Pop Art overrides cho Shadcn
 
@@ -245,6 +248,7 @@
 - [ ] Test: trigger toast thành công
 
 ### ✅ Checkpoint 4: Tất cả components render đúng Pop Art style
+
 - [ ] Mở browser → thấy AppBar + BottomNav
 - [ ] Mỗi component có border 3px đen + shadow
 - [ ] Hover lên button → shadow tăng
@@ -303,6 +307,7 @@
 - [ ] Cancel → đóng dialog
 
 ### ✅ Checkpoint 5: CRUD Task hoạt động end-to-end
+
 - [ ] Tạo task mới → xuất hiện trong danh sách
 - [ ] Click task → xem chi tiết trong drawer
 - [ ] Sửa task → data cập nhật
@@ -342,6 +347,7 @@
 - [ ] Hiện loading khi chuyển trang
 
 ### ✅ Checkpoint 6: Search, Filter, Pagination hoạt động
+
 - [ ] Gõ keyword → kết quả filter đúng
 - [ ] Chọn status "doing" → chỉ hiện task doing
 - [ ] Chọn date range → filter đúng
@@ -369,6 +375,7 @@
 - [ ] Empty state: "Thùng rác trống!"
 
 ### ✅ Checkpoint 7: Pages phụ hoạt động
+
 - [ ] Navigate `/abc` → thấy 404 page Pop Art
 - [ ] Xóa task → vào thùng rác → thấy task đã xóa
 - [ ] Khôi phục → task quay lại danh sách chính
@@ -419,6 +426,7 @@
 - [ ] Cập nhật `.env.example`
 
 ### ✅ Checkpoint 8: Auth API hoạt động
+
 - [ ] Register → trả user + token + set cookie
 - [ ] Login → trả user + token
 - [ ] Gọi GET `/tasks` không có token → 401
@@ -467,6 +475,7 @@
 - [ ] Nếu refresh cũng fail → logout + redirect login
 
 ### ✅ Checkpoint 9: Auth flow end-to-end
+
 - [ ] Mở app chưa đăng nhập → redirect Login
 - [ ] Register → tạo tài khoản → vào Home
 - [ ] Logout → quay về Login
@@ -507,6 +516,7 @@
 - [x] Route `DELETE /api/v1/profile/sessions/:id` → `profileViewModel.deleteSession`
 
 ### ✅ Checkpoint 10: Profile & Settings hoạt động
+
 - [ ] Vào Profile → thấy thông tin đúng
 - [ ] Sửa displayName → lưu thành công
 - [ ] Stats hiện đúng con số từ API
@@ -536,6 +546,7 @@
 - [ ] Toast warning nếu auto-link xảy ra
 
 ### ✅ Checkpoint 11: OAuth hoạt động
+
 - [ ] Click "Đăng nhập Google" → redirect Google → quay lại app → đã đăng nhập
 - [ ] Click "Đăng nhập GitHub" → tương tự
 - [ ] Đăng nhập Google với email đã có → auto-link → toast warning
@@ -616,6 +627,7 @@
   - [ ] Nút khôi phục (re-enable)
 
 ### ✅ Checkpoint 12: Admin system hoạt động
+
 - [ ] Login admin → thấy AdminHomePage
 - [ ] Xem Users → search, filter, pagination OK
 - [ ] Disable user → user đó thấy bị khóa
@@ -659,6 +671,7 @@
 - [ ] Gắn vào Home page, Admin dashboard
 
 ### ✅ Checkpoint 13: Realtime hoạt động
+
 - [ ] Mở 2 tabs cùng user → tạo task tab 1 → tab 2 tự cập nhật
 - [ ] Admin disable user → user nhận event + bị redirect login
 
@@ -687,6 +700,7 @@
 - [ ] Home page render đúng view theo preference
 
 ### ✅ Checkpoint 14: Drag & Drop hoạt động
+
 - [ ] Kéo task từ "Todo" sang "Doing" → status cập nhật
 - [ ] Thả task ở vị trí mới → orderIndex cập nhật
 - [ ] Refresh page → thứ tự giữ nguyên
@@ -718,6 +732,7 @@
 - [ ] Empty state: illustration + message + CTA
 
 ### ✅ Checkpoint 15: UI polish hoàn thiện
+
 - [ ] Mọi animation mượt, đúng timing
 - [ ] Mobile responsive OK
 - [ ] Thumbnail review mỗi page → đạt "WOW" Pop Art
@@ -747,6 +762,7 @@
 - [ ] Setup PM2 auto-restart on crash
 
 ### ✅ Checkpoint 16: App live trên internet
+
 - [ ] Truy cập URL → app hoạt động
 - [ ] Register/Login → đầy đủ chức năng
 - [ ] CRUD tasks → hoạt động realtime
