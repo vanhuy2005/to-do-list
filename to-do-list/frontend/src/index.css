@@ -8,6 +8,16 @@
 
 
 @layer utilities {
+  @keyframes comic-shimmer {
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  .animate-comic-shimmer {
+    animation: comic-shimmer 1.4s linear infinite;
+  }
+
   .comic-border {
     border: 3px solid #111111;
   }
