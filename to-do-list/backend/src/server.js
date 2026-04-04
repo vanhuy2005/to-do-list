@@ -13,18 +13,36 @@ dotenv.config();
 
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   if (process.env.NODE_ENV !== "development") {
-    console.error("CRITICAL: Missing JWT_SECRET or JWT_REFRESH_SECRET in environment");
+    console.error(
+      "CRITICAL: Missing JWT_SECRET or JWT_REFRESH_SECRET in environment",
+    );
     process.exit(1);
   }
 }
 
 const PORT = process.env.PORT || 5001;
+const AUTH_ENABLED = process.env.AUTH_ENABLED !== "false";
+const BYPASS_TASK_AUTH = process.env.BYPASS_TASK_AUTH === "true";
+
+const allowedOrigins = (
+  process.env.CORS_ORIGIN || "http://localhost:3000,http://localhost:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
@@ -37,7 +55,13 @@ app.use("/api/v1/auth", authRouters);
 
 // Protected routes
 app.use("/api/v1/profile", authMiddleware, profileRouters);
-app.use("/api/v1/tasks", authMiddleware, tasksRouters);
+if (BYPASS_TASK_AUTH) {
+  app.use("/api/v1/tasks", tasksRouters);
+} else if (AUTH_ENABLED) {
+  app.use("/api/v1/tasks", authMiddleware, tasksRouters);
+} else {
+  app.use("/api/v1/tasks", tasksRouters);
+}
 app.use("/api/v1/admin", authMiddleware, adminRouters);
 
 connectDB()
