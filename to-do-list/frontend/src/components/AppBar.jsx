@@ -72,7 +72,7 @@ export default function AppBar({
               type="text"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Mua đồ trang trí tiệc"
+              placeholder="Tìm kiếm..."
               className="h-6 flex-1 border-0 bg-transparent text-sm font-extrabold outline-none placeholder:text-muted-foreground"
             />
             <button
