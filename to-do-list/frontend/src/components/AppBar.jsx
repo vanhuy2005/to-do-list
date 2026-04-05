@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { RocketIcon, SearchIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
+import {
+  RocketIcon,
+  SearchIcon,
+  SlidersHorizontalIcon,
+  XIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export default function AppBar({
-  title = "TO-DO POP",
-  onSettingsClick,
-}) {
+export default function AppBar({ onSettingsClick }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -20,9 +22,7 @@ export default function AppBar({
   };
 
   return (
-    <header
-      className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-4 py-3 comic-shadow"
-    >
+    <header className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-4 py-3 comic-shadow">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -31,9 +31,11 @@ export default function AppBar({
             </div>
 
             <div className="inline-flex items-center gap-2">
-              <span className="text-[1.5rem] leading-none font-black tracking-tight">TO-DO</span>
+              <span className="text-[1.5rem] leading-none font-black tracking-tight">
+                TO-DO
+              </span>
               <span className="rounded-md border-[3px] border-border bg-primary px-2 py-0.5 text-xl leading-none font-black text-primary-foreground comic-shadow">
-                POP
+                APP
               </span>
             </div>
           </div>
@@ -85,7 +87,7 @@ export default function AppBar({
             </button>
           </div>
         )}
-        </div>
+      </div>
     </header>
   );
 }

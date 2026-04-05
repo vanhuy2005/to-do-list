@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", label: "Trang chủ", icon: HouseIcon },
-  { to: "/filter", label: "Hoạt động", icon: ActivityIcon },
+  { to: "/activities", label: "Hoạt động", icon: ActivityIcon },
   { to: "/profile", label: "Cá nhân", icon: UserRoundIcon },
   { to: "/settings", label: "Cài đặt", icon: SettingsIcon },
 ];

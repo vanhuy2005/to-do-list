@@ -11,6 +11,7 @@ const ALLOWED_SORT_FIELDS = [
 const ALLOWED_PRIORITY = ["low", "medium", "high"];
 const ALLOWED_STATUS = ["todo", "doing", "done"];
 const RESTORE_WINDOW_DAYS = 7;
+const DEV_OWNER_ID = process.env.DEV_OWNER_ID || "000000000000000000000001";
 
 class ViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -75,6 +76,38 @@ const validateCreatePayload = (payload) => {
   }
 };
 
+const isTaskAuthBypassed = () => {
+  return (
+    String(process.env.BYPASS_TASK_AUTH || "")
+      .trim()
+      .toLowerCase() === "true"
+  );
+};
+
+const isAuthEnabled = () => {
+  return (
+    String(process.env.AUTH_ENABLED || "true")
+      .trim()
+      .toLowerCase() !== "false"
+  );
+};
+
+const resolveOwnerId = (userId) => {
+  if (userId) {
+    return userId;
+  }
+
+  if (isTaskAuthBypassed() || !isAuthEnabled()) {
+    return DEV_OWNER_ID;
+  }
+
+  throw new ViewModelError(
+    401,
+    "MISSING_AUTH",
+    "Bạn cần đăng nhập để thao tác task",
+  );
+};
+
 const taskViewModel = {
   async getAllTasks({ query, userId }) {
     const {
@@ -103,8 +136,9 @@ const taskViewModel = {
       : "updatedAt";
     const normalizedOrder = String(order).toLowerCase() === "asc" ? 1 : -1;
 
+    const ownerId = resolveOwnerId(userId);
     const filter = {
-      ownerId: userId,
+      ownerId,
     };
 
     const includeDeletedValue = parseBooleanQuery(includeDeleted);
@@ -196,11 +230,15 @@ const taskViewModel = {
   async getTaskById(taskId, userId) {
     ensureValidObjectId(taskId);
 
-    const task = await Task.findOne({
+    const ownerId = resolveOwnerId(userId);
+
+    const filter = {
       _id: taskId,
-      ownerId: userId,
+      ownerId,
       deletedAt: null,
-    });
+    };
+
+    const task = await Task.findOne(filter);
     if (!task) {
       throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
     }
@@ -215,7 +253,16 @@ const taskViewModel = {
   async createTask(payload, userId) {
     validateCreatePayload(payload);
 
-    const allowedFields = ["title", "description", "status", "priority", "tags", "dueDate"];
+    const ownerId = resolveOwnerId(userId);
+
+    const allowedFields = [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "tags",
+      "dueDate",
+    ];
     const taskData = {};
     for (const field of allowedFields) {
       if (payload[field] !== undefined) taskData[field] = payload[field];
@@ -223,7 +270,7 @@ const taskViewModel = {
 
     const task = await Task.create({
       ...taskData,
-      ownerId: userId,
+      ownerId,
     });
     return {
       statusCode: 201,
@@ -235,6 +282,8 @@ const taskViewModel = {
 
   async updateTask(taskId, payload, userId) {
     ensureValidObjectId(taskId);
+
+    const ownerId = resolveOwnerId(userId);
 
     if (payload.priority && !ALLOWED_PRIORITY.includes(payload.priority)) {
       throw new ViewModelError(
@@ -250,19 +299,28 @@ const taskViewModel = {
 
     const existingTask = await Task.findOne({
       _id: taskId,
-      ownerId: userId,
+      ownerId,
       deletedAt: null,
     });
     if (!existingTask) {
       throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
     }
 
-    const allowedFields = ["title", "description", "status", "priority", "tags", "dueDate", "orderIndex", "explicitOverdue"];
+    const allowedFields = [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "tags",
+      "dueDate",
+      "orderIndex",
+      "explicitOverdue",
+    ];
     const updateData = {};
     for (const field of allowedFields) {
       if (payload[field] !== undefined) updateData[field] = payload[field];
     }
-    
+
     if (updateData.status === "done") {
       updateData.completedAt = new Date();
     } else if (updateData.status && updateData.status !== "done") {
@@ -270,7 +328,7 @@ const taskViewModel = {
     }
 
     const updatedTask = await Task.findOneAndUpdate(
-      { _id: taskId, ownerId: userId, deletedAt: null },
+      { _id: taskId, ownerId, deletedAt: null },
       updateData,
       { new: true },
     );
@@ -284,12 +342,14 @@ const taskViewModel = {
   async deleteTask(taskId, userId) {
     ensureValidObjectId(taskId);
 
+    const ownerId = resolveOwnerId(userId);
+
     const deletedAt = new Date();
     const restoreUntil = new Date(deletedAt);
     restoreUntil.setDate(restoreUntil.getDate() + RESTORE_WINDOW_DAYS);
 
     const deletedTask = await Task.findOneAndUpdate(
-      { _id: taskId, ownerId: userId, deletedAt: null },
+      { _id: taskId, ownerId, deletedAt: null },
       { deletedAt, restoreUntil },
       { new: true },
     );
@@ -307,9 +367,11 @@ const taskViewModel = {
   async restoreTask(taskId, userId) {
     ensureValidObjectId(taskId);
 
+    const ownerId = resolveOwnerId(userId);
+
     const existingTask = await Task.findOne({
       _id: taskId,
-      ownerId: userId,
+      ownerId,
       deletedAt: { $ne: null },
     });
 
@@ -333,7 +395,7 @@ const taskViewModel = {
     }
 
     const restoredTask = await Task.findOneAndUpdate(
-      { _id: taskId, ownerId: userId },
+      { _id: taskId, ownerId },
       { deletedAt: null, restoreUntil: null },
       { new: true },
     );
@@ -348,6 +410,7 @@ const taskViewModel = {
 
   async getDeletedTasks({ query, userId }) {
     const { page = 1, limit = 20 } = query || {};
+    const ownerId = resolveOwnerId(userId);
     const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const normalizedLimit = Math.min(
       100,
@@ -355,7 +418,7 @@ const taskViewModel = {
     );
 
     const filter = {
-      ownerId: userId,
+      ownerId,
       deletedAt: { $ne: null },
     };
 
@@ -394,9 +457,11 @@ const taskViewModel = {
   async hardDeleteTask(taskId, userId) {
     ensureValidObjectId(taskId);
 
+    const ownerId = resolveOwnerId(userId);
+
     const deletedTask = await Task.findOneAndDelete({
       _id: taskId,
-      ownerId: userId,
+      ownerId,
       deletedAt: { $ne: null },
     });
 
@@ -431,6 +496,27 @@ const errorHandler = (fn) => async (req, res, next) => {
         },
       });
     }
+
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_PAYLOAD",
+          message: error.message,
+        },
+      });
+    }
+
+    if (error?.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_PAYLOAD",
+          message: "Dữ liệu gửi lên không hợp lệ",
+        },
+      });
+    }
+
     console.error("Unexpected error:", error.message);
     res.status(500).json({
       success: false,

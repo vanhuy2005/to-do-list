@@ -62,7 +62,7 @@ const taskSchema = new mongoose.Schema(
 taskSchema.index({ ownerId: 1, status: 1, dueDate: 1, updatedAt: -1 });
 taskSchema.index({ title: "text", description: "text" });
 
-taskSchema.pre("save", function (next) {
+taskSchema.pre("save", function () {
   if (this.status === "done" && !this.completedAt) {
     this.completedAt = new Date();
   }
@@ -70,8 +70,6 @@ taskSchema.pre("save", function (next) {
   if (this.status !== "done") {
     this.completedAt = null;
   }
-
-  next();
 });
 
 const Task = mongoose.model("Task", taskSchema);

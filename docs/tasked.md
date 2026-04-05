@@ -261,59 +261,59 @@
 
 ### 5.1 UI trang Home
 
-- [ ] Layout: AppBar (top) + Content (scroll) + BottomNav (bottom)
-- [ ] Section 1: `StatusCounter` — 3 badges (Todo/Doing/Done) với số đếm từ API
-- [ ] Section 2: Title "Công việc gần đây" + nút "Xem tất cả"
-- [ ] Section 3: Task List — render `TaskCard` cho mỗi task
-- [ ] FAB "Tạo Task" — pill button góc phải dưới
+- [x] Layout: AppBar (top) + StatusCounter + TaskCard (Content - scroll) + BottomNav (bottom)
+- [x] Section 1: `StatusCounter` — 3 badges (Todo/Doing/Done) với số đếm từ API
+- [x] Section 2: Title "Công việc gần đây" + nút "Xem tất cả"
+- [x] Section 3: Task List — render `TaskCard` cho mỗi task
+- [x] TaskCard hiển thị: Title, Status Badge, Priority Badge, Due Date, Action Button (3 chấm)
+- [x] Section 4: BottomNav với 5 links: Home, Activities, button (tạo task) - /tasks/new, Profile, Settings
 
 ### 5.2 Fetch & Hiển thị Data
 
-- [ ] Gọi `taskService.getTasks()` khi component mount
-- [ ] Xử lý state: `loading` → hiện Skeleton (3 cards)
-- [ ] Xử lý state: `empty` → hiện EmptyState "Chưa có task nào"
-- [ ] Xử lý state: `error` → hiện ErrorState + retry button
-- [ ] Xử lý state: `ready` → render TaskCard list
-- [ ] Tính đếm status counters từ data trả về
+- [x] Gọi `taskService.getTasks()` khi component mount
+- [x] Xử lý state: `loading` → hiện Skeleton (3 cards)
+- [x] Xử lý state: `empty` → hiện EmptyState "Chưa có task nào"
+- [x] Xử lý state: `error` → hiện ErrorState + retry button
+- [x] Xử lý state: `ready` → render TaskCard list
+- [x] Tính đếm status counters từ data trả về
 
-### 5.3 Modal Tạo Task (Quick Add)
+### 5.3 New Task Page
 
-- [ ] Click FAB → mở Dialog (Shadcn)
-- [ ] Form fields: Title (required), Description (optional), Status (select), Priority (select), Due Date (calendar picker)
-- [ ] Cài `react-hook-form` + `zod`: `npm i react-hook-form zod @hookform/resolvers`
-- [ ] Tạo schema validation Zod cho form tạo task
-- [ ] Submit → gọi `taskService.createTask(data)`
-- [ ] Thành công → toast "Tạo task thành công" + đóng modal + refresh danh sách
-- [ ] Lỗi → toast error + giữ modal mở
+- [x] Click button Plus icon → direct tới /tasks/new (Shadcn)
+- [x] Form fields: Title (required), Description (optional), Status (select), Priority (select), Due Date (calendar picker)
+- [x] Cài `react-hook-form` + `zod`: `npm i react-hook-form zod @hookform/resolvers`
+- [x] Tạo schema validation Zod cho form tạo task
+- [x] Submit → gọi `taskService.createTask(data)`
+- [x] Thành công → toast "Tạo task thành công" + đóng modal + refresh danh sách
+- [x] Lỗi → toast error + giữ modal mở
 
-### 5.4 Task Detail Drawer
+### 5.4 Task Detail Page
 
-- [ ] Click vào TaskCard → mở Sheet (bottom drawer) ~70vh
-- [ ] Hiển thị: Title, Tags, Status Badge, Priority Badge, Due Date, Description
-- [ ] Footer: 3 icon buttons (Edit, Delete, Close)
-- [ ] Fetch `taskService.getTaskById(id)` khi mở drawer
+- [x] Click vào TaskCard → mở Task Detail Modal overlay
+- [x] Hiển thị: Title, Tags, Status Badge, Priority Badge, Due Date, Description
+- [x] Footer: 2 action buttons (Edit, Delete) + nút Close ở topbar
+- [x] Fetch `taskService.getTaskById(id)` khi mở modal
 
-### 5.5 Chỉnh sửa Task
+### 5.5 Patch Task Page
 
-- [ ] Click icon Edit trong drawer → mở Dialog chỉnh sửa (form pre-filled)
-- [ ] Form giống tạo mới nhưng pre-load values
-- [ ] Submit → `taskService.updateTask(id, data)` → toast + refresh
-- [ ] Đóng dialog + đóng drawer
+- [x] Click icon/button Edit trong Task Detail Page → mở Patch Task Page
+- [x] Form giống tạo mới nhưng pre-load values
+- [x] Submit → `taskService.updateTask(id, data)` → toast + refresh
 
-### 5.6 Xóa Task (Soft Delete)
+### 5.6 Delete Task
 
-- [ ] Click icon Delete → mở Confirm Dialog "Bạn có chắc muốn xóa?"
-- [ ] Confirm → `taskService.deleteTask(id)` → toast "Đã chuyển vào thùng rác" → refresh
-- [ ] Cancel → đóng dialog
+- [x] Click icon/button Delete → mở Confirm Dialog "Bạn có chắc muốn xóa?"
+- [x] Confirm → `taskService.deleteTask(id)` → toast "Đã chuyển vào thùng rác" → refresh
+- [x] Cancel → đóng dialog
 
 ### ✅ Checkpoint 5: CRUD Task hoạt động end-to-end
 
-- [ ] Tạo task mới → xuất hiện trong danh sách
-- [ ] Click task → xem chi tiết trong drawer
-- [ ] Sửa task → data cập nhật
-- [ ] Xóa task → biến mất khỏi danh sách (soft delete)
-- [ ] Status counters đúng con số
-- [ ] Tải trang → thấy skeleton → thấy data
+- [x] Tạo task mới → xuất hiện trong danh sách
+- [x] Click task → xem chi tiết trong modal
+- [x] Sửa task → data cập nhật
+- [x] Xóa task → biến mất khỏi danh sách (soft delete)
+- [x] Status counters đúng con số
+- [x] Tải trang → thấy skeleton → thấy data
 
 ---
 
