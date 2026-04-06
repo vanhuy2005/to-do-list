@@ -59,7 +59,8 @@ const profileViewModel = {
       );
     }
 
-    const { displayName, preferredLanguage, themePreference } = payload;
+    const { displayName, preferredLanguage, themePreference, avatarUrl } =
+      payload;
 
     const updateData = {};
     if (displayName) {
@@ -93,6 +94,31 @@ const profileViewModel = {
         );
       }
       updateData.themePreference = themePreference;
+    }
+
+    if (avatarUrl !== undefined) {
+      if (avatarUrl === null || avatarUrl === "") {
+        updateData.avatarUrl = null;
+      } else if (typeof avatarUrl === "string") {
+        const normalizedAvatarUrl = avatarUrl.trim();
+        if (
+          !/^https?:\/\//i.test(normalizedAvatarUrl) &&
+          !/^data:image\/[a-zA-Z]+;base64,/i.test(normalizedAvatarUrl)
+        ) {
+          throw new ProfileViewModelError(
+            400,
+            "INVALID_AVATAR_URL",
+            "avatarUrl phải là URL hoặc ảnh base64 hợp lệ",
+          );
+        }
+        updateData.avatarUrl = normalizedAvatarUrl;
+      } else {
+        throw new ProfileViewModelError(
+          400,
+          "INVALID_AVATAR_URL",
+          "avatarUrl phải là URL hoặc ảnh base64 hợp lệ",
+        );
+      }
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
