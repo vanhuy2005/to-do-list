@@ -164,9 +164,9 @@ export default function HomePage() {
         done={counters.done}
       />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 pt-2">
         <h2 className="text-2xl font-black uppercase leading-none">
-          Hôm này làm gì ?
+          Hôm nay làm gì ?
         </h2>
 
         <Button asChild variant="secondary" size="xs">

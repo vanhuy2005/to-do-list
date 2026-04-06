@@ -4,11 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { RocketIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import authService from "@/services/authService";
 
-// Validation schema
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ").min(1, "Email là bắt buộc"),
   password: z.string().min(8, "Mật khẩu phải ít nhất 8 ký tự"),
@@ -48,19 +48,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-900">
-          Đăng nhập
-        </h1>
-        <p className="text-center text-gray-600 mb-8">Chào mừng trở lại</p>
+    <div className="flex min-h-screen flex-col bg-background px-6 py-12">
+      <div className="flex flex-1 flex-col justify-center w-full max-w-sm mx-auto">
+        <div className="mb-10 text-center">
+          <div className="mx-auto mb-6 inline-flex size-20 items-center justify-center rounded-2xl border-[3px] border-border bg-[#ffd400] comic-shadow -rotate-6">
+            <RocketIcon className="size-10 text-primary rotate-12" />
+          </div>
+          <h1 className="text-[2.5rem] leading-none font-black uppercase tracking-tight text-foreground">
+            Đăng nhập
+          </h1>
+          <p className="mt-2 text-base font-bold text-muted-foreground uppercase tracking-wide">
+            Chào mừng trở lại
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Email input */}
-          <div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="space-y-2">
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="text-sm font-black uppercase tracking-tight text-foreground"
             >
               Email
             </label>
@@ -69,20 +75,21 @@ export default function LoginPage() {
               type="email"
               placeholder="example@gmail.com"
               {...register("email")}
-              className={errors.email ? "border-red-500" : ""}
+              className={`h-14 rounded-2xl border-[3px] border-border px-4 text-base font-bold ${
+                errors.email ? "border-destructive bg-destructive/10" : "bg-card"
+              }`}
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-red-500">
+              <p className="text-xs font-bold text-destructive">
                 {errors.email.message}
               </p>
             )}
           </div>
 
-          {/* Password input */}
-          <div>
+          <div className="space-y-2">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="text-sm font-black uppercase tracking-tight text-foreground"
             >
               Mật khẩu
             </label>
@@ -91,32 +98,32 @@ export default function LoginPage() {
               type="password"
               placeholder="Nhập mật khẩu"
               {...register("password")}
-              className={errors.password ? "border-red-500" : ""}
+              className={`h-14 rounded-2xl border-[3px] border-border px-4 text-base font-bold ${
+                errors.password ? "border-destructive bg-destructive/10" : "bg-card"
+              }`}
             />
             {errors.password && (
-              <p className="mt-1 text-sm text-red-500">
+              <p className="text-xs font-bold text-destructive">
                 {errors.password.message}
               </p>
             )}
           </div>
 
-          {/* Submit button */}
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 mt-6"
+            className="mt-4 h-14 w-full rounded-2xl text-lg uppercase comic-shadow active:translate-y-1"
           >
-            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+            {isLoading ? "Đang xử lý..." : "Đăng nhập"}
           </Button>
         </form>
 
-        {/* Register link */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
+        <div className="mt-8 text-center">
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">
             Chưa có tài khoản?{" "}
             <Link
               to="/register"
-              className="text-blue-600 hover:underline font-semibold"
+              className="text-primary hover:underline hover:text-primary/80"
             >
               Đăng ký ngay
             </Link>

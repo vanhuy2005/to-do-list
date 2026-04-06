@@ -10,11 +10,16 @@ import ProfilePage from "@/pages/ProfilePage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import NotFoundPage from "@/pages/NotFoundPage";
-
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AuthRoute from "@/components/AuthRoute";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout />,
+    element: (
+      <ProtectedRoute>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
     errorElement: <NotFoundPage />,
     children: [
       { index: true, element: <HomePage /> },
@@ -27,6 +32,20 @@ export const router = createBrowserRouter([
       { path: "*", element: <NotFoundPage /> },
     ],
   },
-  { path: "/login", element: <LoginPage /> },
-  { path: "/register", element: <RegisterPage /> },
+  {
+    path: "/login",
+    element: (
+      <AuthRoute>
+        <LoginPage />
+      </AuthRoute>
+    ),
+  },
+  {
+    path: "/register",
+    element: (
+      <AuthRoute>
+        <RegisterPage />
+      </AuthRoute>
+    ),
+  },
 ]);

@@ -11,7 +11,7 @@ const ALLOWED_SORT_FIELDS = [
 const ALLOWED_PRIORITY = ["low", "medium", "high"];
 const ALLOWED_STATUS = ["todo", "doing", "done"];
 const RESTORE_WINDOW_DAYS = 7;
-const DEV_OWNER_ID = process.env.DEV_OWNER_ID || "000000000000000000000001";
+
 
 class ViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -76,36 +76,15 @@ const validateCreatePayload = (payload) => {
   }
 };
 
-const isTaskAuthBypassed = () => {
-  return (
-    String(process.env.BYPASS_TASK_AUTH || "")
-      .trim()
-      .toLowerCase() === "true"
-  );
-};
-
-const isAuthEnabled = () => {
-  return (
-    String(process.env.AUTH_ENABLED || "true")
-      .trim()
-      .toLowerCase() !== "false"
-  );
-};
-
 const resolveOwnerId = (userId) => {
-  if (userId) {
-    return userId;
+  if (!userId) {
+    throw new ViewModelError(
+      401,
+      "MISSING_AUTH",
+      "Bạn cần đăng nhập để thao tác task",
+    );
   }
-
-  if (isTaskAuthBypassed() || !isAuthEnabled()) {
-    return DEV_OWNER_ID;
-  }
-
-  throw new ViewModelError(
-    401,
-    "MISSING_AUTH",
-    "Bạn cần đăng nhập để thao tác task",
-  );
+  return userId;
 };
 
 const taskViewModel = {
