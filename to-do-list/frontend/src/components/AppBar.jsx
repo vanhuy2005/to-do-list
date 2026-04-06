@@ -5,12 +5,27 @@ import {
   SlidersHorizontalIcon,
   XIcon,
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
 export default function AppBar({ onSettingsClick }) {
+  const location = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
+  const pageTitle = () => {
+    switch (location.pathname) {
+      case "/profile":
+        return { pre: "HỒ SƠ", post: "CÁ NHÂN" };
+      case "/settings":
+        return { pre: "CÀI", post: "ĐẶT" };
+      default:
+        return { pre: "TO-DO", post: "APP" };
+    }
+  };
+
+  const title = pageTitle();
 
   const handleToggleSearch = () => {
     setIsSearchOpen((prev) => !prev);
@@ -31,11 +46,11 @@ export default function AppBar({ onSettingsClick }) {
             </div>
 
             <div className="inline-flex items-center gap-2">
-              <span className="text-[1.5rem] leading-none font-black tracking-tight">
-                TO-DO
+              <span className="text-[1.5rem] leading-none font-black tracking-tight uppercase">
+                {title.pre}
               </span>
-              <span className="rounded-md border-[3px] border-border bg-primary px-2 py-0.5 text-xl leading-none font-black text-primary-foreground comic-shadow">
-                APP
+              <span className="rounded-md border-[3px] border-border bg-primary px-2 py-0.5 text-xl leading-none font-black text-primary-foreground comic-shadow uppercase">
+                {title.post}
               </span>
             </div>
           </div>
@@ -55,14 +70,16 @@ export default function AppBar({ onSettingsClick }) {
             )}
 
             <Button
+              asChild
               type="button"
               size="icon-sm"
               variant="secondary"
-              onClick={onSettingsClick}
-              aria-label="Settings"
-              className="bg-secondary"
+              aria-label="Filter"
+              className="bg-[#00c2ff]"
             >
-              <SlidersHorizontalIcon className="size-4" />
+              <Link to="/filter">
+                <SlidersHorizontalIcon className="size-4" />
+              </Link>
             </Button>
           </div>
         </div>

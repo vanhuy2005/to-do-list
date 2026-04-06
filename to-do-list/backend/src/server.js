@@ -21,8 +21,7 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
 }
 
 const PORT = process.env.PORT || 5001;
-const AUTH_ENABLED = process.env.AUTH_ENABLED !== "false";
-const BYPASS_TASK_AUTH = process.env.BYPASS_TASK_AUTH === "true";
+
 
 const allowedOrigins = (
   process.env.CORS_ORIGIN || "http://localhost:3000,http://localhost:5173"
@@ -55,13 +54,7 @@ app.use("/api/v1/auth", authRouters);
 
 // Protected routes
 app.use("/api/v1/profile", authMiddleware, profileRouters);
-if (BYPASS_TASK_AUTH) {
-  app.use("/api/v1/tasks", tasksRouters);
-} else if (AUTH_ENABLED) {
-  app.use("/api/v1/tasks", authMiddleware, tasksRouters);
-} else {
-  app.use("/api/v1/tasks", tasksRouters);
-}
+app.use("/api/v1/tasks", authMiddleware, tasksRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
 
 connectDB()
