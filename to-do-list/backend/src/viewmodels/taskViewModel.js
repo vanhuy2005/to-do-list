@@ -1,4 +1,5 @@
 import Task from "../models/Task.js";
+import AuditLog from "../models/AuditLog.js";
 
 const REQUIRED_CREATE_FIELDS = ["title", "status"];
 const ALLOWED_SORT_FIELDS = [
@@ -55,6 +56,10 @@ const parseBooleanQuery = (value) => {
   return null;
 };
 
+const escapeRegExp = (value) => {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 const validateCreatePayload = (payload) => {
   const missingFields = REQUIRED_CREATE_FIELDS.filter(
     (field) => !payload[field],
@@ -85,6 +90,43 @@ const resolveOwnerId = (userId) => {
     );
   }
   return userId;
+};
+
+const buildTaskSummary = (task) => {
+  if (!task) {
+    return {};
+  }
+
+  return {
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate || null,
+    deletedAt: task.deletedAt || null,
+    updatedAt: task.updatedAt || null,
+  };
+};
+
+const writeTaskAuditLog = async ({
+  actorId,
+  action,
+  entityId,
+  summaryBefore = {},
+  summaryAfter = {},
+}) => {
+  try {
+    await AuditLog.create({
+      actorId,
+      targetId: actorId,
+      action,
+      entityType: "task",
+      entityId,
+      summaryBefore,
+      summaryAfter,
+    });
+  } catch (error) {
+    console.warn("Không thể ghi audit log task:", error.message);
+  }
 };
 
 const taskViewModel = {
@@ -134,7 +176,15 @@ const taskViewModel = {
     }
 
     if (search) {
-      filter.$text = { $search: search };
+      const normalizedSearch = String(search).trim();
+      if (normalizedSearch) {
+        const searchRegex = new RegExp(escapeRegExp(normalizedSearch), "i");
+        filter.$or = [
+          { title: searchRegex },
+          { description: searchRegex },
+          { tags: searchRegex },
+        ];
+      }
     }
 
     if (tag) {
@@ -251,6 +301,15 @@ const taskViewModel = {
       ...taskData,
       ownerId,
     });
+
+    await writeTaskAuditLog({
+      actorId: ownerId,
+      action: "task.created",
+      entityId: task._id,
+      summaryBefore: {},
+      summaryAfter: buildTaskSummary(task),
+    });
+
     return {
       statusCode: 201,
       success: true,
@@ -311,6 +370,15 @@ const taskViewModel = {
       updateData,
       { new: true },
     );
+
+    await writeTaskAuditLog({
+      actorId: ownerId,
+      action: "task.updated",
+      entityId: updatedTask._id,
+      summaryBefore: buildTaskSummary(existingTask),
+      summaryAfter: buildTaskSummary(updatedTask),
+    });
+
     return {
       statusCode: 200,
       success: true,
@@ -335,6 +403,18 @@ const taskViewModel = {
     if (!deletedTask) {
       throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
     }
+
+    await writeTaskAuditLog({
+      actorId: ownerId,
+      action: "task.deleted",
+      entityId: deletedTask._id,
+      summaryBefore: {
+        title: deletedTask.title,
+        status: deletedTask.status,
+        priority: deletedTask.priority,
+      },
+      summaryAfter: buildTaskSummary(deletedTask),
+    });
 
     return {
       statusCode: 200,
@@ -378,6 +458,18 @@ const taskViewModel = {
       { deletedAt: null, restoreUntil: null },
       { new: true },
     );
+
+    await writeTaskAuditLog({
+      actorId: ownerId,
+      action: "task.restored",
+      entityId: restoredTask._id,
+      summaryBefore: {
+        title: existingTask.title,
+        deletedAt: existingTask.deletedAt,
+        restoreUntil: existingTask.restoreUntil,
+      },
+      summaryAfter: buildTaskSummary(restoredTask),
+    });
 
     return {
       statusCode: 200,

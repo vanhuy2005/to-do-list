@@ -84,4 +84,19 @@ router.delete(
   })
 );
 
+
+router.get(
+  "/audit-logs",
+  errorHandler(async (req, res) => {
+    const result = await profileViewModel.getAuditLogs(
+      req.user?.id || req.userId,
+      req.query,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
 export default router;

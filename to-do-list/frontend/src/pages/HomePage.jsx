@@ -87,6 +87,7 @@ export default function HomePage() {
     const status = searchParams.get("status") || undefined;
     const priority = searchParams.get("priority") || undefined;
     const tag = searchParams.get("tag") || undefined;
+    const search = searchParams.get("search") || undefined;
 
     try {
       const payload = await taskService.getTasks({
@@ -97,6 +98,7 @@ export default function HomePage() {
         ...(status ? { status } : {}),
         ...(priority ? { priority } : {}),
         ...(tag ? { tag } : {}),
+        ...(search ? { search } : {}),
       });
       const normalizedTasks = getTasksFromPayload(payload);
       setTasks(normalizedTasks);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CalendarDaysIcon, Edit3Icon, Trash2Icon } from "lucide-react";
 
@@ -46,13 +46,45 @@ function DetailSkeleton() {
 /* ── page ────────────────────────────────────────────────── */
 export default function TaskDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
 
   const [task, setTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const auditLog = location.state?.auditLog || null;
+  const closeTo = location.state?.returnTo || searchParams.get("returnTo") || "/";
+  const openedFromAudit = auditLog || searchParams.get("from") === "audit";
+
+  const auditFallbackTask = auditLog
+    ? {
+        _id: auditLog.entityId || id,
+        title:
+          auditLog.summaryAfter?.title ||
+          auditLog.summaryBefore?.title ||
+          "Nhiệm vụ không có tiêu đề",
+        description:
+          auditLog.summaryAfter?.description ||
+          auditLog.summaryBefore?.description ||
+          "",
+        status:
+          auditLog.summaryAfter?.status ||
+          auditLog.summaryBefore?.status ||
+          "todo",
+        priority:
+          auditLog.summaryAfter?.priority ||
+          auditLog.summaryBefore?.priority ||
+          "medium",
+        dueDate:
+          auditLog.summaryAfter?.dueDate ||
+          auditLog.summaryBefore?.dueDate ||
+          null,
+        tags: auditLog.summaryAfter?.tags || auditLog.summaryBefore?.tags || [],
+      }
+    : null;
 
   const fetchTask = useCallback(async () => {
     setIsLoading(true);
@@ -66,6 +98,12 @@ export default function TaskDetailPage() {
         error?.response?.data?.error?.message ||
         error?.response?.data?.message ||
         "Không thể tải thông tin nhiệm vụ.";
+      if (auditFallbackTask) {
+        setTask(auditFallbackTask);
+        setErrorMessage("");
+        return;
+      }
+
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
@@ -96,13 +134,18 @@ export default function TaskDetailPage() {
   };
 
   const handleCloseDetail = () => {
-    navigate("/", { replace: true });
+    if (openedFromAudit) {
+      window.location.replace(closeTo);
+      return;
+    }
+
+    navigate(closeTo, { replace: true });
   };
 
   /* ── render states ─────────────────────────────────────── */
   if (isLoading) {
     return (
-      <TaskModalShell closeTo="/" forceCloseTo>
+      <TaskModalShell closeTo={closeTo} forceCloseTo>
         <section className="space-y-5 pb-6">
           <TaskModalTopBar
             title="Chi tiết công việc"
@@ -116,7 +159,7 @@ export default function TaskDetailPage() {
 
   if (errorMessage) {
     return (
-      <TaskModalShell closeTo="/" forceCloseTo>
+      <TaskModalShell closeTo={closeTo} forceCloseTo>
         <section className="space-y-5 pb-6">
           <TaskModalTopBar title="Lỗi" onClose={handleCloseDetail} />
           <div className="rounded-lg border-[3px] border-border bg-[#ffe4ec] p-4 comic-shadow">
@@ -144,9 +187,10 @@ export default function TaskDetailPage() {
     : false;
   const statusVal = task.status || "todo";
   const priorityVal = task.priority || "medium";
+  const isAuditFallback = !!auditLog;
 
   return (
-    <TaskModalShell closeTo="/" forceCloseTo bodyClassName="pb-0">
+    <TaskModalShell closeTo={closeTo} forceCloseTo bodyClassName="pb-0">
       <section className="space-y-5 pb-0">
         <TaskModalTopBar
           title="Chi tiết công việc"
@@ -229,26 +273,39 @@ export default function TaskDetailPage() {
         )}
 
         {/* Footer actions */}
-        <div className="-mx-4 grid grid-cols-2 gap-2 border-t-[3px] border-border bg-[#fff3bf] p-4">
-          <Button
-            type="button"
-            variant="secondary"
-            className="gap-2 font-bold uppercase"
-            onClick={() => navigate(`/tasks/${id}/edit`)}
-          >
-            <Edit3Icon className="size-4" />
-            Sửa
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            className="gap-2 bg-destructive font-bold uppercase text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => setIsDeleteOpen(true)}
-          >
-            <Trash2Icon className="size-4" />
-            Xóa công việc
-          </Button>
-        </div>
+        {!isAuditFallback ? (
+          <div className="-mx-4 grid grid-cols-2 gap-2 border-t-[3px] border-border bg-[#fff3bf] p-4">
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2 font-bold uppercase"
+              onClick={() => navigate(`/tasks/${id}/edit`) }
+            >
+              <Edit3Icon className="size-4" />
+              Sửa
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              className="gap-2 bg-destructive font-bold uppercase text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => setIsDeleteOpen(true)}
+            >
+              <Trash2Icon className="size-4" />
+              Xóa công việc
+            </Button>
+          </div>
+        ) : (
+          <div className="-mx-4 border-t-[3px] border-border bg-[#fff3bf] p-4">
+            <div className="rounded-xl border-[3px] border-border bg-card p-3 comic-shadow">
+              <p className="text-sm font-black uppercase">
+                Đây là dữ liệu từ lịch sử hoạt động.
+              </p>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">
+                Task gốc có thể đã bị xóa, nên chỉ hiển thị thông tin audit log.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Delete Dialog */}
         <DeleteConfirmDialog
