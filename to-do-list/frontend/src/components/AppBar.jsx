@@ -24,7 +24,7 @@ const STATUS_LABELS = {
 
 const PRIORITY_LABELS = {
   low: "Thấp",
-  medium: "Trung bình",
+  medium: "Vừa",
   high: "Cao",
 };
 
@@ -142,6 +142,40 @@ export default function AppBar() {
     updateSearchQuery("");
   };
 
+  const navigateWithCurrentPath = (params) => {
+    const nextSearch = params.toString();
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  };
+
+  const handleRemoveFilterByKey = (key) => {
+    const params = new URLSearchParams(location.search);
+    params.delete(key);
+    navigateWithCurrentPath(params);
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    const params = new URLSearchParams(location.search);
+    const currentTags = normalizeTags(params.get("tag") || "");
+    const nextTags = currentTags.filter(
+      (tag) => tag.toLowerCase() !== tagToRemove.toLowerCase(),
+    );
+
+    if (nextTags.length > 0) {
+      params.set("tag", nextTags.join(","));
+    } else {
+      params.delete("tag");
+    }
+
+    navigateWithCurrentPath(params);
+  };
+
   return (
     <header className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-4 py-2.5 comic-shadow">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
@@ -193,24 +227,60 @@ export default function AppBar() {
         {hasActiveFilterChips && (
           <div className="-mt-0.5 flex flex-wrap items-center gap-1.5">
             {activeFilters.status && (
-              <Badge className="h-7 rounded-full bg-[#ff3b57] px-3 text-xs font-black uppercase tracking-wide text-white">
-                {activeFilters.status.label}
+              <Badge className="h-7 max-w-38 rounded-full bg-[#ff3b57] pr-1 pl-3 text-xs font-black uppercase tracking-wide text-white">
+                <span className="truncate">{activeFilters.status.label}</span>
+                <button
+                  type="button"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 text-foreground hover:bg-black/5"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleRemoveFilterByKey("status");
+                  }}
+                  aria-label="Xóa lọc trạng thái"
+                >
+                  <XIcon className="size-3" />
+                </button>
               </Badge>
             )}
 
             {activeFilters.priority && (
-              <Badge className="h-7 rounded-full bg-[#00c2ff] px-3 text-xs font-black uppercase tracking-wide text-foreground">
-                {activeFilters.priority.label}
+              <Badge className="h-7 max-w-38 rounded-full bg-[#00c2ff] pr-1 pl-3 text-xs font-black uppercase tracking-wide text-foreground">
+                <span className="truncate">{activeFilters.priority.label}</span>
+                <button
+                  type="button"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleRemoveFilterByKey("priority");
+                  }}
+                  aria-label="Xóa lọc ưu tiên"
+                >
+                  <XIcon className="size-3" />
+                </button>
               </Badge>
             )}
 
             {compactTags.map((tag, index) => (
               <Badge
                 key={`${tag.toLowerCase()}-${index}`}
-                className="h-7 max-w-34 rounded-full bg-card px-3 text-xs font-black uppercase tracking-wide text-foreground"
+                className="h-7 max-w-38 rounded-full bg-card pr-1 pl-3 text-xs font-black uppercase tracking-wide text-foreground"
                 title={`#${tag}`}
               >
                 <span className="truncate">#{tag}</span>
+                <button
+                  type="button"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleRemoveTag(tag);
+                  }}
+                  aria-label={`Xóa tag ${tag}`}
+                >
+                  <XIcon className="size-3" />
+                </button>
               </Badge>
             ))}
 
@@ -234,10 +304,22 @@ export default function AppBar() {
                     {activeFilters.tags.map((tag, index) => (
                       <Badge
                         key={`${tag.toLowerCase()}-expanded-${index}`}
-                        className="h-7 min-w-0 max-w-full basis-[calc((100%-0.75rem)/3)] rounded-full bg-card px-2 text-[11px] font-black uppercase tracking-wide text-foreground"
+                        className="h-7 min-w-0 max-w-full basis-[calc((100%-0.75rem)/3)] rounded-full bg-card pr-1 pl-2 text-[11px] font-black uppercase tracking-wide text-foreground"
                         title={`#${tag}`}
                       >
                         <span className="truncate">#{tag}</span>
+                        <button
+                          type="button"
+                          className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleRemoveTag(tag);
+                          }}
+                          aria-label={`Xóa tag ${tag}`}
+                        >
+                          <XIcon className="size-3" />
+                        </button>
                       </Badge>
                     ))}
                   </div>

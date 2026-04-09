@@ -22,7 +22,7 @@ const STATUS_OPTIONS = [
 
 const PRIORITY_OPTIONS = [
   { value: "low", label: "Thấp" },
-  { value: "medium", label: "Trung bình" },
+  { value: "medium", label: "Vừa" },
   { value: "high", label: "Cao" },
 ];
 

@@ -35,7 +35,7 @@ import { taskSchema, taskDefaultValues } from "@/lib/taskSchema";
 import taskService from "@/services/taskService";
 
 const statusOptions = [
-  { value: "todo", label: "Chờ làm" },
+  { value: "todo", label: "Cần làm" },
   { value: "doing", label: "Đang làm" },
   { value: "done", label: "Hoàn thành" },
 ];
