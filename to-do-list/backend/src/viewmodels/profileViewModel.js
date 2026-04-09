@@ -213,7 +213,7 @@ const profileViewModel = {
       );
     }
 
-    const { page = 1, limit = 20 } = query;
+    const { page = 1, limit = 20, search } = query;
     const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const normalizedLimit = Math.min(
       100,
@@ -225,6 +225,14 @@ const profileViewModel = {
       actorId: userId,
       entityType: "task",
     };
+
+    if (search && typeof search === "string") {
+      const searchRegex = new RegExp(search, "i");
+      filter.$or = [
+        { "summaryAfter.title": searchRegex },
+        { "summaryBefore.title": searchRegex }
+      ];
+    }
 
     const [logs, total] = await Promise.all([
       AuditLog.find(filter)
