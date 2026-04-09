@@ -10,10 +10,10 @@ export default function MainLayout() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col min-h-screen h-dvh bg-background text-foreground">
       <AppBar />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 overflow-auto p-4 pb-6">
+      <main className="mx-auto w-full max-w-3xl flex-1 overflow-auto p-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] min-h-0">
         {isTaskModalRoute ? (
           <>
             <HomePage />

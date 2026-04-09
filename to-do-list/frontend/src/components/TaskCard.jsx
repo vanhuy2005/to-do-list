@@ -84,7 +84,7 @@ export default function TaskCard({
         </Button>
       </div>
 
-      <h3 className="line-clamp-2 text-[1.65rem] leading-[1.06] font-black uppercase">
+      <h3 className="line-clamp-2 text-[1.65rem] leading-[1.3] font-black uppercase">
         {task?.title || "Nhiệm vụ chưa có tiêu đề"}
       </h3>
 

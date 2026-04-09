@@ -28,12 +28,6 @@ const actionShortLabelMap = {
   "task.deleted": "XÓA",
 };
 
-const actionToneMap = {
-  "task.created": "bg-[#d9f99d] text-foreground",
-  "task.updated": "bg-[#00c2ff] text-white",
-  "task.deleted": "bg-[#ff3b57] text-white",
-};
-
 const actionMarkerToneMap = {
   "task.created": "bg-[#ffd400] text-foreground",
   "task.updated": "bg-[#00c2ff] text-foreground",
@@ -46,16 +40,17 @@ const actionIconMap = {
   "task.deleted": Trash2Icon,
 };
 
-const formatDateTime = (value) => {
-  if (!value) {
-    return "Không rõ thời gian";
-  }
+const statusLabelMap = {
+  todo: "Cần làm",
+  doing: "Đang làm",
+  done: "Hoàn thành",
+  canceled: "Đã hủy",
+};
 
-  try {
-    return new Date(value).toLocaleString("vi-VN");
-  } catch {
-    return "Không rõ thời gian";
-  }
+const priorityLabelMap = {
+  low: "Thấp",
+  medium: "Vừa",
+  high: "Cao",
 };
 
 const formatClock = (value) => {
@@ -98,11 +93,11 @@ const getDayLabel = (dayKey, firstLogDate) => {
   const yesterdayKey = formatDayKey(yesterday);
 
   if (dayKey === todayKey) {
-    return "HÔM NAY (TODAY)";
+    return "HÔM NAY";
   }
 
   if (dayKey === yesterdayKey) {
-    return "HÔM QUA (YESTERDAY)";
+    return "HÔM QUA";
   }
 
   return firstLogDate.toLocaleDateString("vi-VN", {
@@ -213,11 +208,11 @@ export default function ActivitiesPage() {
   const totalLogs = useMemo(() => logs.length, [logs]);
 
   return (
-    <section className="space-y-6 pb-4">
+    <section className="space-y-6 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <div className="rounded-[1.6rem] border-[3px] border-border bg-[#fffaf0] px-4 py-4 comic-shadow">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[0.75rem] font-black uppercase tracking-[0.35em] text-muted-foreground">
+            <p className="text-[0.75rem] font-black uppercase tracking-[0.08em] md:tracking-[0.15em] text-muted-foreground">
               Dòng thời gian
             </p>
             <h2 className="mt-1 text-2xl leading-none font-black uppercase">
@@ -225,7 +220,12 @@ export default function ActivitiesPage() {
             </h2>
           </div>
 
-          <Button type="button" variant="secondary" size="xs" onClick={fetchLogs}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={fetchLogs}
+          >
             <RefreshCcwIcon className="size-3.5" />
             Làm mới
           </Button>
@@ -260,7 +260,12 @@ export default function ActivitiesPage() {
           {groupedLogs.map((group) => (
             <div key={group.dayKey} className="space-y-4">
               <div className="inline-flex max-w-full rounded-[1.1rem] border-[3px] border-border bg-card px-4 py-2 comic-shadow">
-                <span className={cn("rounded-lg border-[3px] border-border px-4 py-2 text-sm font-black uppercase tracking-wide", group.tone)}>
+                <span
+                  className={cn(
+                    "rounded-lg border-[3px] border-border px-4 py-2 text-sm font-black uppercase tracking-normal md:tracking-wide",
+                    group.tone,
+                  )}
+                >
                   {group.label}
                 </span>
               </div>
@@ -274,18 +279,33 @@ export default function ActivitiesPage() {
                       actionLabelMap[log?.action] || log?.action || "Hành động";
                     const actionShortLabel =
                       actionShortLabelMap[log?.action] || "LOG";
-                    const actionTone =
-                      actionToneMap[log?.action] || "bg-card text-foreground";
                     const actionMarkerTone =
-                      actionMarkerToneMap[log?.action] || "bg-[#ffd400] text-foreground";
+                      actionMarkerToneMap[log?.action] ||
+                      "bg-[#ffd400] text-foreground";
                     const taskTitle = resolveTaskTitle(log);
+                    const statusValue = String(
+                      log?.summaryAfter?.status ||
+                        log?.summaryBefore?.status ||
+                        "",
+                    ).toLowerCase();
+                    const priorityValue = String(
+                      log?.summaryAfter?.priority ||
+                        log?.summaryBefore?.priority ||
+                        "medium",
+                    ).toLowerCase();
+                    const statusLabel =
+                      statusLabelMap[statusValue] ||
+                      (statusValue ? statusValue : "");
+                    const priorityLabel =
+                      priorityLabelMap[priorityValue] || priorityValue;
                     const actionDetail =
-                      log?.summaryAfter?.status || log?.summaryBefore?.status
-                        ? `${String(log?.summaryAfter?.status || log?.summaryBefore?.status).toUpperCase()} · ${String(
-                            log?.summaryAfter?.priority || log?.summaryBefore?.priority || "medium",
-                          ).toUpperCase()}`
-                        : "CẬP NHẬT NHANH";
-                    const ActionIcon = actionIconMap[log?.action] || CheckCircle2Icon;
+                      statusLabel || priorityLabel
+                        ? [statusLabel, priorityLabel]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : "Cập nhật nhanh";
+                    const ActionIcon =
+                      actionIconMap[log?.action] || CheckCircle2Icon;
 
                     return (
                       <div
@@ -300,10 +320,15 @@ export default function ActivitiesPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className={cn("rounded-xl border-[3px] border-border px-3 py-1 text-[0.75rem] font-black uppercase tracking-wide", actionMarkerTone)}>
+                                <span
+                                  className={cn(
+                                    "rounded-xl border-[3px] border-border px-3 py-1 text-[0.75rem] font-black uppercase tracking-normal md:tracking-wide",
+                                    actionMarkerTone,
+                                  )}
+                                >
                                   {actionShortLabel}
                                 </span>
-                                <span className="rounded-full border-[3px] border-border bg-[#1f1f1f] px-3 py-1 text-[0.72rem] font-black uppercase tracking-wide text-white">
+                                <span className="rounded-full border-[3px] border-border bg-[#1f1f1f] px-3 py-1 text-[0.72rem] font-black uppercase tracking-normal md:tracking-wide text-white">
                                   {formatClock(log?.createdAt)}
                                 </span>
                               </div>
@@ -345,11 +370,11 @@ export default function ActivitiesPage() {
                                 Xem chi tiết
                               </Button>
 
-                              <div className="flex items-center gap-2 text-[0.7rem] font-black uppercase tracking-[0.28em] text-muted-foreground">
+                              <div className="flex items-center gap-2 text-[0.7rem] font-black uppercase tracking-[0.08em] md:tracking-[0.15em] text-muted-foreground">
                                 <span className="rounded-full border-[3px] border-border bg-[#ffe4ec] px-3 py-1 text-foreground">
                                   {actionLabel}
                                 </span>
-                                <span>Audit log</span>
+                                <span>Nhật ký</span>
                               </div>
                             </div>
                           </div>
