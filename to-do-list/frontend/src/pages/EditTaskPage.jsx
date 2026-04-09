@@ -27,19 +27,24 @@ import {
 import TaskModalShell from "@/components/TaskModalShell";
 import TaskModalTopBar from "@/components/TaskModalTopBar";
 import { cn } from "@/lib/utils";
+import {
+  taskModalFooterClass,
+  taskOptionButtonClass,
+  taskOptionGridClass,
+} from "@/lib/taskModalDesignSystem";
 import { taskSchema } from "@/lib/taskSchema";
 import taskService from "@/services/taskService";
 
 const statusOptions = [
-  { value: "todo", label: "Chờ làm", color: "bg-[#ffe4ec] text-foreground" },
-  { value: "doing", label: "Đang làm", color: "bg-secondary text-foreground" },
-  { value: "done", label: "Hoàn thành", color: "bg-[#d9f99d] text-foreground" },
+  { value: "todo", label: "Cần làm" },
+  { value: "doing", label: "Đang làm" },
+  { value: "done", label: "Hoàn thành" },
 ];
 
 const priorityOptions = [
-  { value: "low", label: "Thấp", color: "bg-card text-foreground" },
-  { value: "medium", label: "Vừa", color: "bg-[#ffd400] text-foreground" },
-  { value: "high", label: "Cao", color: "bg-primary text-primary-foreground" },
+  { value: "low", label: "Thấp" },
+  { value: "medium", label: "Vừa" },
+  { value: "high", label: "Cao" },
 ];
 
 function FieldLabel({ children, required }) {
@@ -237,22 +242,19 @@ export default function EditTaskPage() {
               <FieldError message={errors.description?.message} />
             </div>
 
-            {/* Status + Priority row */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Status */}
+            {/* Status + Priority */}
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <FieldLabel>Trạng thái</FieldLabel>
-                <div className="flex flex-wrap gap-1.5">
+                <div className={taskOptionGridClass}>
                   {statusOptions.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => setValue("status", opt.value)}
                       className={cn(
-                        "h-8 rounded-md border-[3px] border-border px-2.5 text-xs font-bold uppercase transition-all",
-                        watchedStatus === opt.value
-                          ? cn(opt.color, "comic-shadow scale-105")
-                          : "bg-card text-muted-foreground opacity-60 hover:opacity-80",
+                        taskOptionButtonClass(watchedStatus === opt.value),
+                        "text-[0.78rem] sm:text-xs",
                       )}
                     >
                       {opt.label}
@@ -261,20 +263,16 @@ export default function EditTaskPage() {
                 </div>
               </div>
 
-              {/* Priority */}
               <div className="space-y-1.5">
                 <FieldLabel>Độ ưu tiên</FieldLabel>
-                <div className="flex flex-wrap gap-1.5">
+                <div className={taskOptionGridClass}>
                   {priorityOptions.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => setValue("priority", opt.value)}
-                      className={cn(
-                        "h-8 rounded-md border-[3px] border-border px-2.5 text-xs font-bold uppercase transition-all",
-                        watchedPriority === opt.value
-                          ? cn(opt.color, "comic-shadow scale-105")
-                          : "bg-card text-muted-foreground opacity-60 hover:opacity-80",
+                      className={taskOptionButtonClass(
+                        watchedPriority === opt.value,
                       )}
                     >
                       {opt.label}
@@ -369,23 +367,25 @@ export default function EditTaskPage() {
             </div>
 
             {/* Submit */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full gap-2 bg-primary py-6 text-lg font-black uppercase"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2Icon className="size-5 animate-spin" />
-                  Đang cập nhật...
-                </>
-              ) : (
-                <>
-                  <ZapIcon className="size-5" />
-                  Cập nhật ngay!
-                </>
-              )}
-            </Button>
+            <div className={cn("-mx-4 -mb-6", taskModalFooterClass)}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full gap-2 bg-primary py-6 text-lg font-black uppercase"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2Icon className="size-5 animate-spin" />
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  <>
+                    <ZapIcon className="size-5" />
+                    Cập nhật ngay!
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         )}
       </section>
