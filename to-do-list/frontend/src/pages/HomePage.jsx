@@ -159,7 +159,7 @@ export default function HomePage() {
   };
 
   return (
-    <section className="space-y-4 pb-2">
+    <section className="space-y-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <StatusCounter
         todo={counters.todo}
         doing={counters.doing}

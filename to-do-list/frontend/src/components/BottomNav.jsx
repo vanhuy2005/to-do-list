@@ -1,4 +1,10 @@
-import { ActivityIcon, HouseIcon, PlusIcon, SettingsIcon, UserRoundIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  HouseIcon,
+  PlusIcon,
+  SettingsIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
@@ -14,8 +20,10 @@ export default function BottomNav({ fixed = true }) {
   return (
     <footer
       className={cn(
-        "border-t-[3px] border-border bg-background px-2 py-2",
-        fixed ? "fixed inset-x-0 bottom-0 z-20" : "relative rounded-lg border-[3px]"
+        "border-t-[3px] border-border bg-background px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]",
+        fixed
+          ? "fixed inset-x-0 bottom-0 z-20"
+          : "relative rounded-lg border-[3px]",
       )}
     >
       <nav className="relative mx-auto grid w-full max-w-3xl grid-cols-5 items-end gap-1">
@@ -29,7 +37,7 @@ export default function BottomNav({ fixed = true }) {
               className={({ isActive }) =>
                 cn(
                   "flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[10px] leading-none font-bold tracking-normal",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground",
                 )
               }
             >
@@ -59,7 +67,7 @@ export default function BottomNav({ fixed = true }) {
               className={({ isActive }) =>
                 cn(
                   "flex flex-col items-center gap-1 rounded-md px-1 py-1 text-[10px] leading-none font-bold tracking-normal",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground",
                 )
               }
             >

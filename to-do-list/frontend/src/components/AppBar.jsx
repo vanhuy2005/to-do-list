@@ -30,7 +30,7 @@ export default function AppBar({ onSettingsClick }) {
       case "/settings":
         return { pre: "CÀI", post: "ĐẶT" };
       case "/activities":
-        return { pre: "HOẠT", post: "ĐỘNG" };
+        return { pre: "NHẬT KÍ", post: "HOẠT ĐỘNG" };
       default:
         return { pre: "TO-DO", post: "APP" };
     }
@@ -53,9 +53,16 @@ export default function AppBar({ onSettingsClick }) {
     }
 
     const nextSearch = params.toString();
+    
+    let targetPath = location.pathname;
+    // Logically redirect to HomePage if searching from unsupported pages (Profile, Settings)
+    if (targetPath !== "/" && targetPath !== "/activities") {
+      targetPath = "/";
+    }
+
     navigate(
       {
-        pathname: location.pathname,
+        pathname: targetPath,
         search: nextSearch ? `?${nextSearch}` : "",
       },
       { replace: true },

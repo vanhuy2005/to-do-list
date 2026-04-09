@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   CheckCircle2Icon,
-  HistoryIcon,
-  RefreshCcwIcon,
   SparklesIcon,
   SquarePenIcon,
   Trash2Icon,
@@ -14,7 +12,7 @@ import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const actionLabelMap = {
   "task.created": "Tạo công việc",
@@ -22,17 +20,7 @@ const actionLabelMap = {
   "task.deleted": "Xóa công việc",
 };
 
-const actionShortLabelMap = {
-  "task.created": "THÊM",
-  "task.updated": "SỬA",
-  "task.deleted": "XÓA",
-};
-
-const actionToneMap = {
-  "task.created": "bg-[#d9f99d] text-foreground",
-  "task.updated": "bg-[#00c2ff] text-white",
-  "task.deleted": "bg-[#ff3b57] text-white",
-};
+const actionShortLabelMap = {}; // Removed usage in UI
 
 const actionMarkerToneMap = {
   "task.created": "bg-[#ffd400] text-foreground",
@@ -46,16 +34,17 @@ const actionIconMap = {
   "task.deleted": Trash2Icon,
 };
 
-const formatDateTime = (value) => {
-  if (!value) {
-    return "Không rõ thời gian";
-  }
+const statusLabelMap = {
+  todo: "Cần làm",
+  doing: "Đang làm",
+  done: "Hoàn thành",
+  canceled: "Đã hủy",
+};
 
-  try {
-    return new Date(value).toLocaleString("vi-VN");
-  } catch {
-    return "Không rõ thời gian";
-  }
+const priorityLabelMap = {
+  low: "Thấp",
+  medium: "Vừa",
+  high: "Cao",
 };
 
 const formatClock = (value) => {
@@ -98,11 +87,11 @@ const getDayLabel = (dayKey, firstLogDate) => {
   const yesterdayKey = formatDayKey(yesterday);
 
   if (dayKey === todayKey) {
-    return "HÔM NAY (TODAY)";
+    return "HÔM NAY";
   }
 
   if (dayKey === yesterdayKey) {
-    return "HÔM QUA (YESTERDAY)";
+    return "HÔM QUA";
   }
 
   return firstLogDate.toLocaleDateString("vi-VN", {
@@ -149,19 +138,24 @@ function ActivitiesSkeleton() {
 
 export default function ActivitiesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
+      const searchParams = new URLSearchParams(location.search);
+      const search = searchParams.get("search") || undefined;
+
       const payload = await api.get("/profile/audit-logs", {
         params: {
           page: 1,
           limit: 30,
+          ...(search ? { search } : {}),
         },
       });
 
@@ -178,11 +172,11 @@ export default function ActivitiesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [location.search]);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [fetchLogs]);
 
   const groupedLogs = useMemo(() => {
     const groups = new Map();
@@ -213,32 +207,8 @@ export default function ActivitiesPage() {
   const totalLogs = useMemo(() => logs.length, [logs]);
 
   return (
-    <section className="space-y-6 pb-4">
-      <div className="rounded-[1.6rem] border-[3px] border-border bg-[#fffaf0] px-4 py-4 comic-shadow">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[0.75rem] font-black uppercase tracking-[0.35em] text-muted-foreground">
-              Dòng thời gian
-            </p>
-            <h2 className="mt-1 text-2xl leading-none font-black uppercase">
-              Hoạt động gần đây
-            </h2>
-          </div>
-
-          <Button type="button" variant="secondary" size="xs" onClick={fetchLogs}>
-            <RefreshCcwIcon className="size-3.5" />
-            Làm mới
-          </Button>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 text-sm font-black uppercase">
-          <span className="inline-flex size-8 items-center justify-center rounded-lg border-[3px] border-border bg-[#ffd400] comic-shadow">
-            <HistoryIcon className="size-4" />
-          </span>
-          <span className="text-muted-foreground">Tổng hoạt động</span>
-          <span className="ml-auto text-xl text-foreground">{totalLogs}</span>
-        </div>
-      </div>
+    <section className="space-y-6 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      {/* Recent Activity summary card removed as requested */}
 
       {isLoading && <ActivitiesSkeleton />}
 
@@ -260,98 +230,127 @@ export default function ActivitiesPage() {
           {groupedLogs.map((group) => (
             <div key={group.dayKey} className="space-y-4">
               <div className="inline-flex max-w-full rounded-[1.1rem] border-[3px] border-border bg-card px-4 py-2 comic-shadow">
-                <span className={cn("rounded-lg border-[3px] border-border px-4 py-2 text-sm font-black uppercase tracking-wide", group.tone)}>
+                <span
+                  className={cn(
+                    "rounded-lg border-[3px] border-border px-4 py-2 text-sm font-black uppercase tracking-normal md:tracking-wide",
+                    group.tone,
+                  )}
+                >
                   {group.label}
                 </span>
               </div>
 
-              <div className="relative pl-12">
-                <div className="absolute left-5 top-0 h-full w-1 rounded-full bg-border" />
+              <div className="relative pl-8">
+                <div className="absolute left-3 top-0 h-full w-1 rounded-full bg-border" />
 
                 <div className="space-y-4">
                   {group.items.map((log) => {
                     const actionLabel =
                       actionLabelMap[log?.action] || log?.action || "Hành động";
-                    const actionShortLabel =
-                      actionShortLabelMap[log?.action] || "LOG";
-                    const actionTone =
-                      actionToneMap[log?.action] || "bg-card text-foreground";
                     const actionMarkerTone =
-                      actionMarkerToneMap[log?.action] || "bg-[#ffd400] text-foreground";
+                      actionMarkerToneMap[log?.action] ||
+                      "bg-[#ffd400] text-foreground";
                     const taskTitle = resolveTaskTitle(log);
-                    const actionDetail =
-                      log?.summaryAfter?.status || log?.summaryBefore?.status
-                        ? `${String(log?.summaryAfter?.status || log?.summaryBefore?.status).toUpperCase()} · ${String(
-                            log?.summaryAfter?.priority || log?.summaryBefore?.priority || "medium",
-                          ).toUpperCase()}`
-                        : "CẬP NHẬT NHANH";
-                    const ActionIcon = actionIconMap[log?.action] || CheckCircle2Icon;
+                    
+                    const ActionIcon =
+                      actionIconMap[log?.action] || CheckCircle2Icon;
+
+                    // Compute "Sửa gì" details
+                    const getUpdateDetails = () => {
+                      if (log.action !== "task.updated") return null;
+                      const changes = [];
+                      const before = log.summaryBefore || {};
+                      const after = log.summaryAfter || {};
+
+                      if (before.title !== after.title && after.title) {
+                        changes.push(`đổi tên`);
+                      }
+                      if (before.status !== after.status && after.status) {
+                        const label = statusLabelMap[String(after.status).toLowerCase()] || after.status;
+                        changes.push(`sang "${label}"`);
+                      }
+                      if (before.priority !== after.priority && after.priority) {
+                        const label = priorityLabelMap[String(after.priority).toLowerCase()] || after.priority;
+                        changes.push(`ưu tiên "${label}"`);
+                      }
+                      return changes.length > 0 ? `(${changes.join(", ")})` : null;
+                    };
+
+                    const updateDetails = getUpdateDetails();
 
                     return (
                       <div
                         key={log?._id || `${log?.entityId}-${log?.createdAt}`}
                         className="relative"
                       >
-                        <div className="absolute left-[-2.45rem] top-6 z-10 flex size-10 items-center justify-center rounded-[1rem] border-[3px] border-border bg-[#ffd400] comic-shadow">
-                          <ActionIcon className="size-5 text-foreground" />
-                        </div>
-
-                        <article className="rounded-[1.4rem] border-[3px] border-border bg-card p-4 comic-shadow border-b-[7px]">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={cn("rounded-xl border-[3px] border-border px-3 py-1 text-[0.75rem] font-black uppercase tracking-wide", actionMarkerTone)}>
-                                  {actionShortLabel}
-                                </span>
-                                <span className="rounded-full border-[3px] border-border bg-[#1f1f1f] px-3 py-1 text-[0.72rem] font-black uppercase tracking-wide text-white">
-                                  {formatClock(log?.createdAt)}
-                                </span>
-                              </div>
-
-                              <p className="text-[1.15rem] leading-tight font-black uppercase tracking-tight">
-                                {taskTitle}
-                              </p>
-
-                              <p className="max-w-xl text-sm font-medium leading-6 text-muted-foreground">
-                                {actionLabel}
-                                {actionDetail ? ` · ${actionDetail}` : ""}
-                              </p>
+                        <article className="rounded-[2rem] border-[3px] border-border bg-card p-5 comic-shadow border-b-[8px] transition-transform active:scale-[0.98]">
+                          <div className="flex gap-4 md:gap-6">
+                            {/* Action Icon - Single instance on the left */}
+                            <div className={cn(
+                              "inline-flex size-14 shrink-0 items-center justify-center rounded-[1.2rem] border-[3px] border-border comic-shadow",
+                              actionMarkerTone
+                            )}>
+                              <ActionIcon className="size-7" />
                             </div>
 
-                            <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border-[3px] border-border bg-[#00c2ff] comic-shadow">
-                              <SparklesIcon className="size-5 text-foreground" />
-                            </div>
-                          </div>
+                            <div className="flex-1 min-w-0">
+                               <div className="relative pr-14">
+                                 {/* Time Sticker - Absolutely positioned to avoid all overlaps */}
+                                 <div className="absolute -top-1 -right-1 shrink-0 rounded-full border-[2px] border-border bg-[#121212] px-2 py-1 text-[0.6rem] font-black uppercase text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                                   {formatClock(log?.createdAt)}
+                                 </div>
+ 
+                                 <div className="flex flex-col gap-0.5">
+                                   {/* Level 1: Contextual Prefix */}
+                                   <div className="text-[0.6rem] font-black uppercase tracking-[0.1em] text-muted-foreground/30">
+                                     Bạn đã
+                                   </div>
+                                   
+                                   {/* Level 2: Action - Legible but secondary */}
+                                   <div className="flex flex-wrap items-center gap-2">
+                                     <span className="text-[0.85rem] font-black uppercase tracking-tight text-foreground/50">
+                                       {actionLabel}
+                                     </span>
+                                     {updateDetails && (
+                                       <span className="rounded bg-muted/20 px-1 py-0.5 text-[0.6rem] font-bold text-muted-foreground lowercase italic">
+                                         {updateDetails}
+                                       </span>
+                                     )}
+                                   </div>
+ 
+                                   {/* Level 3: Task Title - Primary Info */}
+                                   <h3 className="truncate text-lg font-black uppercase tracking-tight text-foreground">
+                                     {taskTitle}
+                                   </h3>
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
 
-                          <div className="mt-5 border-t-[3px] border-dashed border-border/20 pt-4">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="xs"
-                                onClick={() => {
-                                  if (!log?.entityId) {
-                                    return;
-                                  }
+                          <div className="mt-4 flex items-center justify-between border-t-[3px] border-dashed border-border/10 pt-3">
+                            <p className="text-[0.7rem] font-black uppercase text-muted-foreground/50">
+                              LOG #{log?._id?.slice(-4).toUpperCase()}
+                            </p>
 
-                                  navigate(
-                                    `/tasks/${log.entityId}?from=audit&returnTo=%2F`,
-                                    {
-                                      state: { auditLog: log },
-                                    },
-                                  );
-                                }}
-                              >
-                                Xem chi tiết
-                              </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="xs"
+                              onClick={() => {
+                                if (!log?.entityId) {
+                                  return;
+                                }
 
-                              <div className="flex items-center gap-2 text-[0.7rem] font-black uppercase tracking-[0.28em] text-muted-foreground">
-                                <span className="rounded-full border-[3px] border-border bg-[#ffe4ec] px-3 py-1 text-foreground">
-                                  {actionLabel}
-                                </span>
-                                <span>Audit log</span>
-                              </div>
-                            </div>
+                                navigate(
+                                  `/tasks/${log.entityId}?from=audit&returnTo=%2F`,
+                                  {
+                                    state: { auditLog: log },
+                                  },
+                                );
+                              }}
+                            >
+                              Xem chi tiết
+                            </Button>
                           </div>
                         </article>
                       </div>
