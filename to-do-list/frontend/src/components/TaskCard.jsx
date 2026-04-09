@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { CalendarDaysIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import CountdownBadge from "@/components/CountdownBadge";
 import { cn } from "@/lib/utils";
 
 const statusTone = {
@@ -33,22 +33,10 @@ const MAX_VISIBLE_TAGS = 2;
 
 export default function TaskCard({ task, onOpen }) {
   const [isTagExpanded, setIsTagExpanded] = useState(false);
-  const now = new Date();
-  const dueDate = task?.dueDate ? new Date(task.dueDate) : null;
   const tags = Array.isArray(task?.tags) ? task.tags.filter(Boolean) : [];
   const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
   const hiddenTagCount = Math.max(0, tags.length - visibleTags.length);
   const displayTags = isTagExpanded ? tags : visibleTags;
-
-  const isToday = dueDate
-    ? now.toDateString() === dueDate.toDateString()
-    : false;
-
-  const isOverdue = dueDate
-    ? !isToday && dueDate.getTime() < now.getTime()
-    : false;
-
-  const dueText = dueDate ? dueDate.toLocaleDateString("vi-VN") : "Chưa đặt";
 
   const statusValue = task?.status || "todo";
   const statusClassName = statusTone[statusValue] || statusTone.todo;
@@ -57,6 +45,8 @@ export default function TaskCard({ task, onOpen }) {
   const priorityClassName = priorityTone[priorityValue] || priorityTone.medium;
   const priorityText = priorityLabel[priorityValue] || priorityLabel.medium;
 
+  const isDone = statusValue === "done";
+
   return (
     <article className="space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow">
       <div className="flex items-start justify-between gap-3">
@@ -64,18 +54,10 @@ export default function TaskCard({ task, onOpen }) {
           {task?.title || "Nhiệm vụ chưa có tiêu đề"}
         </h3>
 
-        <div
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full border-[3px] border-border px-2.5 py-1 text-[0.68rem] font-black uppercase comic-shadow-sm",
-            isToday && "bg-[#ffe4ec] text-primary",
-            isOverdue && "bg-[#ff3b57] text-white",
-            !isToday && !isOverdue && "bg-[#fff8d6] text-foreground",
-            !dueDate && "bg-muted text-muted-foreground",
-          )}
-        >
-          <CalendarDaysIcon className="size-3.5" />
-          <span className="whitespace-nowrap">Hạn: {dueText}</span>
-        </div>
+        <CountdownBadge
+          dueDate={task?.dueDate || null}
+          isDone={isDone}
+        />
       </div>
 
       <div className="h-0 border-t-[3px] border-dashed border-border/20" />

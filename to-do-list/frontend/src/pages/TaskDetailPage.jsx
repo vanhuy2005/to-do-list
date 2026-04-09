@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDaysIcon, Edit3Icon, Trash2Icon } from "lucide-react";
+import { CalendarDaysIcon, ClockIcon, AlertTriangleIcon, Edit3Icon, Trash2Icon } from "lucide-react";
+
+import useCountdown from "@/hooks/useCountdown";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,87 @@ function DetailSkeleton() {
       </div>
       <Skeleton className="h-6 w-40 rounded-md" />
       <Skeleton className="h-32 w-full rounded-lg" />
+    </div>
+  );
+}
+
+/* ── due date detail component ───────────────────────────── */
+function DueDateDetail({ dueDate, status }) {
+  const countdown = useCountdown(dueDate);
+
+  if (!dueDate) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border-[3px] border-border bg-card px-3 py-2.5 comic-shadow">
+        <CalendarDaysIcon className="size-4 text-muted-foreground" />
+        <span className="text-xs font-extrabold uppercase text-muted-foreground">
+          Hạn chót công việc
+        </span>
+        <span className="ml-auto text-sm font-black text-muted-foreground">
+          Chưa đặt
+        </span>
+      </div>
+    );
+  }
+
+  const dateObj = new Date(dueDate);
+  const dateText = dateObj.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const timeText = dateObj.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const isDone = status === "done";
+
+  return (
+    <div className="space-y-2">
+      {/* Row 1: Exact date+time */}
+      <div className="flex items-center gap-2 rounded-lg border-[3px] border-border bg-card px-3 py-2.5 comic-shadow">
+        <CalendarDaysIcon className="size-4 text-muted-foreground" />
+        <span className="text-xs font-extrabold uppercase text-muted-foreground">
+          Hạn chót
+        </span>
+        <span className="ml-auto text-sm font-black">
+          {dateText} lúc {timeText}
+        </span>
+      </div>
+
+      {/* Row 2: Countdown / Overdue warning */}
+      {!isDone && countdown.label && (
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-lg border-[3px] border-border px-3 py-2.5 comic-shadow",
+            countdown.isOverdue
+              ? "bg-[#ff3b57]/10 border-[#ff3b57]"
+              : "bg-[#e8f5e9]",
+          )}
+        >
+          {countdown.isOverdue ? (
+            <AlertTriangleIcon className="size-4 text-[#ff3b57]" />
+          ) : (
+            <ClockIcon className="size-4 text-[#2e7d32]" />
+          )}
+          <span
+            className={cn(
+              "text-sm font-black uppercase",
+              countdown.isOverdue ? "text-[#ff3b57]" : "text-[#2e7d32]",
+            )}
+          >
+            {countdown.label}
+          </span>
+        </div>
+      )}
+
+      {isDone && (
+        <div className="flex items-center gap-2 rounded-lg border-[3px] border-border bg-[#d9f99d] px-3 py-2.5 comic-shadow">
+          <ClockIcon className="size-4 text-[#2e7d32]" />
+          <span className="text-sm font-black uppercase text-[#2e7d32]">
+            Đã hoàn thành ✓
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -182,11 +265,6 @@ export default function TaskDetailPage() {
 
   if (!task) return null;
 
-  const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-  const now = new Date();
-  const isToday = dueDate
-    ? now.toDateString() === dueDate.toDateString()
-    : false;
   const statusVal = task.status || "todo";
   const priorityVal = task.priority || "medium";
   const isAuditFallback = !!auditLog;
@@ -236,29 +314,8 @@ export default function TaskDetailPage() {
           </Badge>
         </div>
 
-        {/* Due Date */}
-        <div className="flex items-center gap-2 rounded-lg border-[3px] border-border bg-card px-3 py-2.5 comic-shadow">
-          <CalendarDaysIcon className="size-4 text-muted-foreground" />
-          <span className="text-xs font-extrabold uppercase text-muted-foreground">
-            Hạn chót công việc
-          </span>
-          <span
-            className={cn(
-              "ml-auto text-sm font-black",
-              isToday && "text-primary",
-            )}
-          >
-            {dueDate
-              ? isToday
-                ? "HÔM NAY!"
-                : dueDate.toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  })
-              : "Chưa đặt"}
-          </span>
-        </div>
+        {/* Due Date + Countdown */}
+        <DueDateDetail dueDate={task.dueDate} status={task.status} />
 
         {/* Description */}
         {task.description && (

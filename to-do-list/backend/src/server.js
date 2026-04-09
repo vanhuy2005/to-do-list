@@ -8,6 +8,7 @@ import adminRouters from "./routes/adminRouters.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import initCronJobs from "./cron/cronJobs.js";
 
 dotenv.config();
 
@@ -59,6 +60,8 @@ app.use("/api/v1/admin", authMiddleware, adminRouters);
 
 connectDB()
   .then(() => {
+    initCronJobs();
+
     app.listen(PORT, () => {
       console.log(`server listen port http://localhost:${PORT}`);
     });

@@ -102,6 +102,8 @@ const buildTaskSummary = (task) => {
     status: task.status,
     priority: task.priority,
     dueDate: task.dueDate || null,
+    isOverdue: task.isOverdue || false,
+    overdueAt: task.overdueAt || null,
     deletedAt: task.deletedAt || null,
     updatedAt: task.updatedAt || null,
   };
@@ -140,6 +142,7 @@ const taskViewModel = {
       dueDateFrom,
       dueDateTo,
       completed,
+      isOverdue,
       includeDeleted,
       page = 1,
       limit = 20,
@@ -236,6 +239,15 @@ const taskViewModel = {
 
     if (completedValue === false) {
       filter.completedAt = null;
+    }
+
+    // Filter theo isOverdue
+    const overdueValue = parseBooleanQuery(isOverdue);
+    if (overdueValue === true) {
+      filter.isOverdue = true;
+    }
+    if (overdueValue === false) {
+      filter.isOverdue = { $ne: true };
     }
 
     const [tasks, total] = await Promise.all([
@@ -352,7 +364,6 @@ const taskViewModel = {
       "tags",
       "dueDate",
       "orderIndex",
-      "explicitOverdue",
     ];
     const updateData = {};
     for (const field of allowedFields) {
@@ -361,8 +372,19 @@ const taskViewModel = {
 
     if (updateData.status === "done") {
       updateData.completedAt = new Date();
+      updateData.isOverdue = false;
+      updateData.overdueAt = null;
     } else if (updateData.status && updateData.status !== "done") {
       updateData.completedAt = null;
+    }
+
+    // Reset overdue khi user đổi dueDate sang tương lai
+    if (updateData.dueDate) {
+      const newDueDate = new Date(updateData.dueDate);
+      if (!Number.isNaN(newDueDate.getTime()) && newDueDate > new Date()) {
+        updateData.isOverdue = false;
+        updateData.overdueAt = null;
+      }
     }
 
     const updatedTask = await Task.findOneAndUpdate(
