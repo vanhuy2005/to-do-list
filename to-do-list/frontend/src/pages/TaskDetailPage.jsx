@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import TaskModalShell from "@/components/TaskModalShell";
 import TaskModalTopBar from "@/components/TaskModalTopBar";
 import { cn } from "@/lib/utils";
+import { taskModalFooterClass } from "@/lib/taskModalDesignSystem";
 import taskService from "@/services/taskService";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 
@@ -56,7 +57,8 @@ export default function TaskDetailPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const auditLog = location.state?.auditLog || null;
-  const closeTo = location.state?.returnTo || searchParams.get("returnTo") || "/";
+  const closeTo =
+    location.state?.returnTo || searchParams.get("returnTo") || "/";
   const openedFromAudit = auditLog || searchParams.get("from") === "audit";
 
   const auditFallbackTask = auditLog
@@ -274,12 +276,14 @@ export default function TaskDetailPage() {
 
         {/* Footer actions */}
         {!isAuditFallback ? (
-          <div className="-mx-4 grid grid-cols-2 gap-2 border-t-[3px] border-border bg-[#fff3bf] p-4">
+          <div
+            className={cn("-mx-4 grid grid-cols-2 gap-2", taskModalFooterClass)}
+          >
             <Button
               type="button"
               variant="secondary"
               className="gap-2 font-bold uppercase"
-              onClick={() => navigate(`/tasks/${id}/edit`) }
+              onClick={() => navigate(`/tasks/${id}/edit`)}
             >
               <Edit3Icon className="size-4" />
               Sửa
@@ -295,7 +299,7 @@ export default function TaskDetailPage() {
             </Button>
           </div>
         ) : (
-          <div className="-mx-4 border-t-[3px] border-border bg-[#fff3bf] p-4">
+          <div className={cn("-mx-4", taskModalFooterClass)}>
             <div className="rounded-xl border-[3px] border-border bg-card p-3 comic-shadow">
               <p className="text-sm font-black uppercase">
                 Đây là dữ liệu từ lịch sử hoạt động.

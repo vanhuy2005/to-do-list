@@ -5,6 +5,13 @@ import { PlusIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import {
+  taskModalFooterClass,
+  taskModalSurfaceClass,
+  taskOptionButtonClass,
+  taskOptionGridClass,
+} from "@/lib/taskModalDesignSystem";
 
 const STATUS_OPTIONS = [
   { value: "todo", label: "Chưa làm" },
@@ -66,15 +73,6 @@ export default function FilterPage() {
     setTags((current) => normalizeTags([...current, nextTag]));
   };
 
-  const handleTagKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      if (tags.length >= 8) return;
-      addTag(tagInput);
-      setTagInput("");
-    }
-  };
-
   const handleApply = () => {
     const params = new URLSearchParams();
 
@@ -105,7 +103,12 @@ export default function FilterPage() {
     // Fixed overlay with safe-area spacing and scrollable viewport on mobile.
     <div className="fixed inset-0 z-100 overflow-y-auto bg-black/40 backdrop-blur-sm">
       <div className="mx-auto flex min-h-dvh w-full max-w-md items-start justify-center p-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom)+5rem)] md:items-center md:pb-4">
-        <div className="relative w-full rounded-[2rem] border-[4px] border-border bg-[#fffaf0] comic-shadow-lg flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.75rem)] flex-col overflow-hidden">
+        <div
+          className={cn(
+            "relative w-full rounded-[2rem] border-[4px] border-border comic-shadow-lg flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.75rem)] flex-col overflow-hidden",
+            taskModalSurfaceClass,
+          )}
+        >
           {/* Modal Header */}
           <div className="flex items-center justify-between border-b-[4px] border-border bg-[#ffd400] px-5 py-4">
             <h1 className="text-[1.8rem] leading-none font-black uppercase tracking-tight text-foreground drop-shadow-[2px_2px_0_#ffffff]">
@@ -138,11 +141,10 @@ export default function FilterPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setSelectedStatus(option.value)}
-                      className={`h-12 rounded-[1rem] border-[3px] border-border text-sm font-black uppercase tracking-tight transition-all active:translate-y-[2px] active:shadow-none ${
-                        isActive
-                          ? "bg-[#ff3b57] text-white comic-shadow-sm border-b-[5px]"
-                          : "bg-white text-foreground comic-shadow-sm border-b-[5px] hover:bg-black/5"
-                      }`}
+                      className={cn(
+                        taskOptionButtonClass(isActive),
+                        "h-12 text-sm comic-shadow-sm",
+                      )}
                     >
                       {option.label}
                     </button>
@@ -157,7 +159,7 @@ export default function FilterPage() {
                 Độ ưu tiên
               </div>
 
-              <div className="flex overflow-hidden rounded-[1.2rem] border-[4px] border-border bg-white comic-shadow-sm">
+              <div className={taskOptionGridClass}>
                 {PRIORITY_OPTIONS.map((option) => {
                   const isActive = selectedPriority === option.value;
                   return (
@@ -165,11 +167,10 @@ export default function FilterPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setSelectedPriority(option.value)}
-                      className={`flex-1 py-3 text-sm font-black uppercase tracking-tight transition-colors border-r-[3px] last:border-r-0 border-border ${
-                        isActive
-                          ? "bg-[#ff3b57] text-white"
-                          : "bg-white text-foreground hover:bg-slate-50"
-                      }`}
+                      className={cn(
+                        taskOptionButtonClass(isActive),
+                        "text-[0.76rem] leading-none sm:text-xs",
+                      )}
                     >
                       {option.label}
                     </button>
@@ -273,7 +274,7 @@ export default function FilterPage() {
           </div>
 
           {/* Modal Footer */}
-          <div className="border-t-[4px] border-border bg-[#fffaf0] p-5">
+          <div className={cn(taskModalFooterClass, "border-t-[4px] p-5")}>
             <div className="flex gap-4">
               <button
                 type="button"
