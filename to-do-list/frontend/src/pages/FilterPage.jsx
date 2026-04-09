@@ -19,9 +19,11 @@ const PRIORITY_OPTIONS = [
   { value: "high", label: "Cao" },
 ];
 
+const MAX_TAG_LENGTH = 24;
+
 const normalizeTags = (values) =>
   values
-    .map((value) => value.trim())
+    .map((value) => value.trim().slice(0, MAX_TAG_LENGTH))
     .filter(Boolean)
     .filter(
       (value, index, array) =>
@@ -59,7 +61,7 @@ export default function FilterPage() {
   const [showTagInput, setShowTagInput] = useState(false);
 
   const addTag = (value) => {
-    const nextTag = value.trim();
+    const nextTag = value.trim().slice(0, MAX_TAG_LENGTH);
     if (!nextTag || tags.length >= 8) return;
     setTags((current) => normalizeTags([...current, nextTag]));
   };
@@ -178,7 +180,7 @@ export default function FilterPage() {
 
             {/* Tags Section */}
             <div className="space-y-4">
-              <div className="inline-flex origin-bottom-left -rotate-3 border-[3px] border-border bg-[#ff3b57] px-3 py-1.5 text-lg font-black uppercase tracking-tight text-white comic-shadow-sm">
+              <div className="inline-flex origin-bottom-left -rotate-3 border-[3px] border-border bg-[#ff3b57] px-3 py-1.5 text-lg font-black uppercase tracking-tight text-white comic-shadow-sm overflow-x-hidden">
                 Thẻ (tags)
               </div>
 
@@ -188,7 +190,7 @@ export default function FilterPage() {
                     key={tag}
                     className={`h-10 rounded-full border-[3px] border-border px-3.5 text-[0.8rem] font-black uppercase tracking-wider text-foreground hover:opacity-90 ${idx % 2 === 0 ? "bg-[#ffd400]" : "bg-[#00c2ff]"}`}
                   >
-                    #{tag}
+                    <span className="min-w-0 truncate">#{tag}</span>
                     <button
                       type="button"
                       className="ml-2 -mr-1 inline-flex items-center justify-center font-bold outline-none"
