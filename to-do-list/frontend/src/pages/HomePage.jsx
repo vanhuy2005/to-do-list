@@ -172,7 +172,7 @@ export default function HomePage() {
         </h2>
 
         <Button asChild variant="secondary" size="xs">
-          <Link to="/filter">Xem tất cả</Link>
+          <Link to={`/view-all${location.search}`}>Xem tất cả</Link>
         </Button>
       </div>
 
