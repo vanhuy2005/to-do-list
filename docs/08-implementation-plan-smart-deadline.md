@@ -23,7 +23,7 @@ Nâng cấp hệ thống hạn chót (deadline) cho To-Do List app — từ cale
 ### Các quyết định đã chốt (từ review):
 - ✅ **Cron interval**: Mỗi 1 phút
 - ✅ **Overdue = flag riêng**, tuyệt đối KHÔNG thêm vào enum status. Query kết hợp: `status !== 'done' && isOverdue === true`
-- ✅ **Presets**: 30m, 1h, 3h, 5h, 12h, Cuối ngày (23:59), Ngày mai 9h, Cuối tuần (T7 9h — smart label), Đầu tuần sau (T2 9h)
+- ✅ **Presets**: 30m, 1h, 3h, 5h, Chiều nay (17:00), Cuối ngày (23:59), Mai 9:00, Cuối tuần (T7 9:00 — smart label), Đầu tuần sau (T2 9:00)
 - ✅ **Timezone**: Browser timezone → Server UTC. Không cần picker timezone thủ công
 - ✅ **Notifications**: Defer sang Phase 2. `useCountdown` hook đã cover 80% trải nghiệm
 - ✅ **Cron không reset overdue** — logic reset nằm trong `updateTask` API
@@ -139,9 +139,9 @@ cron.schedule('* * * * *', async () => {
     await AuditLog.insertMany(auditDocs).catch(() => {});
   }
 
-  // NOTE: Không reset overdue ở đây.
-  // Logic reset isOverdue nằm trong updateTask API (taskViewModel.js)
-  // khi user cập nhật dueDate > now hoặc status = 'done'
+  // NOTE: KHÔNG reset overdue ở đây (Tối ưu theo Quyết định #6).
+  // Logic reset isOverdue được thực hiện TRỰC TIẾP trong `updateTask` API
+  // khi user cập nhật dueDate > now hoặc status = 'done'.
 });
 ```
 
@@ -205,16 +205,16 @@ Component mới thay thế cho Calendar popover hiện tại. Bao gồm 3 chế 
 │  ┌──────────┐  ┌──────────┐            │
 │  │  3 giờ   │  │  5 giờ   │            │
 │  └──────────┘  └──────────┘            │
-│  ┌──────────┐  ┌───────────────┐       │
-│  │  12 giờ  │  │ Cuối ngày     │       │
-│  └──────────┘  │ (23:59)       │       │
-│                └───────────────┘       │
 │  ┌──────────────┐ ┌────────────────┐   │
-│  │ Ngày mai 9h  │ │ Cuối tuần*     │   │
-│  └──────────────┘ │ (T7 9h)       │   │
+│  │ Chiều nay    │ │ Cuối ngày      │   │
+│  │ (17:00)      │ │ (23:59)        │   │
+│  └──────────────┘ └────────────────┘   │
+│  ┌──────────────┐ ┌────────────────┐   │
+│  │ Mai 9:00     │ │ Cuối tuần      │   │
+│  └──────────────┘ │ (smart label)  │   │
 │                    └────────────────┘   │
 │  ┌──────────────────────────┐          │
-│  │  Đầu tuần sau (T2 9h)   │          │
+│  │      Đầu tuần sau        │          │
 │  └──────────────────────────┘          │
 │                                         │
 │  * Nếu hôm nay T7/CN → "Cuối tuần sau"│
