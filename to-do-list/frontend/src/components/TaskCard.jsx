@@ -1,4 +1,4 @@
-import { CalendarDaysIcon, MoreHorizontalIcon } from "lucide-react";
+import { CalendarDaysIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,11 +34,7 @@ const priorityLabel = {
   high: "Cao",
 };
 
-export default function TaskCard({
-  task,
-  onOpen,
-  onAction,
-}) {
+export default function TaskCard({ task, onOpen }) {
   const now = new Date();
   const dueDate = task?.dueDate ? new Date(task.dueDate) : null;
 
@@ -52,7 +48,8 @@ export default function TaskCard({
       : `HẠN CHÓT: ${dueDate.toLocaleDateString("vi-VN")}`
     : "HẠN CHÓT: CHƯA ĐẶT";
 
-  const detailClassName = detailTone[task?.priority || "medium"] || detailTone.medium;
+  const detailClassName =
+    detailTone[task?.priority || "medium"] || detailTone.medium;
   const statusValue = task?.status || "todo";
   const statusClassName = statusTone[statusValue] || statusTone.todo;
   const statusText = statusLabel[statusValue] || statusLabel.todo;
@@ -62,26 +59,18 @@ export default function TaskCard({
 
   return (
     <article className="space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={cn("h-7 px-3 text-xs uppercase", statusClassName)}>
             {statusText}
           </Badge>
 
-          <Badge className={cn("h-7 px-3 text-xs uppercase", priorityClassName)}>
+          <Badge
+            className={cn("h-7 px-3 text-xs uppercase", priorityClassName)}
+          >
             Ưu tiên: {priorityText}
           </Badge>
         </div>
-
-        <Button
-          type="button"
-          size="icon-xs"
-          variant="secondary"
-          onClick={() => onAction?.(task)}
-          aria-label="Mở tác vụ"
-        >
-          <MoreHorizontalIcon className="size-4" />
-        </Button>
       </div>
 
       <h3 className="line-clamp-2 text-[1.65rem] leading-[1.3] font-black uppercase">
@@ -91,10 +80,22 @@ export default function TaskCard({
       <div className="h-0 border-t-[3px] border-dashed border-border/20" />
 
       <div className="flex items-end justify-between gap-3">
-        <p className={cn("text-xs font-black uppercase", isToday ? "text-primary" : "text-muted-foreground")}>{dueText}</p>
+        <p
+          className={cn(
+            "text-xs font-black uppercase",
+            isToday ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          {dueText}
+        </p>
 
         <div className="flex items-center gap-2">
-          <Button type="button" size="icon-xs" variant="secondary" aria-label="Hạn chót">
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="secondary"
+            aria-label="Hạn chót"
+          >
             <CalendarDaysIcon className="size-3.5" />
           </Button>
 
