@@ -1,18 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   RocketIcon,
   SearchIcon,
   SlidersHorizontalIcon,
   XIcon,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
 export default function AppBar({ onSettingsClick }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    const currentSearch = new URLSearchParams(location.search).get("search") || "";
+    setSearchValue(currentSearch);
+    if (currentSearch) {
+      setIsSearchOpen(true);
+    }
+  }, [location.search]);
 
   const pageTitle = () => {
     switch (location.pathname) {
@@ -20,6 +29,8 @@ export default function AppBar({ onSettingsClick }) {
         return { pre: "HỒ SƠ", post: "CÁ NHÂN" };
       case "/settings":
         return { pre: "CÀI", post: "ĐẶT" };
+      case "/activities":
+        return { pre: "HOẠT", post: "ĐỘNG" };
       default:
         return { pre: "TO-DO", post: "APP" };
     }
@@ -31,9 +42,30 @@ export default function AppBar({ onSettingsClick }) {
     setIsSearchOpen((prev) => !prev);
   };
 
+  const updateSearchQuery = (value) => {
+    const params = new URLSearchParams(location.search);
+    const normalized = value.trim();
+
+    if (normalized) {
+      params.set("search", normalized);
+    } else {
+      params.delete("search");
+    }
+
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  };
+
   const handleClearSearch = () => {
     setSearchValue("");
     setIsSearchOpen(false);
+    updateSearchQuery("");
   };
 
   return (
@@ -90,7 +122,11 @@ export default function AppBar({ onSettingsClick }) {
             <input
               type="text"
               value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setSearchValue(nextValue);
+                updateSearchQuery(nextValue);
+              }}
               placeholder="Tìm kiếm..."
               className="h-6 flex-1 border-0 bg-transparent text-sm font-extrabold outline-none placeholder:text-muted-foreground"
             />

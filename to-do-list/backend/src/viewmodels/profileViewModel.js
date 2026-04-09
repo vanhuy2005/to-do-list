@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import RefreshSession from "../models/RefreshSession.js";
+import AuditLog from "../models/AuditLog.js";
 
 class ProfileViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -200,6 +201,53 @@ const profileViewModel = {
       statusCode: 200,
       success: true,
       message: "Đã đăng xuất thiết bị",
+    };
+  },
+
+  async getAuditLogs(userId, query = {}) {
+    if (!userId) {
+      throw new ProfileViewModelError(
+        400,
+        "MISSING_USER_ID",
+        "User ID là bắt buộc",
+      );
+    }
+
+    const { page = 1, limit = 20 } = query;
+    const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const normalizedLimit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(limit, 10) || 20),
+    );
+    const skip = (normalizedPage - 1) * normalizedLimit;
+
+    const filter = {
+      actorId: userId,
+      entityType: "task",
+    };
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(normalizedLimit),
+      AuditLog.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / normalizedLimit));
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        logs,
+        pagination: {
+          page: normalizedPage,
+          limit: normalizedLimit,
+          total,
+          totalPages,
+        },
+      },
     };
   },
 };

@@ -5,6 +5,7 @@ import TaskDetailPage from "@/pages/TaskDetailPage";
 import NewTaskPage from "@/pages/NewTaskPage";
 import EditTaskPage from "@/pages/EditTaskPage";
 import FilterPage from "@/pages/FilterPage";
+import ActivitiesPage from "@/pages/ActivitiesPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
 import LoginPage from "@/pages/LoginPage";
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
       { path: "tasks/:id", element: <TaskDetailPage /> },
       { path: "tasks/:id/edit", element: <EditTaskPage /> },
       { path: "filter", element: <FilterPage /> },
+      { path: "activities", element: <ActivitiesPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
