@@ -51,7 +51,7 @@ export default function BottomNav({ fixed = true }) {
           <Link
             to="/tasks/new"
             aria-label="Thêm"
-            className="-mt-20 z-20 inline-flex size-14 rotate-12 items-center justify-center rounded-xl border-[4px] border-border bg-primary text-primary-foreground comic-shadow transition-transform hover:-translate-y-0.5"
+            className="-mt-20 z-20 inline-flex size-14 rotate-12 items-center justify-center rounded-xl border-4 border-border bg-primary text-primary-foreground comic-shadow transition-transform hover:-translate-y-0.5"
           >
             <PlusIcon className="size-8 -rotate-12" strokeWidth={3} />
           </Link>

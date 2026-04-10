@@ -5,6 +5,7 @@ import tasksRouters from "./routes/tasksRouters.js";
 import authRouters from "./routes/authRouters.js";
 import profileRouters from "./routes/profileRouters.js";
 import adminRouters from "./routes/adminRouters.js";
+import aiRouters from "./routes/aiRouters.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
@@ -22,7 +23,6 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
 }
 
 const PORT = process.env.PORT || 5001;
-
 
 const allowedOrigins = (
   process.env.CORS_ORIGIN || "http://localhost:3000,http://localhost:5173"
@@ -57,6 +57,7 @@ app.use("/api/v1/auth", authRouters);
 app.use("/api/v1/profile", authMiddleware, profileRouters);
 app.use("/api/v1/tasks", authMiddleware, tasksRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
+app.use("/api/v1/ai", authMiddleware, aiRouters);
 
 connectDB()
   .then(() => {

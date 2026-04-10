@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import AppBar from "@/components/AppBar";
+import AIAssistantWidget from "@/components/AIAssistantWidget";
 import BottomNav from "@/components/BottomNav";
 import HomePage from "@/pages/HomePage";
 
@@ -23,6 +24,7 @@ export default function MainLayout() {
           <Outlet />
         )}
       </main>
+      <AIAssistantWidget />
       <BottomNav />
     </div>
   );

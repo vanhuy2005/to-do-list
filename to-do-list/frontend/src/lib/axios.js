@@ -1,10 +1,10 @@
-import axios from 'axios';
-import authService from '../services/authService';
+import axios from "axios";
+import authService from "../services/authService";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   withCredentials: true,
 });
@@ -18,7 +18,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 let isRefreshing = false;
@@ -45,8 +45,8 @@ api.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
-      originalRequest.url !== '/auth/login' &&
-      originalRequest.url !== '/auth/refresh' &&
+      originalRequest.url !== "/auth/login" &&
+      originalRequest.url !== "/auth/refresh" &&
       !originalRequest._retry
     ) {
       if (isRefreshing) {
@@ -67,12 +67,16 @@ api.interceptors.response.use(
         const response = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         let newToken = null;
-        if (response.data?.data?.token) {
+        if (response.data?.data?.accessToken) {
+          newToken = response.data.data.accessToken;
+        } else if (response.data?.data?.token) {
           newToken = response.data.data.token;
+        } else if (response.data?.accessToken) {
+          newToken = response.data.accessToken;
         } else if (response.data?.token) {
           newToken = response.data.token;
         }
@@ -83,13 +87,15 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return api(originalRequest);
         } else {
-          throw new Error('Refresh endpoint returned success without a new token.');
+          throw new Error(
+            "Refresh endpoint returned success without a new token.",
+          );
         }
       } catch (err) {
         processQueue(err, null);
         authService.clearToken();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
         }
         return Promise.reject(err);
       } finally {
@@ -97,9 +103,9 @@ api.interceptors.response.use(
       }
     }
 
-    console.error('API Error:', error.response?.data || error.message);
+    console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
