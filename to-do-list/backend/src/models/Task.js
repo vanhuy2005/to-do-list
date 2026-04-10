@@ -35,9 +35,13 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    explicitOverdue: {
+    isOverdue: {
       type: Boolean,
       default: false,
+    },
+    overdueAt: {
+      type: Date,
+      default: null,
     },
     orderIndex: {
       type: Number,
@@ -61,6 +65,7 @@ const taskSchema = new mongoose.Schema(
 
 taskSchema.index({ ownerId: 1, status: 1, dueDate: 1, updatedAt: -1 });
 taskSchema.index({ title: "text", description: "text" });
+taskSchema.index({ isOverdue: 1, dueDate: 1, status: 1, deletedAt: 1 });
 
 taskSchema.pre("save", function () {
   if (this.status === "done" && !this.completedAt) {

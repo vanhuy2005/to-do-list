@@ -20,6 +20,14 @@ export const taskSchema = z.object({
   }),
   dueDate: z
     .string()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const date = new Date(val);
+        return !Number.isNaN(date.getTime());
+      },
+      { message: "Thời hạn không hợp lệ" },
+    )
     .optional()
     .or(z.literal("")),
   tags: z

@@ -4,25 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  CalendarIcon,
   Loader2Icon,
   PlusIcon,
   SparklesIcon,
   XIcon,
+  ChevronDownIcon,
 } from "lucide-react";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import DeadlinePicker from "@/components/DeadlinePicker";
 import TaskModalShell from "@/components/TaskModalShell";
 import TaskModalTopBar from "@/components/TaskModalTopBar";
 import { cn } from "@/lib/utils";
@@ -60,11 +53,48 @@ function FieldError({ message }) {
   return <p className="mt-1 text-xs font-bold text-destructive">{message}</p>;
 }
 
+/**
+ * Collapsible section — hiện/ẩn phần mở rộng với animation.
+ * Mặc định ẩn, user click để mở.
+ */
+function CollapsibleSection({ label, children, defaultOpen = false }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center gap-1.5 text-left"
+      >
+        <ChevronDownIcon
+          className={cn(
+            "size-3.5 text-muted-foreground transition-transform duration-200",
+            isOpen && "rotate-180",
+          )}
+        />
+        <span className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+      </button>
+      <div
+        className={cn(
+          "grid transition-all duration-200 ease-in-out",
+          isOpen
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function NewTaskPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const {
     register,
@@ -77,10 +107,14 @@ export default function NewTaskPage() {
     defaultValues: taskDefaultValues,
   });
 
+  const watchedTitle = watch("title");
   const watchedStatus = watch("status");
   const watchedPriority = watch("priority");
   const watchedDueDate = watch("dueDate");
   const watchedTags = watch("tags") || [];
+
+  // Progressive: cho phép hiện phần tiếp theo khi title có nội dung
+  const hasTitle = (watchedTitle || "").trim().length > 0;
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -143,163 +177,144 @@ export default function NewTaskPage() {
           onClose={() => navigate("/", { replace: true })}
         />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Title */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Title — luôn hiển thị */}
           <div className="space-y-1.5">
             <FieldLabel required>Tiêu đề</FieldLabel>
             <Input
               id="task-title"
               placeholder="Tên nhiệm vụ cực ngầu..."
+              autoFocus
               {...register("title")}
               aria-invalid={!!errors.title}
             />
             <FieldError message={errors.title?.message} />
           </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <FieldLabel>Mô tả chi tiết</FieldLabel>
-            <Textarea
-              id="task-description"
-              placeholder="Chi tiết kế hoạch giải cứu thế giới..."
-              rows={4}
-              {...register("description")}
-              aria-invalid={!!errors.description}
-            />
-            <FieldError message={errors.description?.message} />
-          </div>
-
-          {/* Status */}
-          <div className="space-y-1.5">
-            <FieldLabel>Trạng thái</FieldLabel>
-            <div className={taskOptionGridClass}>
-              {statusOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setValue("status", opt.value)}
-                  className={cn(
-                    taskOptionButtonClass(watchedStatus === opt.value),
-                    "text-[0.78rem] sm:text-xs",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Priority */}
-          <div className="space-y-1.5">
-            <FieldLabel>Độ ưu tiên</FieldLabel>
-            <div className={taskOptionGridClass}>
-              {priorityOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setValue("priority", opt.value)}
-                  className={taskOptionButtonClass(
-                    watchedPriority === opt.value,
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Due Date */}
-          <div className="space-y-1.5">
-            <FieldLabel>Hạn chót</FieldLabel>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className={cn(
-                    "w-full justify-start gap-2 bg-card text-left font-semibold",
-                    !watchedDueDate && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="size-4" />
-                  {watchedDueDate
-                    ? format(new Date(watchedDueDate), "dd/MM/yyyy", {
-                        locale: vi,
-                      })
-                    : "mm/dd/yyyy"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={
-                    watchedDueDate ? new Date(watchedDueDate) : undefined
-                  }
-                  onSelect={(date) => {
-                    setValue("dueDate", date ? date.toISOString() : "");
-                    setCalendarOpen(false);
-                  }}
-                  locale={vi}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-1.5">
-            <FieldLabel>
-              Gắn thẻ (Tags){" "}
-              <span className="normal-case text-muted-foreground">
-                — tối đa 8
-              </span>
-            </FieldLabel>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {watchedTags.map((tag, i) => (
-                <Badge
-                  key={`${tag}-${i}`}
-                  variant="secondary"
-                  className="gap-1 pr-1"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(i)}
-                    className="ml-0.5 rounded-full hover:bg-destructive/20"
-                  >
-                    <XIcon className="size-3" />
-                  </button>
-                </Badge>
-              ))}
-
-              {watchedTags.length < 8 && (
-                <div className="flex items-center gap-1">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    placeholder="Thêm tag..."
-                    className="h-7 w-24 text-xs"
-                  />
-                  <Button
-                    type="button"
-                    size="icon-xs"
-                    variant="secondary"
-                    onClick={handleAddTag}
-                  >
-                    <PlusIcon className="size-3" />
-                  </Button>
+          {/* Sau khi có title → hiện các section tiếp theo */}
+          <div
+            className={cn(
+              "space-y-4 transition-all duration-300",
+              hasTitle
+                ? "opacity-100 max-h-[2000px]"
+                : "pointer-events-none max-h-0 overflow-hidden opacity-0",
+            )}
+          >
+            {/* Status + Priority — single row with labels */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <div className="space-y-1">
+                  <FieldLabel>Trạng thái</FieldLabel>
+                  <div className="flex gap-1">
+                    {statusOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setValue("status", opt.value)}
+                        className={cn(
+                          taskOptionButtonClass(watchedStatus === opt.value),
+                          "h-8 text-[0.58rem] px-2",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
+
+                <div className="h-10 w-px bg-border/40" />
+
+                <div className="space-y-1">
+                  <FieldLabel>Ưu tiên</FieldLabel>
+                  <div className="flex gap-1">
+                    {priorityOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setValue("priority", opt.value)}
+                        className={cn(
+                          taskOptionButtonClass(watchedPriority === opt.value),
+                          "h-8 text-[0.58rem] px-2",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-            <FieldError message={errors.tags?.message} />
+
+            {/* Due Date — collapsible */}
+            <CollapsibleSection label="Hạn chót" defaultOpen={!!watchedDueDate}>
+              <DeadlinePicker
+                value={watchedDueDate}
+                onChange={(iso) => setValue("dueDate", iso)}
+                onClear={() => setValue("dueDate", "")}
+              />
+            </CollapsibleSection>
+
+            {/* Description — collapsible */}
+            <CollapsibleSection label="Mô tả chi tiết">
+              <Textarea
+                id="task-description"
+                placeholder="Chi tiết kế hoạch giải cứu thế giới..."
+                rows={3}
+                {...register("description")}
+                aria-invalid={!!errors.description}
+              />
+              <FieldError message={errors.description?.message} />
+            </CollapsibleSection>
+
+            {/* Tags — collapsible */}
+            <CollapsibleSection label={`Gắn thẻ (Tags) — tối đa 8`}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {watchedTags.map((tag, i) => (
+                  <Badge
+                    key={`${tag}-${i}`}
+                    variant="secondary"
+                    className="gap-1 pr-1"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(i)}
+                      className="ml-0.5 rounded-full hover:bg-destructive/20"
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+
+                {watchedTags.length < 8 && (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                      placeholder="Thêm tag..."
+                      className="h-7 w-24 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="secondary"
+                      onClick={handleAddTag}
+                    >
+                      <PlusIcon className="size-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <FieldError message={errors.tags?.message} />
+            </CollapsibleSection>
           </div>
 
-          {/* Submit */}
+          {/* Submit — luôn hiển thị */}
           <div className={cn("-mx-4 -mb-6", taskModalFooterClass)}>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !hasTitle}
               className="w-full gap-2 py-6 text-lg font-black uppercase"
             >
               {isSubmitting ? (

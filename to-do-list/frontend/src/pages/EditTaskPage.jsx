@@ -4,33 +4,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  CalendarIcon,
   Loader2Icon,
   PlusIcon,
   XIcon,
   ZapIcon,
+  ChevronDownIcon,
 } from "lucide-react";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import DeadlinePicker from "@/components/DeadlinePicker";
 import TaskModalShell from "@/components/TaskModalShell";
 import TaskModalTopBar from "@/components/TaskModalTopBar";
 import { cn } from "@/lib/utils";
 import {
   taskModalFooterClass,
   taskOptionButtonClass,
-  taskOptionGridClass,
 } from "@/lib/taskModalDesignSystem";
 import { taskSchema } from "@/lib/taskSchema";
 import taskService from "@/services/taskService";
@@ -61,17 +53,53 @@ function FieldError({ message }) {
   return <p className="mt-1 text-xs font-bold text-destructive">{message}</p>;
 }
 
+/**
+ * Collapsible section — hiện/ẩn phần mở rộng với animation.
+ */
+function CollapsibleSection({ label, children, defaultOpen = false }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center gap-1.5 text-left"
+      >
+        <ChevronDownIcon
+          className={cn(
+            "size-3.5 text-muted-foreground transition-transform duration-200",
+            isOpen && "rotate-180",
+          )}
+        />
+        <span className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+      </button>
+      <div
+        className={cn(
+          "grid transition-all duration-200 ease-in-out",
+          isOpen
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function EditSkeleton() {
   return (
     <div className="space-y-5 animate-pulse">
       <Skeleton className="h-10 w-full rounded-lg" />
-      <Skeleton className="h-24 w-full rounded-lg" />
-      <div className="grid grid-cols-2 gap-3">
-        <Skeleton className="h-10 rounded-lg" />
-        <Skeleton className="h-10 rounded-lg" />
+      <div className="h-32 w-full rounded-lg border-2 border-border/20 bg-muted/30" />
+      <div className="flex gap-3">
+        <Skeleton className="h-10 flex-1 rounded-lg" />
+        <Skeleton className="h-10 flex-1 rounded-lg" />
       </div>
-      <Skeleton className="h-10 w-full rounded-lg" />
-      <Skeleton className="h-12 w-full rounded-lg" />
+      <Skeleton className="h-20 w-full rounded-lg" />
     </div>
   );
 }
@@ -84,7 +112,6 @@ export default function EditTaskPage() {
   const [loadError, setLoadError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const {
     register,
@@ -105,6 +132,7 @@ export default function EditTaskPage() {
     },
   });
 
+  const watchedTitle = watch("title");
   const watchedStatus = watch("status");
   const watchedPriority = watch("priority");
   const watchedDueDate = watch("dueDate");
@@ -216,10 +244,10 @@ export default function EditTaskPage() {
         )}
 
         {!isLoadingTask && !loadError && (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Title */}
             <div className="space-y-1.5">
-              <FieldLabel required>Tiêu đề nhiệm vụ</FieldLabel>
+              <FieldLabel required>Tiêu đề</FieldLabel>
               <Input
                 id="edit-task-title"
                 placeholder="Tên nhiệm vụ..."
@@ -229,62 +257,80 @@ export default function EditTaskPage() {
               <FieldError message={errors.title?.message} />
             </div>
 
-            {/* Description */}
+            {/* Status + Priority — single row with labels */}
             <div className="space-y-1.5">
-              <FieldLabel>Mô tả chi tiết</FieldLabel>
+              <div className="flex items-center gap-3">
+                <div className="space-y-1">
+                  <FieldLabel>Trạng thái</FieldLabel>
+                  <div className="flex gap-1">
+                    {statusOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setValue("status", opt.value)}
+                        className={cn(
+                          taskOptionButtonClass(watchedStatus === opt.value),
+                          "h-8 text-[0.58rem] px-2",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-10 w-px bg-border/40" />
+
+                <div className="space-y-1">
+                  <FieldLabel>Ưu tiên</FieldLabel>
+                  <div className="flex gap-1">
+                    {priorityOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setValue("priority", opt.value)}
+                        className={cn(
+                          taskOptionButtonClass(watchedPriority === opt.value),
+                          "h-8 text-[0.58rem] px-2",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Due Date — collapsible */}
+            <CollapsibleSection label="Hạn chót" defaultOpen={!!watchedDueDate}>
+              <DeadlinePicker
+                value={watchedDueDate}
+                onChange={(iso) => setValue("dueDate", iso)}
+                onClear={() => setValue("dueDate", "")}
+              />
+            </CollapsibleSection>
+
+            {/* Description — collapsible */}
+            <CollapsibleSection
+              label="Mô tả chi tiết"
+              defaultOpen={!!watch("description")}
+            >
               <Textarea
                 id="edit-task-description"
                 placeholder="Mô tả nhiệm vụ..."
-                rows={4}
+                rows={3}
                 {...register("description")}
                 aria-invalid={!!errors.description}
               />
               <FieldError message={errors.description?.message} />
-            </div>
+            </CollapsibleSection>
 
-            {/* Status + Priority */}
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <FieldLabel>Trạng thái</FieldLabel>
-                <div className={taskOptionGridClass}>
-                  {statusOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setValue("status", opt.value)}
-                      className={cn(
-                        taskOptionButtonClass(watchedStatus === opt.value),
-                        "text-[0.78rem] sm:text-xs",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <FieldLabel>Độ ưu tiên</FieldLabel>
-                <div className={taskOptionGridClass}>
-                  {priorityOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setValue("priority", opt.value)}
-                      className={taskOptionButtonClass(
-                        watchedPriority === opt.value,
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-1.5">
-              <FieldLabel>Thẻ phân loại</FieldLabel>
+            {/* Tags — collapsible */}
+            <CollapsibleSection
+              label={`Gắn thẻ (Tags) — tối đa 8`}
+              defaultOpen={watchedTags.length > 0}
+            >
               <div className="flex flex-wrap items-center gap-1.5">
                 {watchedTags.map((tag, i) => (
                   <Badge
@@ -324,54 +370,14 @@ export default function EditTaskPage() {
                 )}
               </div>
               <FieldError message={errors.tags?.message} />
-            </div>
-
-            {/* Due Date */}
-            <div className="space-y-1.5">
-              <FieldLabel>Hạn chót</FieldLabel>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className={cn(
-                      "w-full justify-start gap-2 bg-card text-left font-semibold",
-                      !watchedDueDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="size-4" />
-                    {watchedDueDate
-                      ? format(
-                          new Date(watchedDueDate),
-                          "dd 'tháng' MM, yyyy",
-                          { locale: vi },
-                        )
-                      : "Chọn ngày..."}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={
-                      watchedDueDate ? new Date(watchedDueDate) : undefined
-                    }
-                    onSelect={(date) => {
-                      setValue("dueDate", date ? date.toISOString() : "");
-                      setCalendarOpen(false);
-                    }}
-                    locale={vi}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            </CollapsibleSection>
 
             {/* Submit */}
             <div className={cn("-mx-4 -mb-6", taskModalFooterClass)}>
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full gap-2 bg-primary py-6 text-lg font-black uppercase"
+                disabled={isSubmitting || !watchedTitle}
+                className="w-full gap-2 py-6 text-lg font-black uppercase"
               >
                 {isSubmitting ? (
                   <>
@@ -381,7 +387,7 @@ export default function EditTaskPage() {
                 ) : (
                   <>
                     <ZapIcon className="size-5" />
-                    Cập nhật ngay!
+                    Cập nhật!
                   </>
                 )}
               </Button>
