@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  BrushIcon,
   RocketIcon,
   SearchIcon,
   SlidersHorizontalIcon,
@@ -14,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABELS = {
   todo: "Chưa làm",
@@ -86,6 +88,9 @@ export default function AppBar() {
       activeFilters.priority ||
       activeFilters.tags.length,
     );
+  const isActivitiesPage = location.pathname === "/activities";
+  const isCleanupPanelOpen =
+    new URLSearchParams(location.search).get("cleanup") === "1";
 
   const pageTitle = () => {
     switch (location.pathname) {
@@ -182,6 +187,21 @@ export default function AppBar() {
     navigateWithCurrentPath(params);
   };
 
+  const handleToggleCleanupPanel = () => {
+    if (!isActivitiesPage) {
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    if (isCleanupPanelOpen) {
+      params.delete("cleanup");
+    } else {
+      params.set("cleanup", "1");
+    }
+
+    navigateWithCurrentPath(params);
+  };
+
   return (
     <header className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-3 py-2.5">
       <div className="flex w-full flex-col gap-2 lg:gap-2.5">
@@ -202,6 +222,24 @@ export default function AppBar() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isActivitiesPage && (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="secondary"
+                onClick={handleToggleCleanupPanel}
+                aria-label="Bật tắt dọn nhật ký"
+                className={cn(
+                  "transition-all duration-200 lg:hover:scale-110 lg:hover:shadow-[3px_3px_0_#111111]",
+                  isCleanupPanelOpen
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card",
+                )}
+              >
+                <BrushIcon className="size-4" />
+              </Button>
+            )}
+
             {!isSearchVisible && (
               <Button
                 type="button"

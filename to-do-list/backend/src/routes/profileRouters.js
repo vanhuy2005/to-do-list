@@ -99,4 +99,19 @@ router.get(
   }),
 );
 
+router.delete(
+  "/:id",
+  errorHandler(async (req, res) => {
+    const result = await profileViewModel.deleteAuditLogs(
+      req.user?.id || req.userId,
+      req.query,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
 export default router;

@@ -4,6 +4,7 @@ import cors from "cors";
 import tasksRouters from "./routes/tasksRouters.js";
 import authRouters from "./routes/authRouters.js";
 import profileRouters from "./routes/profileRouters.js";
+import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 import dotenv from "dotenv";
@@ -57,6 +58,7 @@ app.use("/api/v1/auth", authRouters);
 app.use("/api/v1/profile", authMiddleware, profileRouters);
 app.use("/api/v1/tasks", authMiddleware, tasksRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
+app.use("/api/v1/audit-logs", authMiddleware, auditLogsRouters);
 
 connectDB()
   .then(() => {
