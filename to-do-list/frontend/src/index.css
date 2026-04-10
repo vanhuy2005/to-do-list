@@ -33,6 +33,15 @@
   .pill {
     border-radius: 9999px;
   }
+
+  /* Hide scrollbar while keeping scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 [data-sonner-toaster] [data-sonner-toast].comic-toast {
