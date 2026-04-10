@@ -120,6 +120,9 @@ export default function AppBar() {
       params.delete("search");
     }
 
+    // Always return to first page when changing search text.
+    params.delete("page");
+
     const nextSearch = params.toString();
 
     let targetPath = location.pathname;
@@ -157,6 +160,7 @@ export default function AppBar() {
   const handleRemoveFilterByKey = (key) => {
     const params = new URLSearchParams(location.search);
     params.delete(key);
+    params.delete("page");
     navigateWithCurrentPath(params);
   };
 
@@ -173,12 +177,14 @@ export default function AppBar() {
       params.delete("tag");
     }
 
+    params.delete("page");
+
     navigateWithCurrentPath(params);
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-4 py-2.5 comic-shadow">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+    <header className="sticky top-0 z-20 border-b-[3px] border-border bg-[#ffd400] px-3 py-2.5">
+      <div className="flex w-full flex-col gap-2 lg:gap-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="inline-flex size-9 items-center justify-center rounded-xl border-[3px] border-border bg-card comic-shadow">
@@ -203,7 +209,7 @@ export default function AppBar() {
                 variant="secondary"
                 onClick={handleToggleSearch}
                 aria-label="Search"
-                className="bg-card"
+                className="bg-card transition-all duration-200 lg:hover:scale-110 lg:hover:shadow-[3px_3px_0_#111111]"
               >
                 <SearchIcon className="size-4" />
               </Button>
@@ -215,7 +221,7 @@ export default function AppBar() {
               size="icon-sm"
               variant="secondary"
               aria-label="Filter"
-              className="bg-[#00c2ff]"
+              className="bg-[#00c2ff] transition-all duration-200 lg:hover:scale-110 lg:hover:shadow-[3px_3px_0_#111111]"
             >
               <Link to="/filter">
                 <SlidersHorizontalIcon className="size-4" />
@@ -231,7 +237,7 @@ export default function AppBar() {
                 <span className="truncate">{activeFilters.status.label}</span>
                 <button
                   type="button"
-                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 text-foreground hover:bg-black/5"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border bg-white/80 text-foreground hover:bg-black/5"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -249,7 +255,7 @@ export default function AppBar() {
                 <span className="truncate">{activeFilters.priority.label}</span>
                 <button
                   type="button"
-                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border bg-white/80 hover:bg-black/5"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -271,7 +277,7 @@ export default function AppBar() {
                 <span className="truncate">#{tag}</span>
                 <button
                   type="button"
-                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                  className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border bg-white/80 hover:bg-black/5"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -310,7 +316,7 @@ export default function AppBar() {
                         <span className="truncate">#{tag}</span>
                         <button
                           type="button"
-                          className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[2px] border-border bg-white/80 hover:bg-black/5"
+                          className="ml-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border bg-white/80 hover:bg-black/5"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();

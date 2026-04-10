@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronRightIcon,
-  FingerprintIcon,
   GlobeIcon,
   LockKeyholeIcon,
   MoonStarIcon,
@@ -11,14 +10,11 @@ import {
   UserRoundIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/axios";
-import authService from "@/services/authService";
 
 const themeOptions = [
   {
@@ -56,8 +52,6 @@ function SettingsSkeleton() {
   );
 }
 
-
-
 const formatCount = (value) => (Number.isFinite(value) ? value : 0);
 
 export default function SettingsPage() {
@@ -71,7 +65,6 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-
     let isMounted = true;
 
     const loadSettings = async () => {
@@ -235,247 +228,253 @@ export default function SettingsPage() {
     await saveProfile({ avatarUrl: null });
   };
 
-
-
   if (isLoading) {
     return <SettingsSkeleton />;
   }
 
-
-
   return (
-    <section className="space-y-8 pb-24 px-4 pt-6">
-      {/* Settings Theme */}
-      <div>
-        <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
-          <PaletteIcon className="size-6 text-[#00c2ff]" />
-          Giao diện
-        </div>
+    <section className="space-y-8 px-4 pt-6 pb-24 lg:space-y-5 lg:px-0 lg:pt-3 lg:pb-8">
+      {/* Desktop compact split layout */}
+      <div className="space-y-8 lg:grid lg:grid-cols-12 lg:gap-5 lg:space-y-0">
+        {/* Column 1: Theme + Security */}
+        <div className="space-y-8 lg:space-y-5 lg:col-span-5">
+          {/* Settings Theme */}
+          <div>
+            <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
+              <PaletteIcon className="size-6 text-[#00c2ff]" />
+              Giao diện
+            </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {themeOptions.map((option) => {
-            const Icon = option.icon;
-            const isActive = activeTheme === option.value;
+            <div className="grid grid-cols-2 gap-3">
+              {themeOptions.map((option) => {
+                const Icon = option.icon;
+                const isActive = activeTheme === option.value;
 
-            return (
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() =>
+                      saveProfile({ themePreference: option.value })
+                    }
+                    className={`min-h-28 rounded-[1.2rem] border-[3px] border-border border-b-[5px] px-4 py-4 text-center transition-all active:translate-y-[2px] active:border-b-[3px] lg:hover:scale-[1.03] lg:hover:shadow-[4px_4px_0_#111111] ${option.accent} ${
+                      isActive ? "comic-shadow opacity-100" : "opacity-90"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Icon className="size-8" />
+                      <span className="text-lg font-black uppercase tracking-tight">
+                        {option.label}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Security — still in column 1 */}
+          <div>
+            <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
+              <ShieldIcon className="size-6 text-[#ff3b57]" />
+              Bảo mật
+            </div>
+
+            <div className="overflow-hidden rounded-[1.4rem] border-[3px] border-border bg-card comic-shadow border-b-[5px]">
               <button
-                key={option.value}
                 type="button"
-                disabled={isSaving}
+                className="flex w-full items-center justify-between border-b-[3px] border-border px-5 py-5 text-left transition-all active:bg-black/5 dark:active:bg-white/10 lg:hover:bg-black/3"
                 onClick={() =>
-                  saveProfile({ themePreference: option.value })
+                  toast.info(
+                    `Đang có ${formatCount(sessionCount)} thiết bị đăng nhập`,
+                  )
                 }
-                className={`min-h-28 rounded-[1.2rem] border-[3px] border-border border-b-[5px] px-4 py-4 text-center transition-transform active:translate-y-[2px] active:border-b-[3px] ${option.accent} ${
-                  isActive ? "comic-shadow opacity-100" : "opacity-90"
-                }`}
               >
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <Icon className="size-8" />
-                  <span className="text-lg font-black uppercase tracking-tight">
-                    {option.label}
-                  </span>
+                <div>
+                  <p className="text-[1.1rem] leading-none font-black uppercase tracking-tight mb-1">
+                    Thiết bị đăng nhập
+                  </p>
+                  <p className="text-[0.8rem] font-bold text-muted-foreground">
+                    Quản lý các phiên hoạt động
+                  </p>
                 </div>
+                <ChevronRightIcon className="size-6 shrink-0" />
               </button>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Settings Security */}
-      <div>
-        <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
-          <ShieldIcon className="size-6 text-[#ff3b57]" />
-          Bảo mật
-        </div>
+              <div className="flex items-center justify-between px-5 py-5">
+                <div>
+                  <p className="text-[1.1rem] leading-none font-black uppercase tracking-tight mb-1">
+                    Khóa ứng dụng (PIN)
+                  </p>
+                  <p className="text-[0.8rem] font-bold text-muted-foreground">
+                    Bảo vệ danh sách của bạn
+                  </p>
+                </div>
 
-        <div className="overflow-hidden rounded-[1.4rem] border-[3px] border-border bg-card comic-shadow border-b-[5px]">
-
-
-          <button
-            type="button"
-            className="flex w-full items-center justify-between border-b-[3px] border-border px-5 py-5 text-left transition-colors active:bg-black/5 dark:active:bg-white/10"
-            onClick={() =>
-              toast.info(
-                `Đang có ${formatCount(sessionCount)} thiết bị đăng nhập`,
-              )
-            }
-          >
-            <div>
-               <p className="text-[1.1rem] leading-none font-black uppercase tracking-tight mb-1">
-                Thiết bị đăng nhập
-              </p>
-              <p className="text-[0.8rem] font-bold text-muted-foreground">
-                Quản lý các phiên hoạt động
-              </p>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-14 items-center rounded-full border-[3px] border-border bg-card px-1 transition-colors comic-shadow-sm"
+                  onClick={() =>
+                    toast.info("Khóa PIN sẽ được kích hoạt ở bản tiếp theo")
+                  }
+                  aria-label="Khóa ứng dụng"
+                >
+                  <span className="size-5 rounded-full border-[3px] border-border bg-foreground" />
+                </button>
+              </div>
             </div>
-            <ChevronRightIcon className="size-6 shrink-0" />
-          </button>
-
-          <div className="flex items-center justify-between px-5 py-5">
-            <div>
-               <p className="text-[1.1rem] leading-none font-black uppercase tracking-tight mb-1">
-                Khóa ứng dụng (PIN)
-              </p>
-              <p className="text-[0.8rem] font-bold text-muted-foreground">
-                Bảo vệ danh sách của bạn
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex h-8 w-14 items-center rounded-full border-[3px] border-border bg-card px-1 transition-colors comic-shadow-sm"
-              onClick={() =>
-                toast.info("Khóa PIN sẽ được kích hoạt ở bản tiếp theo")
-              }
-              aria-label="Khóa ứng dụng"
-            >
-              <span className="size-5 rounded-full border-[3px] border-border bg-foreground" />
-            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Settings Language */}
-      <div>
-        <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
-          <GlobeIcon className="size-6 text-[#ffd400]" />
-          Ngôn ngữ
+          {/* End column 1 */}
         </div>
 
-        <div className="space-y-3">
-          {languageOptions.map((option) => {
-            const isActive = activeLanguage === option.value;
-
-            return (
-              <button
-                key={option.value}
-                type="button"
-                disabled={isSaving}
-                onClick={() =>
-                  saveProfile({ preferredLanguage: option.value })
-                }
-                className={`flex w-full items-center justify-between rounded-[1.2rem] border-[3px] border-b-[5px] border-border bg-card px-5 py-4 text-left transition-transform active:translate-y-[2px] active:border-b-[3px] ${
-                  isActive ? "comic-shadow" : "opacity-95"
-                }`}
-              >
-                <span className="text-[1.1rem] font-black uppercase tracking-tight">
-                  {option.label}
-                </span>
-
-                <span
-                  className={`inline-flex size-7 items-center justify-center rounded-full border-[3px] border-border ${
-                    isActive ? "bg-[#ff3b57]" : "bg-card"
-                  }`}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Data Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
-          <LockKeyholeIcon className="size-6 text-primary" />
-          Tài khoản
-        </div>
-
-        <div className="space-y-3 text-sm font-bold text-foreground">
-          <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <span className="text-base uppercase font-black">Avatar ảnh</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="secondary"
-                  disabled={isSaving}
-                  onClick={handleClearAvatar}
-                  className="border-[2px] comic-shadow-sm"
-                >
-                  Xóa
-                </Button>
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="default"
-                  disabled={isSaving}
-                  onClick={handleSaveAvatar}
-                  className="border-[2px] comic-shadow-sm"
-                >
-                  Lưu
-                </Button>
-              </div>
+        {/* Column 2: Language + Account */}
+        <div className="space-y-8 lg:space-y-5 lg:col-span-7">
+          {/* Language */}
+          <div>
+            <div className="mb-4 flex items-center gap-2 text-xl font-black uppercase tracking-tight">
+              <GlobeIcon className="size-6 text-[#ffd400]" />
+              Ngôn ngữ
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="inline-flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-border bg-[#ffd400] comic-shadow-sm">
-                {avatarUrlDraft ? (
-                  <img
-                    src={avatarUrlDraft}
-                    alt="Avatar preview"
-                    className="size-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <UserRoundIcon className="size-7 text-foreground" />
-                )}
+            <div className="space-y-3">
+              {languageOptions.map((option) => {
+                const isActive = activeLanguage === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() =>
+                      saveProfile({ preferredLanguage: option.value })
+                    }
+                    className={`flex w-full items-center justify-between rounded-[1.2rem] border-[3px] border-b-[5px] border-border bg-card px-5 py-4 text-left transition-all active:translate-y-[2px] active:border-b-[3px] lg:hover:scale-[1.02] lg:hover:shadow-[4px_4px_0_#111111] ${
+                      isActive ? "comic-shadow" : "opacity-95"
+                    }`}
+                  >
+                    <span className="text-[1.1rem] font-black uppercase tracking-tight">
+                      {option.label}
+                    </span>
+
+                    <span
+                      className={`inline-flex size-7 items-center justify-center rounded-full border-[3px] border-border ${
+                        isActive ? "bg-[#ff3b57]" : "bg-card"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Data Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
+              <LockKeyholeIcon className="size-6 text-primary" />
+              Tài khoản
+            </div>
+
+            <div className="space-y-3 text-sm font-bold text-foreground">
+              <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-base uppercase font-black">
+                    Avatar ảnh
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="secondary"
+                      disabled={isSaving}
+                      onClick={handleClearAvatar}
+                      className="border-[2px] comic-shadow-sm"
+                    >
+                      Xóa
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="default"
+                      disabled={isSaving}
+                      onClick={handleSaveAvatar}
+                      className="border-[2px] comic-shadow-sm"
+                    >
+                      Lưu
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-border bg-[#ffd400] comic-shadow-sm">
+                    {avatarUrlDraft ? (
+                      <img
+                        src={avatarUrlDraft}
+                        alt="Avatar preview"
+                        className="size-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <UserRoundIcon className="size-7 text-foreground" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarFileChange}
+                      disabled={isSaving}
+                      className="h-11 rounded-xl bg-background py-2 border-[2px] cursor-pointer"
+                    />
+                    <p className="truncate text-xs font-bold text-muted-foreground">
+                      {avatarFileName || "Chọn file ảnh để làm avatar"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-base uppercase font-black">
+                    Tên hiển thị
+                  </span>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="default"
+                    disabled={isSaving}
+                    onClick={handleSaveDisplayName}
+                    className="border-[2px] comic-shadow-sm"
+                  >
+                    Lưu
+                  </Button>
+                </div>
+
                 <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarFileChange}
+                  type="text"
+                  value={displayNameDraft}
+                  onChange={(event) => setDisplayNameDraft(event.target.value)}
                   disabled={isSaving}
-                  className="h-11 rounded-xl bg-background py-2 border-[2px] cursor-pointer"
+                  placeholder="Nhập tên hiển thị"
+                  className="h-12 rounded-xl bg-background uppercase border-[2px]"
+                  maxLength={50}
                 />
-                <p className="truncate text-xs font-bold text-muted-foreground">
-                  {avatarFileName || "Chọn file ảnh để làm avatar"}
-                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
+                <span className="text-base uppercase font-black">Email</span>
+                <span className="max-w-[55%] truncate text-right lowercase font-bold text-muted-foreground">
+                  {profile?.email || "---"}
+                </span>
               </div>
             </div>
           </div>
-
-          <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <span className="text-base uppercase font-black">Tên hiển thị</span>
-              <Button
-                type="button"
-                size="xs"
-                variant="default"
-                disabled={isSaving}
-                onClick={handleSaveDisplayName}
-                className="border-[2px] comic-shadow-sm"
-              >
-                Lưu
-              </Button>
-            </div>
-
-            <Input
-              type="text"
-              value={displayNameDraft}
-              onChange={(event) =>
-                setDisplayNameDraft(event.target.value)
-              }
-              disabled={isSaving}
-              placeholder="Nhập tên hiển thị"
-              className="h-12 rounded-xl bg-background uppercase border-[2px]"
-              maxLength={50}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-            <span className="text-base uppercase font-black">Email</span>
-            <span className="max-w-[55%] truncate text-right lowercase font-bold text-muted-foreground">
-              {profile?.email || "---"}
-            </span>
-          </div>
-
-
+          {/* End col2 */}
         </div>
+        {/* End 2-column grid */}
       </div>
     </section>
   );

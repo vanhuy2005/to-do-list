@@ -48,16 +48,13 @@ export default function TaskCard({ task, onOpen }) {
   const isDone = statusValue === "done";
 
   return (
-    <article className="space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow">
+    <article className="space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow desktop-hover-lift">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 flex-1 line-clamp-2 text-[1.6rem] leading-[1.2] font-black uppercase">
+        <h3 className="min-w-0 flex-1 line-clamp-2 text-[1.6rem] lg:text-[1.8rem] leading-[1.2] font-black uppercase">
           {task?.title || "Nhiệm vụ chưa có tiêu đề"}
         </h3>
 
-        <CountdownBadge
-          dueDate={task?.dueDate || null}
-          isDone={isDone}
-        />
+        <CountdownBadge dueDate={task?.dueDate || null} isDone={isDone} />
       </div>
 
       <div className="h-0 border-t-[3px] border-dashed border-border/20" />
@@ -90,7 +87,7 @@ export default function TaskCard({ task, onOpen }) {
                 <Badge
                   key={`${tag}-${index}`}
                   className={cn(
-                    "h-6 max-w-28 px-2 text-[0.64rem] uppercase",
+                    "h-6 max-w-28 px-2 text-[0.64rem] uppercase transition-opacity duration-200 lg:hover:opacity-80",
                     index % 2 === 0
                       ? "bg-[#fff3bf] text-foreground"
                       : "bg-[#dbf5ff] text-foreground",
@@ -137,7 +134,7 @@ export default function TaskCard({ task, onOpen }) {
           type="button"
           variant="secondary"
           size="default"
-          className="min-w-30 bg-[#00c2ff] uppercase text-foreground hover:bg-[#00afe6]"
+          className="min-w-30 bg-[#00c2ff] uppercase text-foreground hover:bg-[#00afe6] transition-all duration-200 lg:hover:scale-105 lg:hover:shadow-[4px_4px_0_#111111]"
           onClick={() => onOpen?.(task)}
         >
           Chi tiết

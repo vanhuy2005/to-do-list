@@ -22,7 +22,7 @@ export default function BottomNav({ fixed = true }) {
       className={cn(
         "border-t-[3px] border-border bg-background px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]",
         fixed
-          ? "fixed inset-x-0 bottom-0 z-20"
+          ? "fixed inset-x-0 bottom-0 z-20 lg:hidden"
           : "relative rounded-lg border-[3px]",
       )}
     >

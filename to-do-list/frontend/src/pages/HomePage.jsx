@@ -8,8 +8,20 @@ import StatusCounter from "@/components/StatusCounter";
 import TaskCard from "@/components/TaskCard";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import taskService from "@/services/taskService";
+
+const HOME_PAGE_SIZE = 6;
+const PAGE_JUMP_DEBOUNCE_MS = 450;
 
 const getTasksFromPayload = (payload) => {
   if (Array.isArray(payload?.data?.tasks)) {
@@ -25,6 +37,55 @@ const getTasksFromPayload = (payload) => {
   }
 
   return [];
+};
+
+const getPaginationFromPayload = (payload) => {
+  const pagination = payload?.data?.pagination;
+
+  if (!pagination) {
+    return {
+      page: 1,
+      limit: HOME_PAGE_SIZE,
+      total: 0,
+      totalPages: 1,
+    };
+  }
+
+  return {
+    page: Math.max(1, Number.parseInt(pagination.page, 10) || 1),
+    limit: Math.max(1, Number.parseInt(pagination.limit, 10) || HOME_PAGE_SIZE),
+    total: Math.max(0, Number.parseInt(pagination.total, 10) || 0),
+    totalPages: Math.max(1, Number.parseInt(pagination.totalPages, 10) || 1),
+  };
+};
+
+const getPageFromSearch = (search) => {
+  const raw = Number.parseInt(
+    new URLSearchParams(search).get("page") || "1",
+    10,
+  );
+
+  if (Number.isNaN(raw) || raw < 1) {
+    return 1;
+  }
+
+  return raw;
+};
+
+const getVisiblePages = (currentPage, totalPages) => {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, currentPage - 1, currentPage, currentPage + 1, totalPages];
 };
 
 const getErrorMessage = (error) => {
@@ -75,9 +136,44 @@ export default function HomePage() {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: HOME_PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+  });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pageInput, setPageInput] = useState("");
+  const [isJumpInputVisible, setIsJumpInputVisible] = useState(false);
+
+  const currentPage = useMemo(
+    () => getPageFromSearch(location.search),
+    [location.search],
+  );
+
+  const updatePageInQuery = useCallback(
+    (nextPage) => {
+      const normalizedPage = Math.max(1, nextPage);
+      const params = new URLSearchParams(location.search);
+
+      if (normalizedPage <= 1) {
+        params.delete("page");
+      } else {
+        params.set("page", String(normalizedPage));
+      }
+
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString() ? `?${params.toString()}` : "",
+        },
+        { replace: true },
+      );
+    },
+    [location.pathname, location.search, navigate],
+  );
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
@@ -91,8 +187,8 @@ export default function HomePage() {
 
     try {
       const payload = await taskService.getTasks({
-        page: 1,
-        limit: 20,
+        page: currentPage,
+        limit: HOME_PAGE_SIZE,
         sort: "updatedAt",
         order: "desc",
         ...(status ? { status } : {}),
@@ -100,22 +196,86 @@ export default function HomePage() {
         ...(tag ? { tag } : {}),
         ...(search ? { search } : {}),
       });
+
+      const nextPagination = getPaginationFromPayload(payload);
+      if (currentPage > nextPagination.totalPages) {
+        updatePageInQuery(nextPagination.totalPages);
+        return;
+      }
+
       const normalizedTasks = getTasksFromPayload(payload);
+      setPagination(nextPagination);
       setTasks(normalizedTasks);
     } catch (error) {
       const nextMessage = getErrorMessage(error);
       setErrorMessage(nextMessage);
+      setPagination({
+        page: currentPage,
+        limit: HOME_PAGE_SIZE,
+        total: 0,
+        totalPages: 1,
+      });
       setTasks([]);
     } finally {
       setIsLoading(false);
     }
-  }, [location.search]);
+  }, [location.search, currentPage, updatePageInQuery]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
   const counters = useMemo(() => buildStatusCounter(tasks), [tasks]);
+  const visiblePages = useMemo(
+    () => getVisiblePages(pagination.page, pagination.totalPages),
+    [pagination.page, pagination.totalPages],
+  );
+
+  useEffect(() => {
+    setPageInput("");
+    setIsJumpInputVisible(false);
+  }, [pagination.page]);
+
+  const handleJumpToPage = useCallback(
+    (rawInput = pageInput) => {
+      const parsed = Number.parseInt(rawInput, 10);
+
+      if (Number.isNaN(parsed)) {
+        return;
+      }
+
+      const nextPage = Math.min(pagination.totalPages, Math.max(1, parsed));
+      setIsJumpInputVisible(false);
+      setPageInput("");
+
+      if (nextPage === pagination.page) {
+        return;
+      }
+
+      updatePageInQuery(nextPage);
+    },
+    [pageInput, pagination.page, pagination.totalPages, updatePageInQuery],
+  );
+
+  const handlePageInputChange = useCallback((event) => {
+    const rawValue = event.target.value || "";
+    const digitsOnlyValue = rawValue.replace(/\D/g, "");
+    setPageInput(digitsOnlyValue);
+  }, []);
+
+  useEffect(() => {
+    if (!isJumpInputVisible || !pageInput) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      handleJumpToPage(pageInput);
+    }, PAGE_JUMP_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [handleJumpToPage, isJumpInputVisible, pageInput]);
 
   const handleOpenTask = (task) => {
     if (!task?._id) {
@@ -192,7 +352,7 @@ export default function HomePage() {
       )}
 
       {!isLoading && !errorMessage && tasks.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
           {tasks.map((task) => (
             <TaskCard
               key={task._id}
@@ -202,6 +362,130 @@ export default function HomePage() {
               onDelete={handleDeleteTask}
             />
           ))}
+        </div>
+      )}
+
+      {!isLoading && !errorMessage && pagination.total > 0 && (
+        <div className="flex justify-end pt-1">
+          <div className="w-full">
+            {pagination.totalPages > 1 ? (
+              <div className="w-full overflow-x-auto px-1 pt-1 pb-2 scrollbar-hide">
+                <div className="ml-auto flex w-max min-w-full items-center justify-end gap-2.5 pr-2">
+                  <span className="shrink-0 text-[0.68rem] font-black uppercase tracking-wide text-muted-foreground">
+                    Tổng {pagination.total} task
+                  </span>
+
+                  <Pagination className="w-auto shrink-0">
+                    <PaginationContent className="justify-end">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => updatePageInQuery(pagination.page - 1)}
+                          disabled={pagination.page <= 1}
+                        />
+                      </PaginationItem>
+
+                      {(() => {
+                        let hasRenderedJumpControl = false;
+
+                        return visiblePages.flatMap((pageNumber, index) => {
+                          const previousPage = visiblePages[index - 1];
+                          const hasGap =
+                            index > 0 &&
+                            typeof previousPage === "number" &&
+                            pageNumber - previousPage > 1;
+
+                          const items = [];
+
+                          if (hasGap) {
+                            if (!hasRenderedJumpControl) {
+                              hasRenderedJumpControl = true;
+                              items.push(
+                                <PaginationItem
+                                  key={`home-gap-jump-${pageNumber}`}
+                                >
+                                  {isJumpInputVisible ? (
+                                    <Input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      maxLength={
+                                        String(pagination.totalPages).length
+                                      }
+                                      value={pageInput}
+                                      onChange={handlePageInputChange}
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                          event.preventDefault();
+                                          handleJumpToPage();
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        if (!pageInput) {
+                                          setIsJumpInputVisible(false);
+                                          return;
+                                        }
+
+                                        handleJumpToPage();
+                                      }}
+                                      className="h-7 w-12 border-[3px] border-border bg-card px-1 text-center text-[0.68rem] font-black uppercase shadow-none"
+                                      aria-label="Nhập trang cần chuyển"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <PaginationLink
+                                      onClick={() => {
+                                        setIsJumpInputVisible(true);
+                                        setPageInput("");
+                                      }}
+                                      aria-label="Mở nhập số trang"
+                                    >
+                                      ...
+                                    </PaginationLink>
+                                  )}
+                                </PaginationItem>,
+                              );
+                            } else {
+                              items.push(
+                                <PaginationItem key={`home-gap-${pageNumber}`}>
+                                  <PaginationLink disabled aria-hidden>
+                                    ...
+                                  </PaginationLink>
+                                </PaginationItem>,
+                              );
+                            }
+                          }
+
+                          items.push(
+                            <PaginationItem key={`home-page-${pageNumber}`}>
+                              <PaginationLink
+                                isActive={pageNumber === pagination.page}
+                                onClick={() => updatePageInQuery(pageNumber)}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>,
+                          );
+
+                          return items;
+                        });
+                      })()}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => updatePageInQuery(pagination.page + 1)}
+                          disabled={pagination.page >= pagination.totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              </div>
+            ) : (
+              <div className="text-right text-[0.68rem] font-black uppercase tracking-wide text-muted-foreground">
+                Tổng {pagination.total} task
+              </div>
+            )}
+          </div>
         </div>
       )}
 

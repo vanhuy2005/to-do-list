@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PlusIcon, XIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -100,12 +100,11 @@ export default function FilterPage() {
   };
 
   return (
-    // Fixed overlay with safe-area spacing and scrollable viewport on mobile.
-    <div className="fixed inset-0 z-100 overflow-y-auto bg-black/40 backdrop-blur-sm">
-      <div className="mx-auto flex min-h-dvh w-full max-w-md items-start justify-center p-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom)+5rem)] md:items-center md:pb-4">
+    <section className="mx-auto w-full max-w-3xl pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8">
+      <div className="mx-auto w-full max-w-md">
         <div
           className={cn(
-            "relative w-full rounded-[2rem] border-[4px] border-border comic-shadow-lg flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.75rem)] flex-col overflow-hidden",
+            "relative w-full rounded-[2rem] border-[4px] border-border comic-shadow-lg flex min-h-[min(78dvh,760px)] flex-col overflow-hidden",
             taskModalSurfaceClass,
           )}
         >
@@ -126,7 +125,7 @@ export default function FilterPage() {
           </div>
 
           {/* Modal Content */}
-          <div className="flex-1 space-y-7 p-6 overflow-y-auto">
+          <div className="flex-1 space-y-7 overflow-y-auto p-6">
             {/* Status Section */}
             <div className="space-y-4">
               <div className="inline-flex origin-bottom-left -rotate-3 border-[3px] border-border bg-[#ffd400] px-3 py-1.5 text-lg font-black uppercase tracking-tight text-foreground comic-shadow-sm">
@@ -295,6 +294,6 @@ export default function FilterPage() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
