@@ -17,6 +17,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
@@ -57,6 +64,10 @@ const priorityLabelMap = {
 
 const AUDIT_PAGE_SIZE = 6;
 const PAGE_JUMP_DEBOUNCE_MS = 450;
+const CLEANUP_CONTROL_CLASS =
+  "h-10 w-full rounded-lg border-[3px] border-border bg-background text-[0.72rem] font-black uppercase comic-shadow";
+const CLEANUP_SELECT_ITEM_CLASS =
+  "rounded-none text-[0.72rem] font-black uppercase";
 
 const formatClock = (value) => {
   if (!value) {
@@ -483,35 +494,84 @@ export default function ActivitiesPage() {
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <select
-              value={deleteScope}
-              onChange={(event) => setDeleteScope(event.target.value)}
-              className="h-10 rounded-lg border-[3px] border-border bg-background px-2 text-[0.72rem] font-black uppercase comic-shadow"
-              aria-label="Chọn phạm vi xóa log"
-            >
-              <option value="all">Xóa tất cả thời gian</option>
-              <option value="day">Xóa theo ngày</option>
-              <option value="month">Xóa theo tháng</option>
-            </select>
+            <Select value={deleteScope} onValueChange={setDeleteScope}>
+              <SelectTrigger
+                className={cn(CLEANUP_CONTROL_CLASS, "px-2")}
+                aria-label="Chọn phạm vi xóa log"
+              >
+                <SelectValue placeholder="Xóa tất cả thời gian" />
+              </SelectTrigger>
+              <SelectContent
+                position="popper"
+                align="start"
+                className="w-(--radix-select-trigger-width) bg-background"
+              >
+                <SelectItem
+                  value="all"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Xóa tất cả thời gian
+                </SelectItem>
+                <SelectItem
+                  value="day"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Xóa theo ngày
+                </SelectItem>
+                <SelectItem
+                  value="month"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Xóa theo tháng
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-            <select
-              value={deleteType}
-              onChange={(event) => setDeleteType(event.target.value)}
-              className="h-10 rounded-lg border-[3px] border-border bg-background px-2 text-[0.72rem] font-black uppercase comic-shadow"
-              aria-label="Chọn loại log"
-            >
-              <option value="all">Mọi loại log</option>
-              <option value="task.created">Task created</option>
-              <option value="task.updated">Task updated</option>
-              <option value="task.deleted">Task deleted</option>
-            </select>
+            <Select value={deleteType} onValueChange={setDeleteType}>
+              <SelectTrigger
+                className={cn(CLEANUP_CONTROL_CLASS, "px-2")}
+                aria-label="Chọn loại log"
+              >
+                <SelectValue placeholder="Mọi loại log" />
+              </SelectTrigger>
+              <SelectContent
+                position="popper"
+                align="start"
+                className="w-(--radix-select-trigger-width) bg-background"
+              >
+                <SelectItem
+                  value="all"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Mọi loại log
+                </SelectItem>
+                <SelectItem
+                  value="task.created"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Task created
+                </SelectItem>
+                <SelectItem
+                  value="task.updated"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Task updated
+                </SelectItem>
+                <SelectItem
+                  value="task.deleted"
+                  className={CLEANUP_SELECT_ITEM_CLASS}
+                >
+                  Task deleted
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
             {deleteScope === "day" ? (
               <Input
                 type="date"
                 value={deleteDate}
                 onChange={(event) => setDeleteDate(event.target.value)}
-                className="h-10 border-[3px] border-border bg-background text-[0.72rem] font-black uppercase comic-shadow"
+                className={CLEANUP_CONTROL_CLASS}
                 aria-label="Chọn ngày xóa log"
               />
             ) : (
@@ -520,7 +580,7 @@ export default function ActivitiesPage() {
                 value={deleteMonth}
                 onChange={(event) => setDeleteMonth(event.target.value)}
                 disabled={deleteScope !== "month"}
-                className="h-10 border-[3px] border-border bg-background text-[0.72rem] font-black uppercase comic-shadow disabled:opacity-50"
+                className={cn(CLEANUP_CONTROL_CLASS, "disabled:opacity-50")}
                 aria-label="Chọn tháng xóa log"
               />
             )}
