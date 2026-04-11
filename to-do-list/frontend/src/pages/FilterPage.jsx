@@ -14,7 +14,7 @@ import {
 } from "@/lib/taskModalDesignSystem";
 
 const STATUS_OPTIONS = [
-  { value: "todo", label: "Chưa làm" },
+  { value: "todo", label: "Cần làm" },
   { value: "doing", label: "Đang làm" },
   { value: "done", label: "Hoàn thành" },
   { value: "canceled", label: "Đã hủy" },

@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS = {
-  todo: "Chưa làm",
+  todo: "Cần làm",
   doing: "Đang làm",
   done: "Hoàn thành",
   canceled: "Đã hủy",

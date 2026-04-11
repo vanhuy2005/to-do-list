@@ -506,22 +506,13 @@ export default function ActivitiesPage() {
                 align="start"
                 className="w-(--radix-select-trigger-width) bg-background"
               >
-                <SelectItem
-                  value="all"
-                  className={CLEANUP_SELECT_ITEM_CLASS}
-                >
+                <SelectItem value="all" className={CLEANUP_SELECT_ITEM_CLASS}>
                   Xóa tất cả thời gian
                 </SelectItem>
-                <SelectItem
-                  value="day"
-                  className={CLEANUP_SELECT_ITEM_CLASS}
-                >
+                <SelectItem value="day" className={CLEANUP_SELECT_ITEM_CLASS}>
                   Xóa theo ngày
                 </SelectItem>
-                <SelectItem
-                  value="month"
-                  className={CLEANUP_SELECT_ITEM_CLASS}
-                >
+                <SelectItem value="month" className={CLEANUP_SELECT_ITEM_CLASS}>
                   Xóa theo tháng
                 </SelectItem>
               </SelectContent>
@@ -539,10 +530,7 @@ export default function ActivitiesPage() {
                 align="start"
                 className="w-(--radix-select-trigger-width) bg-background"
               >
-                <SelectItem
-                  value="all"
-                  className={CLEANUP_SELECT_ITEM_CLASS}
-                >
+                <SelectItem value="all" className={CLEANUP_SELECT_ITEM_CLASS}>
                   Mọi loại log
                 </SelectItem>
                 <SelectItem
@@ -597,7 +585,8 @@ export default function ActivitiesPage() {
           </div>
 
           <p className="mt-2 text-[0.68rem] font-bold uppercase tracking-wide text-muted-foreground">
-            Gợi ý: Chọn theo tháng + loại log để dọn nhẹ dữ liệu mà không ảnh hưởng toàn bộ lịch sử.
+            Gợi ý: Chọn theo tháng + loại log để dọn nhẹ dữ liệu mà không ảnh
+            hưởng toàn bộ lịch sử.
           </p>
         </section>
       )}
@@ -676,10 +665,6 @@ export default function ActivitiesPage() {
                                   Bạn đã
                                 </p>
 
-                                <h3 className="mt-0.5 whitespace-normal wrap-break-word text-[1.3rem] leading-[1.08] font-black uppercase tracking-tight text-foreground">
-                                  {taskTitle}
-                                </h3>
-
                                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                                   <span className="text-[0.78rem] font-black uppercase tracking-tight text-foreground/65">
                                     {actionLabel}
@@ -691,6 +676,10 @@ export default function ActivitiesPage() {
                                     </span>
                                   )}
                                 </div>
+
+                                <h3 className="mt-1 whitespace-normal wrap-break-word text-[1.3rem] leading-[1.08] font-black uppercase tracking-tight text-foreground">
+                                  {taskTitle}
+                                </h3>
                               </div>
 
                               <span className="shrink-0 rounded-full border-2 border-border bg-[#121212] px-2 py-0.5 text-[0.58rem] font-black uppercase text-white">
@@ -764,10 +753,6 @@ export default function ActivitiesPage() {
                               Bạn đã
                             </p>
 
-                            <h3 className="whitespace-normal wrap-break-word text-[1.85rem] leading-[1.02] font-black uppercase tracking-tight text-foreground">
-                              {taskTitle}
-                            </h3>
-
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[0.84rem] font-black uppercase tracking-tight text-foreground/65">
                                 {actionLabel}
@@ -779,6 +764,10 @@ export default function ActivitiesPage() {
                                 </span>
                               )}
                             </div>
+
+                            <h3 className="whitespace-normal wrap-break-word text-[1.85rem] leading-[1.02] font-black uppercase tracking-tight text-foreground">
+                              {taskTitle}
+                            </h3>
                           </div>
                         </div>
 
@@ -804,7 +793,7 @@ export default function ActivitiesPage() {
                             }
 
                             navigate(
-                               `/tasks/${log.entityId}?from=audit&returnTo=%2Factivities`,
+                              `/tasks/${log.entityId}?from=audit&returnTo=%2Factivities`,
                               {
                                 state: { auditLog: log },
                               },
