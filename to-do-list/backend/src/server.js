@@ -9,7 +9,7 @@ import authRouters from "./routes/authRouters.js";
 import profileRouters from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
-import authMiddleware from "./middleware/authMiddleware.js";
+import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
 
@@ -75,12 +75,17 @@ app.use(cookieParser());
 app.use("/api/v1/auth", authRouters);
 
 // Protected routes
-app.use("/api/v1/profile", authMiddleware, profileRouters);
-app.use("/api/v1/tasks", authMiddleware, tasksRouters);
+app.use("/api/v1/profile", authMiddleware, requireRole("user"), profileRouters);
+app.use("/api/v1/tasks", authMiddleware, requireRole("user"), tasksRouters);
 app.use("/api/v1/voice-task", authMiddleware, voiceTaskRouters);
 app.use("/api/v1/voice/stt", authMiddleware, sttRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
-app.use("/api/v1/audit-logs", authMiddleware, auditLogsRouters);
+app.use(
+  "/api/v1/audit-logs",
+  authMiddleware,
+  requireRole("user"),
+  auditLogsRouters,
+);
 
 connectDB()
   .then(() => {

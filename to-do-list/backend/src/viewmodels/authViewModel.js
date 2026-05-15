@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import RefreshSession from "../models/RefreshSession.js";
+import { getPermissionsByRole } from "../config/permissions.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_REFRESH_SECRET =
@@ -67,6 +68,7 @@ const formatUserResponse = (user) => ({
   role: user.role,
   status: user.status,
   providers: user.providers,
+  permissions: getPermissionsByRole(user.role),
 });
 
 const authViewModel = {

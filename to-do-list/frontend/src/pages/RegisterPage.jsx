@@ -45,7 +45,10 @@ export default function RegisterPage() {
       if (response?.data?.accessToken) {
         authService.setToken(response.data.accessToken);
         toast.success("Đăng ký thành công!");
-        navigate("/");
+        navigate(
+          authService.getDefaultRouteByRole(response?.data?.user?.role),
+          { replace: true },
+        );
       }
     } catch (error) {
       const errorMessage =
@@ -67,13 +70,13 @@ export default function RegisterPage() {
       <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-xl items-center justify-center">
         <section className="w-full max-w-90 rounded-[2rem] border-4 border-border bg-card px-4 py-6 comic-shadow sm:px-6 lg:py-7">
           <div className="text-center">
-            <div className="mx-auto mb-5 inline-flex size-16 items-center justify-center rounded-2xl border-[3px] border-border bg-[#00c2ff] comic-shadow rotate-6">
-              <UserPlusIcon className="size-8 text-white -rotate-6" />
+            <div className="mx-auto mb-5 inline-flex size-16 rotate-6 items-center justify-center rounded-2xl border-[3px] border-border bg-[#00c2ff] comic-shadow">
+              <UserPlusIcon className="size-8 -rotate-6 text-white" />
             </div>
-            <h1 className="text-[2.2rem] leading-none font-black uppercase tracking-tight text-foreground">
+            <h1 className="text-[2.2rem] font-black leading-none tracking-tight text-foreground uppercase">
               Đăng ký
             </h1>
-            <p className="mt-1.5 text-sm font-bold text-muted-foreground uppercase tracking-wide">
+            <p className="mt-1.5 text-sm font-bold tracking-wide text-muted-foreground uppercase">
               Tạo tài khoản mới
             </p>
           </div>
@@ -82,7 +85,7 @@ export default function RegisterPage() {
             <div className="space-y-2.5">
               <label
                 htmlFor="displayName"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Họ và tên
               </label>
@@ -107,7 +110,7 @@ export default function RegisterPage() {
             <div className="space-y-2.5">
               <label
                 htmlFor="email"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Email
               </label>
@@ -132,7 +135,7 @@ export default function RegisterPage() {
             <div className="space-y-2.5">
               <label
                 htmlFor="password"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Mật khẩu
               </label>
@@ -157,7 +160,7 @@ export default function RegisterPage() {
             <div className="space-y-2.5">
               <label
                 htmlFor="confirmPassword"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Xác nhận mật khẩu
               </label>
@@ -189,11 +192,11 @@ export default function RegisterPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">
+            <p className="text-sm font-bold tracking-wide text-muted-foreground uppercase">
               Đã có tài khoản?{" "}
               <Link
                 to="/login"
-                className="text-primary hover:underline hover:text-primary/80"
+                className="text-primary hover:text-primary/80 hover:underline"
               >
                 Đăng nhập ngay
               </Link>

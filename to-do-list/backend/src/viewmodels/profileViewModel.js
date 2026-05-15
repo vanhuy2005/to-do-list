@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import RefreshSession from "../models/RefreshSession.js";
 import AuditLog from "../models/AuditLog.js";
+import { getPermissionsByRole } from "../config/permissions.js";
 
 class ProfileViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -20,6 +21,7 @@ const formatUserResponse = (user) => ({
   role: user.role,
   status: user.status,
   providers: user.providers,
+  permissions: getPermissionsByRole(user.role),
   preferredLanguage: user.preferredLanguage,
   themePreference: user.themePreference,
   customStatuses: user.customStatuses,
