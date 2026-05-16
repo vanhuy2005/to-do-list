@@ -34,6 +34,7 @@ const errorHandler = (fn) => async (req, res, next) => {
   }
 };
 
+// GET /admin/users - danh sách users
 router.get(
   "/users",
   requireRole("admin"),
@@ -47,6 +48,7 @@ router.get(
   }),
 );
 
+// PUT /admin/users/:id - cập nhật user
 router.put(
   "/users/:id",
   requireRole("admin"),
@@ -60,6 +62,7 @@ router.put(
   }),
 );
 
+// DELETE /admin/users/:id - xóa user
 router.delete(
   "/users/:id",
   requireRole("admin"),
@@ -74,6 +77,7 @@ router.delete(
   }),
 );
 
+// GET /admin/moderation - kiểm duyệt users không hoạt động
 router.get(
   "/moderation",
   requireRole("admin"),
@@ -87,6 +91,7 @@ router.get(
   }),
 );
 
+// PUT /admin/moderation/:id/disable - vô hiệu hóa user
 router.put(
   "/moderation/:id/disable",
   requireRole("admin"),
@@ -101,6 +106,7 @@ router.put(
   }),
 );
 
+// GET /admin/trash - thùng rác tài khoản
 router.get(
   "/trash",
   requireRole("admin"),
@@ -114,6 +120,7 @@ router.get(
   }),
 );
 
+// GET /admin/tasks - tasks cho kiểm duyệt
 router.get(
   "/tasks",
   requireRole("admin"),
@@ -127,6 +134,7 @@ router.get(
   }),
 );
 
+// GET /admin/analytics - phân tích
 router.get(
   "/analytics",
   requireRole("admin"),
@@ -140,6 +148,7 @@ router.get(
   }),
 );
 
+// GET /admin/audit-logs - nhật ký kiểm toán
 router.get(
   "/audit-logs",
   requireRole("admin"),
