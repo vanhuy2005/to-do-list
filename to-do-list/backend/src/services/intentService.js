@@ -102,23 +102,43 @@ Output: {"title":"Ôn thi cuối kỳ môn toán","description":"Tập trung ph�
 Now extract the task from the user's transcript. Return ONLY the JSON.`;
 
 /**
+ * Correct Vietnamese phonetic tone/vowel confusion errors safely.
+ */
+export function phoneticCorrect(transcript) {
+  if (!transcript || typeof transcript !== 'string') return transcript;
+  
+  const rules = [
+    { pattern: /\btạm\s+giờ\b/gi, replacement: 'tám giờ' },
+    { pattern: /\blam\s+giờ\b/gi, replacement: 'lăm giờ' },
+    { pattern: /\bchim\s+nay\b/gi, replacement: 'chiều nay' },
+  ];
+  
+  let corrected = transcript;
+  for (const { pattern, replacement } of rules) {
+    corrected = corrected.replace(pattern, replacement);
+  }
+  return corrected;
+}
+
+/**
  * Full pipeline: transcript → enriched task draft
  */
 export async function extractIntent({ transcript, requestId }) {
   const startAt = Date.now();
+  const correctedTranscript = phoneticCorrect(transcript);
 
   let aiDraft = null;
   const providers = ['openrouter', 'gemini', 'ollama'];
   const requestFns = {
-    openrouter: () => requestOpenRouter(transcript),
-    gemini: () => requestGemini(transcript),
-    ollama: () => requestOllama(transcript),
+    openrouter: () => requestOpenRouter(correctedTranscript),
+    gemini: () => requestGemini(correctedTranscript),
+    ollama: () => requestOllama(correctedTranscript),
   };
 
   for (const provider of providers) {
     try {
-      const rawOutput = await governor.run(provider, transcript, requestFns[provider]);
-      aiDraft = recoverAndValidate(rawOutput, transcript);
+      const rawOutput = await governor.run(provider, correctedTranscript, requestFns[provider]);
+      aiDraft = recoverAndValidate(rawOutput, correctedTranscript);
 
       console.info({
         event: 'intent.provider_success',
@@ -142,17 +162,18 @@ export async function extractIntent({ transcript, requestId }) {
   if (!aiDraft) {
     console.warn({ event: 'intent.fallback', request_id: requestId, reason: 'All AI providers failed' });
     aiDraft = {
-      title: transcript.slice(0, 100).trim() || 'Untitled task',
+      title: correctedTranscript.slice(0, 100).trim() || '[Task từ giọng nói]',
       description: null,
       datePhrase: null,
       tags: [],
       priority: 'medium',
-      confidence: 0.15,
+      confidence: 0.3,
     };
   }
 
-  const dueDate = parseDateFromText(aiDraft.datePhrase ?? transcript);
-  const priority = extractPriority(transcript);
+  const dueDate = parseDateFromText(aiDraft.datePhrase ?? correctedTranscript);
+  const priority = extractPriority(correctedTranscript);
+  const finalPriority = (priority && priority !== 'medium') ? priority : (aiDraft.priority || 'medium');
 
   const latency = Date.now() - startAt;
   console.info({
@@ -161,16 +182,16 @@ export async function extractIntent({ transcript, requestId }) {
     latency_ms: latency,
     has_due_date: !!dueDate,
     has_description: !!aiDraft.description,
-    priority: aiDraft.priority || priority,
+    priority: finalPriority,
     confidence: aiDraft.confidence,
   });
 
   return {
-    title: aiDraft.title,
+    title: aiDraft.title?.trim() || '[Task từ giọng nói]',
     description: aiDraft.description,
     datePhrase: aiDraft.datePhrase,
     dueDate,
-    priority: aiDraft.priority || priority,
+    priority: finalPriority,
     tags: aiDraft.tags,
     confidence: aiDraft.confidence,
   };
