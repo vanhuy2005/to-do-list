@@ -43,8 +43,20 @@ export const TaskDraftSchema = z.object({
  * Throws ParseError nếu không thể recover
  */
 export function recoverAndValidate(rawOutput, fallbackTitle = '') {
+  // Direct support for object types (e.g. from test mocks)
+  if (rawOutput && typeof rawOutput === 'object') {
+    const result = TaskDraftSchema.safeParse(rawOutput);
+    if (!result.success) {
+      const fieldErrors = result.error.errors
+        .map(e => `${e.path.join('.')}: ${e.message}`)
+        .join('; ');
+      throw new ParseError(`Schema validation failed: ${fieldErrors}`, JSON.stringify(rawOutput));
+    }
+    return result.data;
+  }
+
   if (!rawOutput || typeof rawOutput !== 'string') {
-    return buildFallback(fallbackTitle, 'empty_input');
+    throw new ParseError('Empty or invalid string input', rawOutput);
   }
 
   let cleaned = rawOutput
@@ -53,27 +65,38 @@ export function recoverAndValidate(rawOutput, fallbackTitle = '') {
     .trim();
 
   const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
-    console.warn({ event: 'parse.no_json_found', raw_length: rawOutput.length });
-    return buildFallback(fallbackTitle, 'no_json_found');
+  if (firstBrace === -1) {
+    throw new ParseError('No JSON object found', rawOutput);
   }
-  cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  } else {
+    cleaned = cleaned.slice(firstBrace);
+  }
 
   let repaired;
   try {
     repaired = jsonrepair(cleaned);
   } catch (err) {
-    console.warn({ event: 'parse.jsonrepair_failed', error: err.message });
-    return buildFallback(fallbackTitle, 'jsonrepair_failed');
+    // Attempt auto-closing of braces for truncated outputs
+    try {
+      repaired = jsonrepair(cleaned + '}');
+    } catch (e2) {
+      try {
+        repaired = jsonrepair(cleaned + ']}');
+      } catch (e3) {
+        throw new ParseError(`JSON repair failed: ${err.message}`, rawOutput);
+      }
+    }
   }
 
   let parsed;
   try {
     parsed = JSON.parse(repaired);
   } catch (err) {
-    console.warn({ event: 'parse.json_parse_failed', error: err.message });
-    return buildFallback(fallbackTitle, 'json_parse_failed');
+    throw new ParseError(`JSON parse failed: ${err.message}`, rawOutput);
   }
 
   const result = TaskDraftSchema.safeParse(parsed);
@@ -81,9 +104,7 @@ export function recoverAndValidate(rawOutput, fallbackTitle = '') {
     const fieldErrors = result.error.errors
       .map(e => `${e.path.join('.')}: ${e.message}`)
       .join('; ');
-    console.warn({ event: 'parse.schema_fail', field_errors: fieldErrors });
-    const salvageTitle = typeof parsed?.title === 'string' ? parsed.title.trim() : fallbackTitle;
-    return buildFallback(salvageTitle, 'schema_fail');
+    throw new ParseError(`Schema validation failed: ${fieldErrors}`, rawOutput);
   }
 
   console.info({ event: 'parse.success', has_description: !!result.data.description });
@@ -98,7 +119,7 @@ function buildFallback(title, reason) {
     datePhrase: null,
     tags: [],
     priority: 'medium',
-    confidence: 0.2,
+    confidence: 0.3,
   };
 }
 
