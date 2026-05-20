@@ -1,5 +1,6 @@
 import express from "express";
 import { extractIntent } from "../services/intentService.js";
+import { sanitizeVoiceText } from "../services/aiService.js";
 import { voiceRateLimit } from "../middleware/voiceRateLimit.js";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,7 +17,7 @@ router.post("/", voiceRateLimit, async (req, res) => {
     });
   }
 
-  const sanitizedText = text.trim();
+  const sanitizedText = sanitizeVoiceText(text);
   if (sanitizedText.length < 3) {
     return res.status(400).json({
       success: false,
@@ -31,9 +32,17 @@ router.post("/", voiceRateLimit, async (req, res) => {
       requestId,
     });
 
+    if (enrichedTask.error) {
+      return res.status(422).json({
+        success: false,
+        error: { code: "VOICE_TASK_INVALID", message: enrichedTask.error },
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: {
+        status: null,
         ...enrichedTask,
         rawTranscript: sanitizedText,
         source: "voice",
@@ -49,6 +58,17 @@ router.post("/", voiceRateLimit, async (req, res) => {
     });
 
     // Xử lý các lỗi đặc thù từ Governor hoặc AI
+    if (err.status === 429) {
+      res.setHeader("Retry-After", String(err.retryAfter || 5));
+      return res.status(429).json({
+        success: false,
+        error: {
+          code: "AI_RATE_LIMIT",
+          message: err.message,
+        },
+      });
+    }
+
     if (err.code === 'QUEUE_TIMEOUT') {
       return res.status(503).json({
         success: false,
