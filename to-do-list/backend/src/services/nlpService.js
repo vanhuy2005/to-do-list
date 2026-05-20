@@ -24,10 +24,30 @@ const VI_ALIASES = [
   { pattern: /\btu[aầ]n sau\b/gi,     replace: 'next week' },
   { pattern: /\btu[aầ]n t[oớ]i\b/gi,  replace: 'next week' },
   { pattern: /\bcu[oố]i th[aá]ng\b/gi,replace: 'the last day of this month' },
-  { pattern: /\bl[uú]c\s+(\d+)\s*h\s*s[aá]ng\b/gi, replace: 'at $1:00 AM' },
-  { pattern: /\bl[uú]c\s+(\d+)\s*h\s*ch[iị]u\b/gi, replace: 'at $1:00 PM' },
-  { pattern: /\bl[uú]c\s+(\d+)\s*h\s*t[oố]i\b/gi,   replace: 'at $1:00 PM' },
-  { pattern: /\bl[uú]c\s+(\d+)\s*h\b/gi,          replace: 'at $1:00' },
+  
+  // Hour & Minute patterns with "giờ", "h", "g"
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*ph[uú]t\s*s[aá]ng\b/gi, replace: 'at $1:$3 AM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*ph[uú]t\s*ch[iị]u\b/gi, replace: 'at $1:$3 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*ph[uú]t\s*t[oố]i\b/gi,   replace: 'at $1:$3 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*ph[uú]t\b/gi,          replace: 'at $1:$3' },
+  
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*s[aá]ng\b/gi, replace: 'at $1:$3 AM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*ch[iị]u\b/gi, replace: 'at $1:$3 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\s*t[oố]i\b/gi,   replace: 'at $1:$3 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*(\d+)\b/gi,          replace: 'at $1:$3' },
+  
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*s[aá]ng\b/gi, replace: 'at $1:00 AM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*ch[iị]u\b/gi, replace: 'at $1:00 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*t[oố]i\b/gi,   replace: 'at $1:00 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\s*đ[ê]m\b/gi,    replace: 'at $1:00 PM' },
+  { pattern: /\bl[uú]c\s+(\d+)\s*(giờ|g|h)\b/gi,          replace: 'at $1:00' },
+
+  { pattern: /\b(\d+)\s*(giờ|g|h)\s*s[aá]ng\b/gi, replace: 'at $1:00 AM' },
+  { pattern: /\b(\d+)\s*(giờ|g|h)\s*ch[iị]u\b/gi, replace: 'at $1:00 PM' },
+  { pattern: /\b(\d+)\s*(giờ|g|h)\s*t[oố]i\b/gi,   replace: 'at $1:00 PM' },
+  { pattern: /\b(\d+)\s*(giờ|g|h)\s*đ[ê]m\b/gi,    replace: 'at $1:00 PM' },
+  { pattern: /\b(\d+)\s*(giờ|g|h)\b/gi,          replace: 'at $1:00' },
+  
   { pattern: /\bs[aá]ng mai\b/gi,     replace: 'tomorrow at 8:00 AM' },
   { pattern: /\bchi[ề]u mai\b/gi,     replace: 'tomorrow at 2:00 PM' },
   { pattern: /\bt[ố]i mai\b/gi,        replace: 'tomorrow at 8:00 PM' },
@@ -39,26 +59,49 @@ const VI_ALIASES = [
 ];
 
 /**
+ * Pre-process written Vietnamese numbers to standard digits.
+ */
+function convertVietnameseNumbersToDigits(text) {
+  if (!text) return text;
+  let result = text;
+  const mappings = [
+    { pattern: /\bmười\s+hai\b/gi, replacement: '12' },
+    { pattern: /\bmười\s+một\b/gi, replacement: '11' },
+    { pattern: /\bmười\b/gi, replacement: '10' },
+    { pattern: /\bchín\b/gi, replacement: '9' },
+    { pattern: /\btám\b/gi, replacement: '8' },
+    { pattern: /\bbảy\b/gi, replacement: '7' },
+    { pattern: /\bsáu\b/gi, replacement: '6' },
+    { pattern: /\bnăm\b/gi, replacement: '5' },
+    { pattern: /\blăm\b/gi, replacement: '5' },
+    { pattern: /\bbốn\b/gi, replacement: '4' },
+    { pattern: /\btư\b/gi, replacement: '4' },
+    { pattern: /\bba\b/gi, replacement: '3' },
+    { pattern: /\bhai\b/gi, replacement: '2' },
+    { pattern: /\bmột\b/gi, replacement: '1' }
+  ];
+  for (const { pattern, replacement } of mappings) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
+/**
  * Input:  rawText (string) — transcript hoặc datePhrase từ AI
  * Output: ISO 8601 string | null
- *
- * Ví dụ:
- *   parseDateFromText("gặp Nam sáng mai")   → "2026-05-17T08:00:00+07:00"
- *   parseDateFromText("thứ 6 tuần sau")     → "2026-05-22T09:00:00+07:00"
- *   parseDateFromText("nothing here")       → null
  */
 export function parseDateFromText(rawText) {
   if (!rawText || typeof rawText !== 'string') return null;
 
-  // 1. Dịch tiếng Việt → tiếng Anh để chrono hiểu
-  let normalized = rawText.toLowerCase();
+  // 1. Pre-process numbers & translate to English
+  let normalized = convertVietnameseNumbersToDigits(rawText.toLowerCase());
   
-  // Xử lý thủ công "cuối tháng" vì chrono-node không ổn định với cụm này qua dịch thuật
+  // Xử lý thủ công "cuối tháng"
   if (/\bcu[oố]i th[aá]ng\b/i.test(normalized)) {
     return dayjs().tz(TZ).endOf('month').toISOString();
   }
 
-  // Xoá các tiền tố ngày tháng thông dụng để tránh làm nhiễu chrono
+  // Xoá các tiền tố ngày tháng thông dụng
   normalized = normalized.replace(/\b(ngày|vào lúc|vào|vào ngày)\b/gi, '');
 
   for (const { pattern, replace } of VI_ALIASES) {
@@ -71,16 +114,49 @@ export function parseDateFromText(rawText) {
 
   if (!results.length) return null;
 
-  // 3. Lấy kết quả đầu tiên, convert sang ISO với timezone Việt Nam
-  const parsed = results[0].date();
-  return dayjs(parsed).tz(TZ).toISOString();
+  const result = results[0];
+  const parsedDate = result.date();
+  
+  // 3. Temporal Proximity Heuristic for ambiguous hours (1-12)
+  const hasMeridiem = result.start.isCertain('meridiem') || 
+                      /\b(s[aá]ng|chi[ề]u|t[ố]i|đ[ê]m|am|pm)\b/i.test(rawText);
+  const parsedHour = result.start.get('hour');
+  
+  if (!hasMeridiem && parsedHour !== null && parsedHour >= 1 && parsedHour <= 12) {
+    const now = dayjs().tz(TZ);
+    const parsedDayjs = dayjs(parsedDate).tz(TZ);
+    const amCandidate = parsedDayjs.hour(parsedHour).minute(result.start.get('minute') || 0).second(0).millisecond(0);
+    const pmCandidate = amCandidate.hour(parsedHour + 12);
+    
+    const diffAM = Math.abs(amCandidate.diff(now, 'minute'));
+    const diffPM = Math.abs(pmCandidate.diff(now, 'minute'));
+    
+    let chosenDate;
+    if (diffAM <= 120 || diffPM <= 120) {
+      chosenDate = diffAM < diffPM ? amCandidate : pmCandidate;
+    } else {
+      const isAMFuture = amCandidate.isAfter(now);
+      const isPMFuture = pmCandidate.isAfter(now);
+      
+      if (isAMFuture && isPMFuture) {
+        chosenDate = amCandidate;
+      } else if (isPMFuture) {
+        chosenDate = pmCandidate;
+      } else {
+        chosenDate = amCandidate;
+      }
+    }
+    return chosenDate.toISOString();
+  }
+
+  return dayjs(parsedDate).tz(TZ).toISOString();
 }
 
 // --- Priority Rule Engine ---
 const PRIORITY_RULES = [
   // Check negations/low priority first to avoid matching keywords like "gấp" in "không gấp"
   { pattern: /\b(low|thấp|không gấp|khi rảnh|whenever|no rush)\b/i,   priority: 'low' },
-  { pattern: /\b(urgent|gấp|khẩn|asap|ngay|immediately|emergency)\b/i, priority: 'high' },
+  { pattern: /\b(urgent|gấp|khẩn|asap|ngay|immediately|emergency)\b/i, priority: 'urgent' },
   { pattern: /\b(deadline|hạn chót|hết hạn|due today|hôm nay)\b/i,    priority: 'high' },
   { pattern: /\b(important|quan trọng|critical|cần thiết)\b/i,         priority: 'high' },
 ];
