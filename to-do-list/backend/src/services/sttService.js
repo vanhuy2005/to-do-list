@@ -24,6 +24,7 @@ export async function transcribeAudio({ audioBuffer, mimeType, requestId }) {
         model: 'whisper-large-v3',
         response_format: 'verbose_json', // trả về language + duration
         language: undefined,             // auto-detect: tiếng Việt & Anh đều ok
+        prompt: "nhắc tôi, tạo công việc, ngày mai, tám giờ, hôm nay, meeting, deadline, task, schedule, ASAP",
       }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new STTError('Groq timeout', 'GROQ_TIMEOUT')), 15_000)
