@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import MainLayout from "@/layouts/Mainlayout";
 import HomePage from "@/pages/HomePage";
 import TaskDetailPage from "@/pages/TaskDetailPage";
@@ -13,6 +13,7 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import DashboardPage from "@/pages/DashboardPage";
+import UnsubscribePage from "@/pages/UnsubscribePage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AuthRoute from "@/components/AuthRoute";
 import RoleRoute from "@/components/RoleRoute";
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
     errorElement: <NotFoundPage />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: "tasks", element: <Navigate to="/" replace /> },
       { path: "tasks/new", element: <NewTaskPage /> },
       { path: "tasks/:id", element: <TaskDetailPage /> },
       { path: "tasks/:id/edit", element: <EditTaskPage /> },
@@ -66,5 +68,9 @@ export const router = createBrowserRouter([
         <RegisterPage />
       </AuthRoute>
     ),
+  },
+  {
+    path: "/unsubscribe",
+    element: <UnsubscribePage />,
   },
 ]);

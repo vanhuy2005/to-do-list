@@ -6,7 +6,7 @@ import tasksRouters from "./routes/tasksRouters.js";
 import voiceTaskRouters from "./routes/voiceTaskRouters.js";
 import sttRouters from "./routes/sttRouter.js";
 import authRouters from "./routes/authRouters.js";
-import profileRouters from "./routes/profileRouters.js";
+import profileRouters, { publicProfileRouter } from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
@@ -73,6 +73,7 @@ app.use(cookieParser());
 
 // Public routes
 app.use("/api/v1/auth", authRouters);
+app.use("/api/v1/profile", publicProfileRouter);
 
 // Protected routes
 app.use("/api/v1/profile", authMiddleware, requireRole("user"), profileRouters);

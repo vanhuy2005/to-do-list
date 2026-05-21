@@ -1,6 +1,8 @@
 import User from "../models/User.js";
 import Task from "../models/Task.js";
 import AuditLog from "../models/AuditLog.js";
+import NotificationLog from "../models/NotificationLog.js";
+import cloudinaryService from "../services/cloudinaryService.js";
 
 class AdminViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -293,6 +295,20 @@ const adminViewModel = {
         "USER_NOT_FOUND",
         "Không tìm thấy người dùng",
       );
+    }
+
+    // Cascade delete user avatar assets on Cloudinary
+    if (deletedUser.avatarPublicId) {
+      cloudinaryService.deleteAvatar(deletedUser.avatarPublicId).catch((err) => {
+        console.error(`Cascade delete avatar failed for user ${userId}:`, err);
+      });
+    }
+
+    // Cascade delete database notification logs
+    try {
+      await NotificationLog.deleteMany({ userId });
+    } catch (err) {
+      console.error(`Cascade delete notification logs failed for user ${userId}:`, err);
     }
 
     return {
