@@ -3,6 +3,7 @@ import Project from "../models/Project.js";
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
 import mongoose from "mongoose";
+import { realtimeService } from "../services/realtimeService.js";
 
 const REQUIRED_CREATE_FIELDS = ["title", "status"];
 const ALLOWED_SORT_FIELDS = [
@@ -578,6 +579,13 @@ const taskViewModel = {
       summaryAfter: buildTaskSummary(task),
     });
 
+    if (task.projectId) {
+      realtimeService.publishProjectEvent(task.projectId, "task_created", {
+        task,
+        actorId: ownerId,
+      });
+    }
+
     return {
       statusCode: 201,
       success: true,
@@ -654,6 +662,13 @@ const taskViewModel = {
       summaryAfter: buildTaskSummary(updatedTask),
     });
 
+    if (updatedTask.projectId) {
+      realtimeService.publishProjectEvent(updatedTask.projectId, "task_updated", {
+        task: updatedTask,
+        actorId,
+      });
+    }
+
     return {
       statusCode: 200,
       success: true,
@@ -694,6 +709,13 @@ const taskViewModel = {
       },
       summaryAfter: buildTaskSummary(deletedTask),
     });
+
+    if (deletedTask.projectId) {
+      realtimeService.publishProjectEvent(deletedTask.projectId, "task_deleted", {
+        taskId: deletedTask._id,
+        actorId,
+      });
+    }
 
     return {
       statusCode: 200,
@@ -749,6 +771,13 @@ const taskViewModel = {
       },
       summaryAfter: buildTaskSummary(restoredTask),
     });
+
+    if (restoredTask.projectId) {
+      realtimeService.publishProjectEvent(restoredTask.projectId, "task_created", {
+        task: restoredTask,
+        actorId: ownerId,
+      });
+    }
 
     return {
       statusCode: 200,
