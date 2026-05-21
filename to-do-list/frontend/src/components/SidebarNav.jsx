@@ -2,7 +2,6 @@ import {
   ActivityIcon,
   HouseIcon,
   PlusIcon,
-  SettingsIcon,
   UserRoundIcon,
   GridIcon,
 } from "lucide-react";
@@ -15,7 +14,6 @@ const navItems = [
   { to: "/projects", label: "Dự án", icon: GridIcon },
   { to: "/activities", label: "Hoạt động", icon: ActivityIcon },
   { to: "/profile", label: "Cá nhân", icon: UserRoundIcon },
-  { to: "/settings", label: "Cài đặt", icon: SettingsIcon },
 ];
 
 export default function SidebarNav() {

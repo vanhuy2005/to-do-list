@@ -2,20 +2,15 @@ import { useEffect, useState } from "react";
 import {
   ChevronRightIcon,
   GlobeIcon,
-  LockKeyholeIcon,
   MoonStarIcon,
   PaletteIcon,
   ShieldIcon,
   SunMediumIcon,
-  UserRoundIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/axios";
-import AvatarUpload from "@/components/settings/AvatarUpload";
 import NotificationSection from "@/components/settings/NotificationSection";
 
 const themeOptions = [
@@ -58,7 +53,6 @@ const formatCount = (value) => (Number.isFinite(value) ? value : 0);
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState(null);
-  const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [sessionCount, setSessionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -81,7 +75,6 @@ export default function SettingsPage() {
         }
 
         setProfile(profileResponse?.data || null);
-        setDisplayNameDraft(profileResponse?.data?.displayName || "");
         setSessionCount(
           Array.isArray(sessionsResponse?.data)
             ? sessionsResponse.data.length
@@ -125,9 +118,7 @@ export default function SettingsPage() {
     }
   }, [profile?.themePreference]);
 
-  useEffect(() => {
-    setDisplayNameDraft(profile?.displayName || "");
-  }, [profile?.displayName]);
+
 
   const activeLanguage = profile?.preferredLanguage || "vi";
   const activeTheme = profile?.themePreference || "light";
@@ -162,18 +153,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveDisplayName = async () => {
-    const nextDisplayName = displayNameDraft.trim();
 
-    if (nextDisplayName.length < 2 || nextDisplayName.length > 50) {
-      toast.error("Tên hiển thị không hợp lệ", {
-        description: "Tên hiển thị phải từ 2 đến 50 ký tự.",
-      });
-      return;
-    }
-
-    await saveProfile({ displayName: nextDisplayName });
-  };
 
   if (isLoading) {
     return <SettingsSkeleton />;
@@ -315,59 +295,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Data Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
-              <LockKeyholeIcon className="size-6 text-primary" />
-              Tài khoản
-            </div>
-
-            <div className="space-y-3 text-sm font-bold text-foreground">
-              {/* Cloudinary-based Avatar Upload component */}
-              <AvatarUpload
-                avatarUrl={profile?.avatarUrl}
-                displayName={profile?.displayName}
-                onAvatarChange={(newUrl) => {
-                  setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
-                }}
-              />
-
-              <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-base uppercase font-black">
-                    Tên hiển thị
-                  </span>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="default"
-                    disabled={isSaving}
-                    onClick={handleSaveDisplayName}
-                    className="border-[2px] comic-shadow-sm"
-                  >
-                    Lưu
-                  </Button>
-                </div>
-
-                <Input
-                  type="text"
-                  value={displayNameDraft}
-                  onChange={(event) => setDisplayNameDraft(event.target.value)}
-                  disabled={isSaving}
-                  placeholder="Nhập tên hiển thị"
-                  className="h-12 rounded-xl bg-background uppercase border-[2px]"
-                  maxLength={50}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <span className="text-base uppercase font-black">Email</span>
-                <span className="max-w-[55%] truncate text-right lowercase font-bold text-muted-foreground">
-                  {profile?.email || "---"}
-                </span>
-              </div>
-            </div>
-          </div>
           {/* End col2 */}
         </div>
         {/* End 2-column grid */}

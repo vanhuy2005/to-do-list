@@ -9,6 +9,7 @@ import {
   PaletteIcon,
   PencilIcon,
   UserRoundIcon,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -199,6 +200,14 @@ export default function ProfilePage() {
     <section className="relative space-y-4 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">
       {/* Mobile cover */}
       <div className="-mx-3 -mt-3 relative z-0 border-b-[3px] border-border bg-[#ff3b57] px-4 pb-14 pt-6 text-center lg:hidden">
+        <div className="absolute top-4 right-4 z-10">
+          <Link
+            to="/settings"
+            className="flex size-10 items-center justify-center rounded-xl border-[3px] border-border bg-white text-foreground comic-shadow active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(0,0,0,1)] transition-all"
+          >
+            <Settings className="size-5" />
+          </Link>
+        </div>
         <div className="absolute left-1/2 bottom-0 flex w-full -translate-x-1/2 translate-y-1/2 justify-center">
           <div className="relative">
             <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-[4px] border-border bg-[radial-gradient(circle_at_30%_30%,#ffd400_0%,#ff7a59_35%,#1f7bdc_68%,#0d324d_100%)] comic-shadow">
@@ -255,12 +264,20 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Button
-          asChild
-          className="h-12 rounded-xl border-[3px] border-border border-b-[5px] bg-card px-6 text-base uppercase text-foreground comic-shadow transition-all duration-200 hover:bg-card/95 lg:hover:scale-[1.02] lg:hover:shadow-[5px_5px_0_#111111]"
-        >
-          <Link to="/settings">Chỉnh sửa hồ sơ</Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            asChild
+            className="h-12 rounded-xl border-[3px] border-border border-b-[5px] bg-card px-6 text-base uppercase text-foreground comic-shadow transition-all duration-200 hover:bg-card/95 lg:hover:scale-[1.02] lg:hover:shadow-[5px_5px_0_#111111]"
+          >
+            <Link to="/profile/edit">Chỉnh sửa hồ sơ</Link>
+          </Button>
+          <Link
+            to="/settings"
+            className="flex size-12 items-center justify-center rounded-xl border-[3px] border-border bg-card text-foreground comic-shadow hover:scale-[1.02] hover:shadow-[3.5px_3.5px_0_#111111] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <Settings className="size-6" />
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-4 pt-16 lg:space-y-4 lg:pt-0">
@@ -277,7 +294,7 @@ export default function ProfilePage() {
             asChild
             className="mt-4 h-12 w-full rounded-2xl border-[3px] border-border border-b-[6px] bg-[#ff3b57] text-base uppercase text-white comic-shadow active:border-b-[3px] active:translate-y-[3px]"
           >
-            <Link to="/settings">Chỉnh sửa hồ sơ</Link>
+            <Link to="/profile/edit">Chỉnh sửa hồ sơ</Link>
           </Button>
         </div>
 
