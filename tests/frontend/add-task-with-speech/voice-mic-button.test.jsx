@@ -61,6 +61,43 @@ vi.mock("@/services/taskService", () => ({
   },
 }));
 
+vi.mock("@/services/voiceApi", () => ({
+  createVoiceDraft: async (text) => {
+    const { default: taskService } = await import("@/services/taskService");
+    const res = await taskService.createVoiceDraft({
+      text,
+      timestamp: new Date().toISOString(),
+    });
+    return res.data || res;
+  }
+}));
+
+vi.mock("@/hooks/useVoiceRecorder", () => ({
+  useVoiceRecorder: (callbacks) => {
+    const [, forceUpdate] = React.useState({});
+    const state = speechState.listening ? "RECORDING" : "IDLE";
+
+    return {
+      state,
+      startRecording: () => {
+        speechState.listening = true;
+        forceUpdate({});
+      },
+      stopRecording: () => {
+        speechState.listening = false;
+        forceUpdate({});
+        const text = speechState.finalTranscript || speechState.transcript;
+        const trimmed = (text || "").trim();
+        if (trimmed.length < 3) {
+          callbacks.onError(new Error("khong nghe ro"));
+        } else {
+          callbacks.onTranscript(trimmed);
+        }
+      },
+    };
+  }
+}));
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Build a 429 Axios-style error with optional Retry-After header. */
