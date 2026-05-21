@@ -16,13 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import DeadlinePicker from "@/components/DeadlinePicker";
+import TaskPreviewCard from "@/components/TaskPreviewCard";
 import TaskModalShell from "@/components/TaskModalShell";
 import TaskModalTopBar from "@/components/TaskModalTopBar";
+import VoiceMicButton from "@/components/VoiceMicButton";
 import { cn } from "@/lib/utils";
 import {
   taskModalFooterClass,
   taskOptionButtonClass,
-  taskOptionGridClass,
 } from "@/lib/taskModalDesignSystem";
 import { taskSchema, taskDefaultValues } from "@/lib/taskSchema";
 import taskService from "@/services/taskService";
@@ -94,7 +95,11 @@ function CollapsibleSection({ label, children, defaultOpen = false }) {
 export default function NewTaskPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVoiceSaving, setIsVoiceSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [voiceDraft, setVoiceDraft] = useState(null);
+  const [voiceRawText, setVoiceRawText] = useState("");
+  const [voiceUiState, setVoiceUiState] = useState("IDLE");
 
   const {
     register,
@@ -141,6 +146,60 @@ export default function NewTaskPage() {
     }
   };
 
+  const normalizeVoiceDueDate = (dueDate) => {
+    if (!dueDate) return undefined;
+    const parsed = new Date(dueDate);
+    if (Number.isNaN(parsed.getTime())) return undefined;
+    return parsed.toISOString();
+  };
+
+  const handleVoiceDraftReady = (draft, rawText, uiState) => {
+    setVoiceDraft(draft);
+    setVoiceRawText(rawText || "");
+    setVoiceUiState(uiState || "PREVIEW");
+  };
+
+  const resetVoiceDraft = () => {
+    setVoiceDraft(null);
+    setVoiceRawText("");
+    setVoiceUiState("IDLE");
+  };
+
+  const handleConfirmVoiceTask = async (draft) => {
+    const title = String(draft?.title || "").trim();
+    if (!title) {
+      toast.error("Lỗi!", { description: "Tiêu đề task không hợp lệ." });
+      return;
+    }
+
+    setIsVoiceSaving(true);
+    try {
+      const payload = {
+        title,
+        description: draft?.description?.trim() || undefined,
+        status: draft?.status || "todo",
+        priority: draft?.priority || "medium",
+        dueDate: normalizeVoiceDueDate(draft?.dueDate),
+        tags: draft?.tags?.length ? draft.tags : undefined,
+      };
+
+      await taskService.createTask(payload);
+      toast.success("Tạo thành công!", {
+        description: `Nhiệm vụ "${title}" đã được tạo.`,
+      });
+      resetVoiceDraft();
+      navigate("/");
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        "Không thể tạo task. Vui lòng thử lại.";
+      toast.error("Lỗi!", { description: msg });
+    } finally {
+      setIsVoiceSaving(false);
+    }
+  };
+
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
@@ -176,6 +235,39 @@ export default function NewTaskPage() {
           title="Thêm công việc"
           onClose={() => navigate("/", { replace: true })}
         />
+
+        <div className="space-y-3 rounded-xl border-[3px] border-border bg-card p-4 comic-shadow">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+                Voice to Task
+              </p>
+              <p className="text-sm font-bold text-foreground">
+                Nói một câu ngắn để tạo task nhanh.
+              </p>
+            </div>
+            <VoiceMicButton
+              onDraftReady={handleVoiceDraftReady}
+              disabled={isSubmitting || isVoiceSaving}
+            />
+          </div>
+
+          {voiceDraft ? (
+            <TaskPreviewCard
+              key={`voice-draft-${voiceRawText || voiceDraft?.title || ""}`}
+              task={voiceDraft}
+              rawText={voiceRawText}
+              uiState={voiceUiState}
+              onCancel={resetVoiceDraft}
+              onConfirm={handleConfirmVoiceTask}
+              isSaving={isVoiceSaving}
+            />
+          ) : (
+            <p className="text-xs font-bold text-muted-foreground">
+              Gợi ý: "Nhắc mình gửi báo cáo cho sếp Minh vào sáng thứ 6".
+            </p>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Title — luôn hiển thị */}

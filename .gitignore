@@ -1,0 +1,7 @@
+node_modules
+.env
+skills
+*.int.test.js
+*.unit.test.js
+*.e2e.test.js
+scratch

@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { taskModalSurfaceClass } from "@/lib/taskModalDesignSystem";
 
@@ -39,6 +39,10 @@ export default function TaskModalShell({
           className,
         )}
       >
+        <DialogTitle className="sr-only">Task Modal</DialogTitle>
+        <DialogDescription className="sr-only">
+          Task details and actions
+        </DialogDescription>
         <div
           className={cn(
             "max-h-[calc(100vh-1rem)] overflow-y-auto p-4 pb-6",

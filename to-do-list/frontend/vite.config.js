@@ -15,4 +15,25 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
+    },
+    fs: {
+      allow: ["..", "../../tests"],
+    },
+  },
+  test: {
+    root: path.resolve(__dirname, "../../"),
+    globals: true,
+    environment: "jsdom",
+    include: [path.resolve(__dirname, "../../tests/frontend/**/*.test.js")],
+    setupFiles: [path.resolve(__dirname, "../../tests/frontend/setupTests.js")],
+    deps: {
+      inline: [/@testing-library/],
+    },
+  },
 })

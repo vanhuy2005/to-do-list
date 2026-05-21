@@ -34,6 +34,43 @@
     border-radius: 9999px;
   }
 
+  @keyframes voice-wave {
+    0%,
+    100% {
+      height: 4px;
+    }
+    50% {
+      height: 16px;
+    }
+  }
+
+  .voice-wave {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 20px;
+  }
+
+  .voice-wave-bar {
+    width: 3px;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--primary-foreground);
+    animation: voice-wave 0.8s ease-in-out infinite;
+  }
+
+  .voice-wave-bar:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .voice-wave-bar:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .voice-wave-bar:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
   /* Hide scrollbar while keeping scroll functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;

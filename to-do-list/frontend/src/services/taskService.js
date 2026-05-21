@@ -4,6 +4,7 @@ const taskService = {
   getTasks: (params = {}) => api.get('/tasks', { params }),
   getTaskById: (id) => api.get(`/tasks/${id}`),
   createTask: (data) => api.post('/tasks', data),
+  createVoiceDraft: (data) => api.post('/voice-task', data),
   updateTask: (id, data) => api.put(`/tasks/${id}`, data),
   deleteTask: (id) => api.delete(`/tasks/${id}`),
   restoreTask: (id) => api.post(`/tasks/${id}/restore`),
