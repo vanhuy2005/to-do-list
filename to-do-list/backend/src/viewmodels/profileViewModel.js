@@ -6,6 +6,7 @@ import NotificationLog from "../models/NotificationLog.js";
 import cloudinaryService from "../services/cloudinaryService.js";
 import emailService from "../services/emailService.js";
 import { getPermissionsByRole } from "../config/permissions.js";
+import { getBetterAuth } from "../services/betterAuthService.js";
 
 class ProfileViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -155,7 +156,7 @@ const profileViewModel = {
     };
   },
 
-  async getSessions(userId) {
+  async getSessions(userId, headers) {
     if (!userId) {
       throw new ProfileViewModelError(
         400,
@@ -164,17 +165,41 @@ const profileViewModel = {
       );
     }
 
-    const sessions = await RefreshSession.find({ userId }).sort({
-      createdAt: -1,
-    });
+    let formattedSessions = [];
 
-    const formattedSessions = sessions.map((session) => ({
-      id: session._id,
-      userAgent: session.userAgent || "Unknown",
-      ipAddress: session.ipAddress || "Unknown",
-      createdAt: session.createdAt,
-      isCurrent: false,
-    }));
+    try {
+      const auth = getBetterAuth();
+      const [currentSession, sessions] = await Promise.all([
+        auth.api.getSession({ headers }),
+        auth.api.listSessions({ headers }),
+      ]);
+
+      if (Array.isArray(sessions) && sessions.length > 0) {
+        formattedSessions = sessions.map((session) => ({
+          id: session.id,
+          userAgent: session.userAgent || "Unknown",
+          ipAddress: session.ipAddress || "Unknown",
+          createdAt: session.createdAt,
+          isCurrent: currentSession?.session?.id === session.id,
+        }));
+      }
+    } catch (error) {
+      console.warn("Better Auth listSessions fallback to legacy store:", error.message);
+    }
+
+    if (formattedSessions.length === 0) {
+      const sessions = await RefreshSession.find({ userId }).sort({
+        createdAt: -1,
+      });
+
+      formattedSessions = sessions.map((session) => ({
+        id: session._id,
+        userAgent: session.userAgent || "Unknown",
+        ipAddress: session.ipAddress || "Unknown",
+        createdAt: session.createdAt,
+        isCurrent: false,
+      }));
+    }
 
     return {
       statusCode: 200,
@@ -183,13 +208,36 @@ const profileViewModel = {
     };
   },
 
-  async deleteSession(sessionId, userId) {
+  async deleteSession(sessionId, userId, headers) {
     if (!sessionId || !userId) {
       throw new ProfileViewModelError(
         400,
         "MISSING_DATA",
         "Session ID và User ID là bắt buộc",
       );
+    }
+
+    try {
+      const auth = getBetterAuth();
+      const sessions = await auth.api.listSessions({ headers });
+      const targetSession = sessions.find((session) => session.id === sessionId);
+
+      if (targetSession) {
+        await auth.api.revokeSession({
+          headers,
+          body: {
+            token: targetSession.token,
+          },
+        });
+
+        return {
+          statusCode: 200,
+          success: true,
+          message: "ÄÃ£ Ä‘Äƒng xuáº¥t thiáº¿t bá»‹",
+        };
+      }
+    } catch (error) {
+      console.warn("Better Auth revokeSession fallback to legacy store:", error.message);
     }
 
     const session = await RefreshSession.findById(sessionId);

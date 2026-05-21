@@ -2,6 +2,7 @@ import express from "express";
 import profileViewModel, { ProfileViewModelError } from "../viewmodels/profileViewModel.js";
 import { imageUploadMiddleware, validateImageBuffer } from "../middleware/imageUpload.js";
 import { avatarRateLimit, unsubscribeRateLimit } from "../middleware/rateLimiters.js";
+import { toBetterAuthHeaders } from "../services/betterAuthService.js";
 
 const router = express.Router();
 
@@ -62,7 +63,8 @@ router.get(
   "/sessions",
   errorHandler(async (req, res) => {
     const result = await profileViewModel.getSessions(
-      req.user?.id || req.userId
+      req.user?.id || req.userId,
+      toBetterAuthHeaders(req),
     );
     res.status(result.statusCode).json({
       success: result.success,
@@ -77,7 +79,8 @@ router.delete(
   errorHandler(async (req, res) => {
     const result = await profileViewModel.deleteSession(
       req.params.id,
-      req.user?.id || req.userId
+      req.user?.id || req.userId,
+      toBetterAuthHeaders(req),
     );
     res.status(result.statusCode).json({
       success: result.success,
