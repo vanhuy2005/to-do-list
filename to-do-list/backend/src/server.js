@@ -1,4 +1,5 @@
 import "./config/env.js";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
@@ -21,7 +22,28 @@ import initCronJobs from "./cron/cronJobs.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendDistPath = path.resolve(__dirname, "../dist/client");
+const frontendBuildPath = path.resolve(__dirname, "../../frontend/dist");
 const frontendIndexPath = path.join(frontendDistPath, "index.html");
+const frontendAssetsPath = path.join(frontendDistPath, "assets");
+
+function ensureFrontendBuild() {
+  if (fs.existsSync(frontendIndexPath) && fs.existsSync(frontendAssetsPath)) {
+    return;
+  }
+
+  if (!fs.existsSync(frontendBuildPath)) {
+    console.warn(
+      `[server] Frontend build not found at ${frontendBuildPath}; skipping asset copy.`,
+    );
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(frontendDistPath), { recursive: true });
+  fs.cpSync(frontendBuildPath, frontendDistPath, { recursive: true });
+  console.log(
+    `[server] Copied frontend build from ${frontendBuildPath} to ${frontendDistPath}`,
+  );
+}
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error({
@@ -63,6 +85,8 @@ const allowedOrigins = (
   .filter(Boolean);
 
 const app = express();
+
+ensureFrontendBuild();
 
 app.use(
   cors({
