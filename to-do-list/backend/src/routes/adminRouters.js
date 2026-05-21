@@ -2,6 +2,10 @@ import express from "express";
 import adminViewModel, {
   AdminViewModelError,
 } from "../viewmodels/adminViewModel.js";
+import {
+  requirePermission,
+  requireRole,
+} from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -30,24 +34,11 @@ const errorHandler = (fn) => async (req, res, next) => {
   }
 };
 
-// Middleware kiểm tra admin
-const requireAdmin = (req, res, next) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({
-      success: false,
-      error: {
-        code: "FORBIDDEN",
-        message: "Chỉ admin có quyền truy cập",
-      },
-    });
-  }
-  next();
-};
-
 // GET /admin/users - danh sách users
 router.get(
   "/users",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("users:read"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getUsers(req.query);
     res.status(result.statusCode).json({
@@ -60,7 +51,8 @@ router.get(
 // PUT /admin/users/:id - cập nhật user
 router.put(
   "/users/:id",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("users:update"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.updateUser(req.params.id, req.body);
     res.status(result.statusCode).json({
@@ -73,7 +65,8 @@ router.put(
 // DELETE /admin/users/:id - xóa user
 router.delete(
   "/users/:id",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("users:delete"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.deleteUserOffline(req.params.id);
     res.status(result.statusCode).json({
@@ -83,10 +76,12 @@ router.delete(
     });
   }),
 );
+
 // GET /admin/moderation - kiểm duyệt users không hoạt động
 router.get(
   "/moderation",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("moderation:read"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getModeration(req.query);
     res.status(result.statusCode).json({
@@ -99,7 +94,8 @@ router.get(
 // PUT /admin/moderation/:id/disable - vô hiệu hóa user
 router.put(
   "/moderation/:id/disable",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("users:disable"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.disableInactiveUser(req.params.id);
     res.status(result.statusCode).json({
@@ -113,7 +109,8 @@ router.put(
 // GET /admin/trash - thùng rác tài khoản
 router.get(
   "/trash",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("trash:read"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getTrash(req.query);
     res.status(result.statusCode).json({
@@ -126,7 +123,8 @@ router.get(
 // GET /admin/tasks - tasks cho kiểm duyệt
 router.get(
   "/tasks",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("moderation:read"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getTasksForModeration(req.query);
     res.status(result.statusCode).json({
@@ -139,7 +137,8 @@ router.get(
 // GET /admin/analytics - phân tích
 router.get(
   "/analytics",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("analytics:read"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getAnalytics();
     res.status(result.statusCode).json({
@@ -152,7 +151,8 @@ router.get(
 // GET /admin/audit-logs - nhật ký kiểm toán
 router.get(
   "/audit-logs",
-  requireAdmin,
+  requireRole("admin"),
+  requirePermission("audit-logs:read:any"),
   errorHandler(async (req, res) => {
     const result = await adminViewModel.getAuditLogs(req.query);
     res.status(result.statusCode).json({

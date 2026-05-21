@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { getPermissionsByRole } from "../config/permissions.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -47,6 +48,7 @@ export const authMiddleware = async (req, res, next) => {
       email: user.email,
       role: user.role,
       status: user.status,
+      permissions: getPermissionsByRole(user.role),
     };
     req.userId = user._id;
     next();
@@ -60,5 +62,63 @@ export const authMiddleware = async (req, res, next) => {
     });
   }
 };
+
+export const requireRole =
+  (...roles) =>
+  (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Bạn cần đăng nhập để tiếp tục",
+        },
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: "FORBIDDEN",
+          message: "Bạn không có quyền truy cập tài nguyên này",
+        },
+      });
+    }
+
+    next();
+  };
+
+export const requirePermission =
+  (...permissions) =>
+  (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Bạn cần đăng nhập để tiếp tục",
+        },
+      });
+    }
+
+    const userPermissions =
+      req.user.permissions || getPermissionsByRole(req.user.role);
+    const hasAccess = permissions.every((permission) =>
+      userPermissions.includes(permission),
+    );
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: "INSUFFICIENT_PERMISSION",
+          message: "Bạn không có đủ quyền để thực hiện thao tác này",
+        },
+      });
+    }
+
+    next();
+  };
 
 export default authMiddleware;

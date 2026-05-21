@@ -12,14 +12,29 @@ import ProfilePage from "@/pages/ProfilePage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import DashboardPage from "@/pages/DashboardPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AuthRoute from "@/components/AuthRoute";
+import RoleRoute from "@/components/RoleRoute";
+
 export const router = createBrowserRouter([
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute>
+        <RoleRoute allowRoles={["admin"]} fallbackPath="/">
+          <DashboardPage />
+        </RoleRoute>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: "/",
     element: (
       <ProtectedRoute>
-        <MainLayout />
+        <RoleRoute allowRoles={["user"]} fallbackPath="/dashboard">
+          <MainLayout />
+        </RoleRoute>
       </ProtectedRoute>
     ),
     errorElement: <NotFoundPage />,

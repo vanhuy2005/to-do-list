@@ -32,9 +32,15 @@ export default function LoginPage() {
       const response = await authService.login(data);
 
       if (response?.data?.accessToken) {
-        authService.setToken(response.data.accessToken);
+        authService.setSession({
+          token: response.data.accessToken,
+          user: response.data.user,
+        });
         toast.success("Đăng nhập thành công!");
-        navigate("/");
+        navigate(
+          authService.getDefaultRouteByRole(response?.data?.user?.role),
+          { replace: true },
+        );
       }
     } catch (error) {
       const errorMessage =
@@ -57,12 +63,12 @@ export default function LoginPage() {
         <section className="w-full max-w-md rounded-[2rem] border-4 border-border bg-card px-5 py-8 comic-shadow sm:px-7 lg:px-8 lg:py-9">
           <div className="text-center">
             <div className="mx-auto mb-6 inline-flex size-20 items-center justify-center rounded-2xl border-[3px] border-border bg-[#ffd400] comic-shadow -rotate-6">
-              <RocketIcon className="size-10 text-primary rotate-12" />
+              <RocketIcon className="size-10 rotate-12 text-primary" />
             </div>
-            <h1 className="text-[2.5rem] leading-none font-black uppercase tracking-tight text-foreground">
+            <h1 className="text-[2.5rem] font-black leading-none tracking-tight text-foreground uppercase">
               Đăng nhập
             </h1>
-            <p className="mt-2 text-base font-bold text-muted-foreground uppercase tracking-wide">
+            <p className="mt-2 text-base font-bold tracking-wide text-muted-foreground uppercase">
               Chào mừng trở lại
             </p>
           </div>
@@ -71,7 +77,7 @@ export default function LoginPage() {
             <div className="space-y-3">
               <label
                 htmlFor="email"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Email
               </label>
@@ -96,7 +102,7 @@ export default function LoginPage() {
             <div className="space-y-3">
               <label
                 htmlFor="password"
-                className="text-sm font-black uppercase tracking-tight text-foreground"
+                className="text-sm font-black tracking-tight text-foreground uppercase"
               >
                 Mật khẩu
               </label>
@@ -128,11 +134,11 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-8 text-center">
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wide">
+            <p className="text-sm font-bold tracking-wide text-muted-foreground uppercase">
               Chưa có tài khoản?{" "}
               <Link
                 to="/register"
-                className="text-primary hover:underline hover:text-primary/80"
+                className="text-primary hover:text-primary/80 hover:underline"
               >
                 Đăng ký ngay
               </Link>
