@@ -64,6 +64,49 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    avatarPublicId: {
+      type: String,
+      default: null,
+    },
+    notificationPreferences: {
+      emailOverdue: {
+        type: Boolean,
+        default: true,
+      },
+      emailDigest: {
+        type: Boolean,
+        default: true,
+      },
+      digestHour: {
+        type: Number,
+        default: 8,
+        min: 0,
+        max: 23,
+        validate: {
+          validator: Number.isInteger,
+          message: "digestHour phải là một số nguyên từ 0 đến 23",
+        },
+      },
+      timezone: {
+        type: String,
+        default: "Asia/Ho_Chi_Minh",
+        validate: {
+          validator: function (v) {
+            try {
+              Intl.DateTimeFormat(undefined, { timeZone: v });
+              return true;
+            } catch (e) {
+              return false;
+            }
+          },
+          message: "Múi giờ IANA không hợp lệ",
+        },
+      },
+      unsubscribedAt: {
+        type: Date,
+        default: null,
+      },
+    },
    
   },
   { timestamps: true },
