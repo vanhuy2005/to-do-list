@@ -9,23 +9,25 @@ import authRouters from "./routes/authRouters.js";
 import profileRouters, { publicProfileRouter } from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
+import projectsRouters from "./routes/projectsRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on("unhandledRejection", (reason, promise) => {
   console.error({
-    event: 'unhandled_rejection',
-    reason: reason instanceof Error
-      ? { message: reason.message, code: reason.code, name: reason.name }
-      : String(reason),
+    event: "unhandled_rejection",
+    reason:
+      reason instanceof Error
+        ? { message: reason.message, code: reason.code, name: reason.name }
+        : String(reason),
     timestamp: new Date().toISOString(),
   });
 });
 
-process.on('uncaughtException', (err) => {
+process.on("uncaughtException", (err) => {
   console.error({
-    event: 'uncaught_exception',
+    event: "uncaught_exception",
     message: err.message,
     stack: err.stack,
     timestamp: new Date().toISOString(),
@@ -43,7 +45,6 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
 }
 
 const PORT = process.env.PORT || 5001;
-
 
 const allowedOrigins = (
   process.env.CORS_ORIGIN || "http://localhost:3000,http://localhost:5173"
@@ -87,6 +88,7 @@ app.use(
   requireRole("user"),
   auditLogsRouters,
 );
+app.use("/api/v1/projects", authMiddleware, requireRole("user"), projectsRouters);
 
 connectDB()
   .then(() => {

@@ -7,6 +7,12 @@ const taskSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      default: null,
+      index: true,
+    },
     title: {
       type: String,
       required: true,
@@ -59,11 +65,39 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    shares: {
+      type: [
+        {
+          userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          permission: {
+            type: String,
+            enum: ["view", "comment", "edit"],
+            required: true,
+            default: "view",
+          },
+          sharedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          sharedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );
 
 taskSchema.index({ ownerId: 1, status: 1, dueDate: 1, updatedAt: -1 });
+taskSchema.index({ "shares.userId": 1, deletedAt: 1, updatedAt: -1 });
 taskSchema.index({ title: "text", description: "text" });
 taskSchema.index({ isOverdue: 1, dueDate: 1, status: 1, deletedAt: 1 });
 

@@ -191,6 +191,7 @@ export default function HomePage() {
         limit: HOME_PAGE_SIZE,
         sort: "updatedAt",
         order: "desc",
+        projectId: "null", // Only show tasks without a project
         ...(status ? { status } : {}),
         ...(priority ? { priority } : {}),
         ...(tag ? { tag } : {}),

@@ -4,6 +4,7 @@ import {
   PlusIcon,
   SettingsIcon,
   UserRoundIcon,
+  GridIcon,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", label: "Trang chủ", icon: HouseIcon },
+  { to: "/projects", label: "Dự án", icon: GridIcon },
   { to: "/activities", label: "Hoạt động", icon: ActivityIcon },
   { to: "/profile", label: "Cá nhân", icon: UserRoundIcon },
   { to: "/settings", label: "Cài đặt", icon: SettingsIcon },

@@ -1,5 +1,8 @@
 import Task from "../models/Task.js";
+import Project from "../models/Project.js";
 import AuditLog from "../models/AuditLog.js";
+import User from "../models/User.js";
+import mongoose from "mongoose";
 
 const REQUIRED_CREATE_FIELDS = ["title", "status"];
 const ALLOWED_SORT_FIELDS = [
@@ -11,8 +14,10 @@ const ALLOWED_SORT_FIELDS = [
 ];
 const ALLOWED_PRIORITY = ["low", "medium", "high"];
 const ALLOWED_STATUS = ["todo", "doing", "done"];
+const ALLOWED_SHARE_PERMISSIONS = ["view", "comment", "edit"];
+const READ_SHARE_PERMISSIONS = ["view", "comment", "edit"];
+const EDIT_SHARE_PERMISSIONS = ["edit"];
 const RESTORE_WINDOW_DAYS = 7;
-
 
 class ViewModelError extends Error {
   constructor(statusCode, errorCode, message) {
@@ -92,6 +97,169 @@ const resolveOwnerId = (userId) => {
   return userId;
 };
 
+const asStringId = (value) => String(value);
+
+const buildReadableTaskFilter = (userId) => ({
+  $or: [
+    { ownerId: userId },
+    {
+      shares: {
+        $elemMatch: {
+          userId,
+          permission: { $in: READ_SHARE_PERMISSIONS },
+        },
+      },
+    },
+  ],
+});
+
+const findShareEntry = (task, userId) => {
+  if (!task?.shares?.length) {
+    return null;
+  }
+
+  const normalizedUserId = asStringId(userId);
+  return (
+    task.shares.find(
+      (share) => asStringId(share.userId) === normalizedUserId,
+    ) || null
+  );
+};
+
+const getTaskAccessLevel = (task, userId) => {
+  if (!task || !userId) {
+    return null;
+  }
+
+  if (asStringId(task.ownerId) === asStringId(userId)) {
+    return "owner";
+  }
+
+  const shareEntry = findShareEntry(task, userId);
+  return shareEntry?.permission || null;
+};
+
+const ensureReadAccess = (task, userId) => {
+  const accessLevel = getTaskAccessLevel(task, userId);
+  if (!accessLevel) {
+    throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+  }
+  return accessLevel;
+};
+
+const ensureEditAccess = (task, userId) => {
+  const accessLevel = ensureReadAccess(task, userId);
+  if (
+    accessLevel !== "owner" &&
+    !EDIT_SHARE_PERMISSIONS.includes(accessLevel)
+  ) {
+    throw new ViewModelError(
+      403,
+      "FORBIDDEN_TASK_EDIT",
+      "Bạn không có quyền chỉnh sửa task này",
+    );
+  }
+  return accessLevel;
+};
+
+const ensureOwnerAccess = (task, userId) => {
+  if (!task) {
+    throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+  }
+
+  if (asStringId(task.ownerId) !== asStringId(userId)) {
+    throw new ViewModelError(
+      403,
+      "FORBIDDEN_TASK_OWNER_ONLY",
+      "Chỉ chủ sở hữu mới thực hiện được thao tác này",
+    );
+  }
+};
+
+const toTaskResponse = (task, userId) => {
+  const plainTask = task?.toObject ? task.toObject() : task;
+  const accessLevel = getTaskAccessLevel(task, userId);
+  return {
+    ...plainTask,
+    accessLevel,
+  };
+};
+
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
+
+const resolveCollaborator = async (email) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new ViewModelError(
+      400,
+      "MISSING_SHARE_EMAIL",
+      "Email người được chia sẻ là bắt buộc",
+    );
+  }
+
+  const user = await User.findOne({ email: normalizedEmail }).select(
+    "_id email displayName status",
+  );
+
+  if (!user) {
+    throw new ViewModelError(
+      404,
+      "SHARE_USER_NOT_FOUND",
+      "Không tìm thấy người dùng để chia sẻ",
+    );
+  }
+
+  if (user.status !== "active") {
+    throw new ViewModelError(
+      403,
+      "SHARE_USER_DISABLED",
+      "Không thể chia sẻ cho tài khoản đã bị vô hiệu hóa",
+    );
+  }
+
+  return user;
+};
+
+const normalizeSharePermission = (permission) => {
+  const normalized = String(permission || "")
+    .trim()
+    .toLowerCase();
+  if (!ALLOWED_SHARE_PERMISSIONS.includes(normalized)) {
+    throw new ViewModelError(
+      400,
+      "INVALID_SHARE_PERMISSION",
+      "Quyền chia sẻ phải là view, comment hoặc edit",
+    );
+  }
+  return normalized;
+};
+
+const formatShareMembers = async (task) => {
+  const taskWithUsers = await Task.findById(task._id)
+    .populate("shares.userId", "email displayName")
+    .populate("shares.sharedBy", "email displayName");
+
+  if (!taskWithUsers) {
+    return [];
+  }
+
+  return taskWithUsers.shares.map((share) => ({
+    userId: share.userId?._id || share.userId,
+    email: share.userId?.email || null,
+    displayName: share.userId?.displayName || null,
+    permission: share.permission,
+    sharedAt: share.sharedAt,
+    sharedBy: {
+      userId: share.sharedBy?._id || share.sharedBy,
+      email: share.sharedBy?.email || null,
+      displayName: share.sharedBy?.displayName || null,
+    },
+  }));
+};
+
 const buildTaskSummary = (task) => {
   if (!task) {
     return {};
@@ -143,6 +311,7 @@ const taskViewModel = {
       dueDateTo,
       completed,
       isOverdue,
+      projectId,
       includeDeleted,
       page = 1,
       limit = 20,
@@ -161,13 +330,20 @@ const taskViewModel = {
     const normalizedOrder = String(order).toLowerCase() === "asc" ? 1 : -1;
 
     const ownerId = resolveOwnerId(userId);
+    const readableFilter = buildReadableTaskFilter(ownerId);
     const filter = {
-      ownerId,
+      ...readableFilter,
     };
 
     const includeDeletedValue = parseBooleanQuery(includeDeleted);
     if (!includeDeletedValue) {
       filter.deletedAt = null;
+    } else {
+      filter.$and = [
+        readableFilter,
+        { $or: [{ ownerId }, { deletedAt: null }] },
+      ];
+      delete filter.$or;
     }
 
     if (status) {
@@ -250,19 +426,82 @@ const taskViewModel = {
       filter.isOverdue = { $ne: true };
     }
 
+    // Filter theo projectId
+    if (projectId !== undefined && projectId !== null) {
+      if (String(projectId).toLowerCase() === "null") {
+        // Show only tasks without a project
+        filter.projectId = null;
+      } else {
+        // Verify user has access to this project
+        const proj = await Project.findById(projectId).select(
+          "_id ownerId members",
+        );
+        if (!proj) {
+          // Project not found - return empty results
+          return {
+            statusCode: 200,
+            success: true,
+            data: {
+              tasks: [],
+              pagination: getPagination(normalizedPage, normalizedLimit, 0),
+            },
+          };
+        }
+
+        const isProjectOwner = String(proj.ownerId) === String(ownerId);
+        const isProjectMember =
+          proj.members &&
+          proj.members.some((m) => String(m.userId) === String(ownerId));
+
+        if (!isProjectOwner && !isProjectMember) {
+          // User doesn't have access to this project
+          return {
+            statusCode: 200,
+            success: true,
+            data: {
+              tasks: [],
+              pagination: getPagination(normalizedPage, normalizedLimit, 0),
+            },
+          };
+        }
+
+        // User has access to project - show all tasks in this project
+        filter.projectId = projectId;
+        // Override readableFilter to allow all tasks in project for authorized members
+        delete filter.$or;
+        filter.$and = [
+          {
+            $or: [
+              { projectId }, // Tasks in this project (any owner)
+              { ownerId }, // Or tasks owned by this user outside the project
+            ],
+          },
+        ];
+      }
+    }
+
     const [tasks, total] = await Promise.all([
       Task.find(filter)
         .sort({ [normalizedSort]: normalizedOrder })
         .skip((normalizedPage - 1) * normalizedLimit)
-        .limit(normalizedLimit),
+        .limit(normalizedLimit)
+        .lean(),
       Task.countDocuments(filter),
     ]);
+
+    const enrichedTasks = tasks.map((task) => ({
+      ...task,
+      accessLevel:
+        asStringId(task.ownerId) === asStringId(ownerId)
+          ? "owner"
+          : findShareEntry(task, ownerId)?.permission || null,
+    }));
 
     return {
       statusCode: 200,
       success: true,
       data: {
-        tasks,
+        tasks: enrichedTasks,
         pagination: getPagination(normalizedPage, normalizedLimit, total),
       },
     };
@@ -273,21 +512,13 @@ const taskViewModel = {
 
     const ownerId = resolveOwnerId(userId);
 
-    const filter = {
-      _id: taskId,
-      ownerId,
-      deletedAt: null,
-    };
-
-    const task = await Task.findOne(filter);
-    if (!task) {
-      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
-    }
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    ensureReadAccess(task, ownerId);
 
     return {
       statusCode: 200,
       success: true,
-      data: task,
+      data: toTaskResponse(task, ownerId),
     };
   },
 
@@ -307,6 +538,31 @@ const taskViewModel = {
     const taskData = {};
     for (const field of allowedFields) {
       if (payload[field] !== undefined) taskData[field] = payload[field];
+    }
+
+    // Support optional projectId: ensure project exists and user is member/owner
+    if (payload.projectId) {
+      const proj = await Project.findById(payload.projectId);
+      if (!proj) {
+        throw new ViewModelError(
+          400,
+          "INVALID_PROJECT",
+          "Project không tồn tại",
+        );
+      }
+
+      const isMember =
+        String(proj.ownerId) === String(ownerId) ||
+        (proj.members || []).some((m) => String(m.userId) === String(ownerId));
+      if (!isMember) {
+        throw new ViewModelError(
+          403,
+          "FORBIDDEN_PROJECT",
+          "Bạn không có quyền tạo task trong project này",
+        );
+      }
+
+      taskData.projectId = payload.projectId;
     }
 
     const task = await Task.create({
@@ -333,7 +589,7 @@ const taskViewModel = {
   async updateTask(taskId, payload, userId) {
     ensureValidObjectId(taskId);
 
-    const ownerId = resolveOwnerId(userId);
+    const actorId = resolveOwnerId(userId);
 
     if (payload.priority && !ALLOWED_PRIORITY.includes(payload.priority)) {
       throw new ViewModelError(
@@ -349,12 +605,9 @@ const taskViewModel = {
 
     const existingTask = await Task.findOne({
       _id: taskId,
-      ownerId,
       deletedAt: null,
     });
-    if (!existingTask) {
-      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
-    }
+    ensureEditAccess(existingTask, actorId);
 
     const allowedFields = [
       "title",
@@ -388,13 +641,13 @@ const taskViewModel = {
     }
 
     const updatedTask = await Task.findOneAndUpdate(
-      { _id: taskId, ownerId, deletedAt: null },
+      { _id: taskId, deletedAt: null },
       updateData,
       { new: true },
     );
 
     await writeTaskAuditLog({
-      actorId: ownerId,
+      actorId,
       action: "task.updated",
       entityId: updatedTask._id,
       summaryBefore: buildTaskSummary(existingTask),
@@ -404,21 +657,25 @@ const taskViewModel = {
     return {
       statusCode: 200,
       success: true,
-      data: updatedTask,
+      data: toTaskResponse(updatedTask, actorId),
     };
   },
 
   async deleteTask(taskId, userId) {
     ensureValidObjectId(taskId);
 
-    const ownerId = resolveOwnerId(userId);
+    const actorId = resolveOwnerId(userId);
+
+    const existingTask = await Task.findOne({ _id: taskId, deletedAt: null });
+    // allow owner or users with `edit` permission to soft-delete
+    ensureEditAccess(existingTask, actorId);
 
     const deletedAt = new Date();
     const restoreUntil = new Date(deletedAt);
     restoreUntil.setDate(restoreUntil.getDate() + RESTORE_WINDOW_DAYS);
 
     const deletedTask = await Task.findOneAndUpdate(
-      { _id: taskId, ownerId, deletedAt: null },
+      { _id: taskId, deletedAt: null },
       { deletedAt, restoreUntil },
       { new: true },
     );
@@ -427,7 +684,7 @@ const taskViewModel = {
     }
 
     await writeTaskAuditLog({
-      actorId: ownerId,
+      actorId,
       action: "task.deleted",
       entityId: deletedTask._id,
       summaryBefore: {
@@ -552,6 +809,12 @@ const taskViewModel = {
 
     const ownerId = resolveOwnerId(userId);
 
+    const existingTask = await Task.findOne({
+      _id: taskId,
+      deletedAt: { $ne: null },
+    });
+    ensureOwnerAccess(existingTask, ownerId);
+
     const deletedTask = await Task.findOneAndDelete({
       _id: taskId,
       ownerId,
@@ -570,6 +833,153 @@ const taskViewModel = {
       statusCode: 200,
       success: true,
       message: "Task đã được xóa vĩnh viễn",
+    };
+  },
+
+  async getTaskShares(taskId, userId) {
+    ensureValidObjectId(taskId);
+    const ownerId = resolveOwnerId(userId);
+
+    const task = await Task.findById(taskId);
+    ensureOwnerAccess(task, ownerId);
+
+    const shares = await formatShareMembers(task);
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        taskId,
+        shares,
+      },
+    };
+  },
+
+  async shareTask(taskId, payload, userId) {
+    ensureValidObjectId(taskId);
+    const ownerId = resolveOwnerId(userId);
+    const permission = normalizeSharePermission(payload?.permission);
+
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    ensureOwnerAccess(task, ownerId);
+
+    const collaborator = await resolveCollaborator(payload?.email);
+    if (asStringId(collaborator._id) === asStringId(ownerId)) {
+      throw new ViewModelError(
+        400,
+        "CANNOT_SHARE_TO_OWNER",
+        "Không thể chia sẻ task cho chính chủ sở hữu",
+      );
+    }
+
+    const existingShare = findShareEntry(task, collaborator._id);
+    if (existingShare) {
+      existingShare.permission = permission;
+      existingShare.sharedBy = ownerId;
+      existingShare.sharedAt = new Date();
+    } else {
+      task.shares.push({
+        userId: collaborator._id,
+        permission,
+        sharedBy: ownerId,
+        sharedAt: new Date(),
+      });
+    }
+
+    await task.save();
+
+    await writeTaskAuditLog({
+      actorId: ownerId,
+      action: "task.shared",
+      entityId: task._id,
+      summaryBefore: {},
+      summaryAfter: {
+        title: task.title,
+        permission,
+        sharedWith: collaborator.email,
+      },
+    });
+
+    const shares = await formatShareMembers(task);
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        taskId,
+        shares,
+      },
+      message: "Chia sẻ task thành công",
+    };
+  },
+
+  async updateTaskShare(taskId, collaboratorId, payload, userId) {
+    ensureValidObjectId(taskId);
+    ensureValidObjectId(collaboratorId);
+
+    const ownerId = resolveOwnerId(userId);
+    const permission = normalizeSharePermission(payload?.permission);
+
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    ensureOwnerAccess(task, ownerId);
+
+    const targetShare = findShareEntry(task, collaboratorId);
+    if (!targetShare) {
+      throw new ViewModelError(
+        404,
+        "TASK_SHARE_NOT_FOUND",
+        "Không tìm thấy quyền chia sẻ cho người dùng này",
+      );
+    }
+
+    targetShare.permission = permission;
+    targetShare.sharedBy = ownerId;
+    targetShare.sharedAt = new Date();
+    await task.save();
+
+    const shares = await formatShareMembers(task);
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        taskId,
+        shares,
+      },
+      message: "Cập nhật quyền chia sẻ thành công",
+    };
+  },
+
+  async removeTaskShare(taskId, collaboratorId, userId) {
+    ensureValidObjectId(taskId);
+    ensureValidObjectId(collaboratorId);
+
+    const ownerId = resolveOwnerId(userId);
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    ensureOwnerAccess(task, ownerId);
+
+    const beforeCount = task.shares.length;
+    task.shares = task.shares.filter(
+      (share) => asStringId(share.userId) !== asStringId(collaboratorId),
+    );
+
+    if (task.shares.length === beforeCount) {
+      throw new ViewModelError(
+        404,
+        "TASK_SHARE_NOT_FOUND",
+        "Không tìm thấy người dùng trong danh sách chia sẻ",
+      );
+    }
+
+    await task.save();
+
+    const shares = await formatShareMembers(task);
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        taskId,
+        shares,
+      },
+      message: "Đã thu hồi quyền truy cập task",
     };
   },
 };

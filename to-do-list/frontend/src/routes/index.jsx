@@ -6,6 +6,8 @@ import NewTaskPage from "@/pages/NewTaskPage";
 import EditTaskPage from "@/pages/EditTaskPage";
 import FilterPage from "@/pages/FilterPage";
 import ViewAllPage from "@/pages/ViewAllPage";
+import ProjectsPage from "@/pages/ProjectsPage";
+import ProjectDetailPage from "@/pages/ProjectDetailPage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
@@ -42,6 +44,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "tasks", element: <Navigate to="/" replace /> },
+      { path: "projects", element: <ProjectsPage /> },
+      { path: "projects/:id", element: <ProjectDetailPage /> },
       { path: "tasks/new", element: <NewTaskPage /> },
       { path: "tasks/:id", element: <TaskDetailPage /> },
       { path: "tasks/:id/edit", element: <EditTaskPage /> },
