@@ -1,5 +1,8 @@
+import axios from "axios";
 import api from "../lib/axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
 const TOKEN_KEY = "token";
 const USER_KEY = "auth_user";
 
@@ -21,6 +24,8 @@ const authService = {
   login: (data) => api.post("/auth/login", data),
   logout: () => api.post("/auth/logout"),
   refresh: () => api.post("/auth/refresh"),
+
+  getGoogleAuthUrl: () => `${API_BASE_URL}/auth/google`,
 
   setToken: (token) => {
     if (token) {
@@ -55,6 +60,27 @@ const authService = {
 
   clearToken: () => {
     authService.clearAuth();
+  },
+
+  hydrateFromSessionCookie: async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/auth/session`, {
+        withCredentials: true,
+      });
+
+      const data = response?.data?.data;
+      if (data?.accessToken && data?.user) {
+        authService.setSession({
+          token: data.accessToken,
+          user: data.user,
+        });
+        return data;
+      }
+    } catch {
+      authService.clearAuth();
+    }
+
+    return null;
   },
 
   isAuthenticated: () => Boolean(authService.getToken()),

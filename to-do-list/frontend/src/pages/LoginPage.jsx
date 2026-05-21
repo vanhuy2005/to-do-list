@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { RocketIcon } from "lucide-react";
+import { GlobeIcon, RocketIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import authService from "@/services/authService";
@@ -16,7 +16,9 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
   const {
     register,
@@ -25,6 +27,23 @@ export default function LoginPage() {
   } = useForm({
     resolver: zodResolver(loginSchema),
   });
+
+  useEffect(() => {
+    if (searchParams.get("oauth") !== "error") {
+      return;
+    }
+
+    const errorCode = searchParams.get("error") || searchParams.get("code");
+    const message =
+      errorCode === "account_not_linked"
+        ? "Tài khoản Google này chưa được liên kết. Hãy đăng nhập bằng mật khẩu hiện tại trước."
+        : errorCode === "GOOGLE_OAUTH_NOT_CONFIGURED"
+          ? "Google OAuth chưa được cấu hình trên backend. Hãy thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET trước."
+          : "Đăng nhập Google thất bại. Vui lòng thử lại.";
+
+    toast.error(message);
+    navigate(window.location.pathname, { replace: true });
+  }, [searchParams, navigate]);
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -51,6 +70,11 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsOAuthLoading(true);
+    window.location.href = authService.getGoogleAuthUrl();
   };
 
   return (
@@ -130,6 +154,16 @@ export default function LoginPage() {
               className="mt-6 h-14 w-full rounded-2xl text-lg uppercase comic-shadow active:translate-y-1"
             >
               {isLoading ? "Đang xử lý..." : "Đăng nhập"}
+            </Button>
+
+            <Button
+              type="button"
+              disabled={isOAuthLoading}
+              onClick={handleGoogleSignIn}
+              className="h-14 w-full rounded-2xl border-[3px] border-border bg-white text-base font-black uppercase text-foreground comic-shadow hover:bg-[#fff6d6] active:translate-y-1"
+            >
+              <GlobeIcon className="mr-2 size-5" />
+              {isOAuthLoading ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
             </Button>
           </form>
 

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { UserPlusIcon } from "lucide-react";
+import { GlobeIcon, UserPlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import authService from "@/services/authService";
@@ -14,7 +14,9 @@ const registerSchema = z
     email: z.string().email("Email không hợp lệ").min(1, "Email là bắt buộc"),
     displayName: z.string().min(2, "Họ tên phải ít nhất 2 ký tự"),
     password: z.string().min(8, "Mật khẩu phải ít nhất 8 ký tự"),
-    confirmPassword: z.string().min(8, "Xác nhận mật khẩu là bắt buộc"),
+    confirmPassword: z
+      .string()
+      .min(8, "Xác nhận mật khẩu là bắt buộc"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Mật khẩu không trùng khớp",
@@ -24,6 +26,7 @@ const registerSchema = z
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
   const {
     register,
@@ -43,7 +46,10 @@ export default function RegisterPage() {
       });
 
       if (response?.data?.accessToken) {
-        authService.setToken(response.data.accessToken);
+        authService.setSession({
+          token: response.data.accessToken,
+          user: response.data.user,
+        });
         toast.success("Đăng ký thành công!");
         navigate(
           authService.getDefaultRouteByRole(response?.data?.user?.role),
@@ -59,6 +65,11 @@ export default function RegisterPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsOAuthLoading(true);
+    window.location.href = authService.getGoogleAuthUrl();
   };
 
   return (
@@ -188,6 +199,16 @@ export default function RegisterPage() {
               className="mt-4 h-12 w-full rounded-2xl text-base uppercase comic-shadow active:translate-y-1"
             >
               {isLoading ? "Đang xử lý..." : "Đăng ký"}
+            </Button>
+
+            <Button
+              type="button"
+              disabled={isOAuthLoading}
+              onClick={handleGoogleSignIn}
+              className="h-12 w-full rounded-2xl border-[3px] border-border bg-white text-sm font-black uppercase text-foreground comic-shadow hover:bg-[#fff6d6] active:translate-y-1"
+            >
+              <GlobeIcon className="mr-2 size-4" />
+              {isOAuthLoading ? "Đang chuyển hướng..." : "Đăng ký với Google"}
             </Button>
           </form>
 
