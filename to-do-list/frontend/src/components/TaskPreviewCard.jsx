@@ -1,12 +1,6 @@
-import { useState, useEffect } from "react";
-import {
-  CalendarIcon,
-  FileTextIcon,
-  PencilIcon,
-  PlusIcon,
-  TagIcon,
-  XIcon,
-} from "lucide-react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, memo } from "react";
+import { CalendarIcon, PencilIcon, Loader2Icon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +33,27 @@ const priorityOptions = [
 
 const priorityLabel = { high: "Cao", medium: "Vừa", low: "Thấp" };
 
+// ─── Helper component: Enrichable ─────────────────────────────────────────────
+// This component is defined outside of the main render function to avoid the
+// “Cannot create components during render” warning.
+// It receives the current draft and the set of fields the user has edited so
+// it can decide whether to show a skeleton while AI enrichment is in progress.
+const Enrichable = memo(function Enrichable({
+  field,
+  draft,
+  userEditedFields,
+  isLoading,
+  render,
+  skeletonWidth = "w-24",
+}) {
+  const isEmpty =
+    !draft[field] || (Array.isArray(draft[field]) && draft[field].length === 0);
+  if (isLoading && isEmpty && !userEditedFields.has(field)) {
+    return <Skeleton className={cn("h-6 rounded-full", skeletonWidth)} />;
+  }
+  return render(draft[field]);
+});
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TaskPreviewCard({
@@ -62,21 +77,41 @@ export default function TaskPreviewCard({
     tags: Array.isArray(task?.tags) ? [...task.tags] : [],
   }));
 
-  // Sync draft from task when AI enrichment updates the task prop
+  // Sync draft from task when the task prop changes (e.g., after AI enrichment).
+  // We only overwrite fields that the user hasn't edited yet.
   useEffect(() => {
-    if (task) {
-      setDraft(prev => {
-        const next = { ...prev };
-        // Only update fields that the user hasn't touched yet
-        if (!userEditedFields.has("title")) next.title = task.title || prev.title;
-        if (!userEditedFields.has("description")) next.description = task.description || prev.description;
-        if (!userEditedFields.has("status")) next.status = task.status || prev.status;
-        if (!userEditedFields.has("priority")) next.priority = task.priority || prev.priority;
-        if (!userEditedFields.has("dueDate")) next.dueDate = task.dueDate || prev.dueDate;
-        if (!userEditedFields.has("tags") && Array.isArray(task.tags)) next.tags = [...task.tags];
-        return next;
-      });
-    }
+    if (!task) return;
+    setDraft(prev => {
+      let changed = false;
+      const next = { ...prev };
+      if (!userEditedFields.has("title") && task.title !== prev.title) {
+        next.title = task.title ?? prev.title;
+        changed = true;
+      }
+      if (!userEditedFields.has("description") && task.description !== prev.description) {
+        next.description = task.description ?? prev.description;
+        changed = true;
+      }
+      if (!userEditedFields.has("status") && task.status !== prev.status) {
+        next.status = task.status ?? prev.status;
+        changed = true;
+      }
+      if (!userEditedFields.has("priority") && task.priority !== prev.priority) {
+        next.priority = task.priority ?? prev.priority;
+        changed = true;
+      }
+      if (!userEditedFields.has("dueDate") && task.dueDate !== prev.dueDate) {
+        next.dueDate = task.dueDate ?? prev.dueDate;
+        changed = true;
+      }
+      if (!userEditedFields.has("tags") && Array.isArray(task.tags)) {
+        if (prev.tags.length !== task.tags.length || prev.tags.some((t, i) => t !== task.tags[i])) {
+          next.tags = [...task.tags];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [task, userEditedFields]);
 
   const [tagInput, setTagInput] = useState("");
@@ -86,11 +121,11 @@ export default function TaskPreviewCard({
   // ── Draft updaters ──────────────────────────────────────────────────────
 
   const updateDraft = (field, value) => {
-    setUserEditedFields(prev => new Set(prev).add(field));
+    setUserEditedFields((prev) => new Set(prev).add(field));
     setDraft((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAddTag = () => {
+  const HANDLE_ADD_TAG = () => {
     const trimmed = tagInput.trim();
     if (!trimmed || draft.tags.length >= 8) return;
     if (draft.tags.includes(trimmed)) {
@@ -101,47 +136,20 @@ export default function TaskPreviewCard({
     setTagInput("");
   };
 
-  const handleRemoveTag = (index) =>
-    updateDraft(
-      "tags",
-      draft.tags.filter((_, i) => i !== index),
-    );
-
-  const handleTagKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
-
   // ── Actions ─────────────────────────────────────────────────────────────
 
-  const handleToggleEdit = () => {
-    setEditMode((prev) => !prev);
-  };
+  const handleToggleEdit = () => setEditMode((prev) => !prev);
 
   const handleConfirm = () => {
-    const finalDraft = editMode ? draft : draft; // draft is already synced or edited
+    const finalDraft = editMode ? draft : draft; // draft already reflects the latest state
     const title = (finalDraft.title || "").trim();
     if (!title) return;
-    onConfirm?.({
-      ...finalDraft,
-      title,
-    });
+    onConfirm?.({ ...finalDraft, title });
   };
 
   // ── Helper for Skeletons ────────────────────────────────────────────────
 
   const isEnriching = uiState === "ENRICHING";
-
-  function Enrichable({ field, isLoading, render, skeletonWidth = "w-24" }) {
-    // If AI is enriching AND the value is still null/empty, show skeleton
-    const isEmpty = !draft[field] || (Array.isArray(draft[field]) && draft[field].length === 0);
-    if (isLoading && isEmpty && !userEditedFields.has(field)) {
-      return <Skeleton className={cn("h-6 rounded-full", skeletonWidth)} />;
-    }
-    return render(draft[field]);
-  }
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -153,9 +161,7 @@ export default function TaskPreviewCard({
           <Badge className="h-6 rounded-full bg-secondary text-[10px] uppercase font-black text-foreground">
             {isEnriching ? "AI is thinking..." : "AI Draft"}
           </Badge>
-          <span className="text-xs font-bold text-muted-foreground italic">
-            "{rawText}"
-          </span>
+          <span className="text-xs font-bold text-muted-foreground italic">{rawText}</span>
         </div>
       </CardHeader>
 
@@ -258,13 +264,17 @@ export default function TaskPreviewCard({
             {/* Description Preview */}
             <Enrichable
               field="description"
+              draft={draft}
+              userEditedFields={userEditedFields}
               isLoading={isEnriching}
               skeletonWidth="w-full h-10"
-              render={(v) => v && (
-                <p className="text-xs font-bold text-muted-foreground line-clamp-2 italic">
-                  {v}
-                </p>
-              )}
+              render={(v) =>
+                v && (
+                  <p className="text-xs font-bold text-muted-foreground line-clamp-2 italic">
+                    {v}
+                  </p>
+                )
+              }
             />
 
             {/* Metadata chips with Skeletons */}
@@ -272,13 +282,17 @@ export default function TaskPreviewCard({
               {/* Due date */}
               <Enrichable
                 field="dueDate"
+                draft={draft}
+                userEditedFields={userEditedFields}
                 isLoading={isEnriching}
                 skeletonWidth="w-32"
                 render={(v) => (
-                  <span className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border-[3px] border-border px-3 py-1 text-xs font-bold comic-shadow-sm",
-                    v ? "bg-background text-foreground" : "bg-muted/30 text-muted-foreground opacity-50"
-                  )}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border-[3px] border-border px-3 py-1 text-xs font-bold comic-shadow-sm",
+                      v ? "bg-background text-foreground" : "bg-muted/30 text-muted-foreground opacity-50",
+                    )}
+                  >
                     <CalendarIcon className="size-3" />
                     {v ? formatViDate(v) : "Chưa có ngày"}
                   </span>
@@ -288,15 +302,15 @@ export default function TaskPreviewCard({
               {/* Priority */}
               <Enrichable
                 field="priority"
+                draft={draft}
+                userEditedFields={userEditedFields}
                 isLoading={isEnriching}
                 skeletonWidth="w-24"
                 render={(v) => (
                   <span
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full border-[3px] border-border px-3 py-1 text-xs font-bold comic-shadow-sm",
-                      v === "high"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-foreground",
+                      v === "high" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
                     )}
                   >
                     Ưu tiên: {priorityLabel[v] || "Vừa"}
@@ -307,6 +321,8 @@ export default function TaskPreviewCard({
               {/* Tags */}
               <Enrichable
                 field="tags"
+                draft={draft}
+                userEditedFields={userEditedFields}
                 isLoading={isEnriching}
                 skeletonWidth="w-40"
                 render={(v) => (
@@ -317,8 +333,8 @@ export default function TaskPreviewCard({
                           #{tag}
                         </Badge>
                       ))
-                    ) : !isEnriching && (
-                      <span className="text-[10px] font-bold text-muted-foreground opacity-50">#no-tags</span>
+                    ) : (
+                      !isEnriching && <span className="text-[10px] font-bold text-muted-foreground opacity-50">#no-tags</span>
                     )}
                   </div>
                 )}
