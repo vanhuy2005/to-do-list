@@ -205,7 +205,17 @@ export default function SettingsPage() {
 
   const handleLinkGoogle = () => {
     const token = authService.getToken();
-    window.location.href = `${authService.getGoogleAuthUrl()}?token=${token}`;
+
+    if (!token) {
+      toast.error("Không thể liên kết Google", {
+        description: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+      });
+      return;
+    }
+
+    const googleAuthUrl = new URL(authService.getGoogleAuthUrl(), window.location.origin);
+    googleAuthUrl.searchParams.set("token", token);
+    window.location.href = googleAuthUrl.toString();
   };
 
   if (isLoading) {
