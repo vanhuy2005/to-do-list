@@ -233,7 +233,7 @@ const profileViewModel = {
         return {
           statusCode: 200,
           success: true,
-          message: "ÄÃ£ Ä‘Äƒng xuáº¥t thiáº¿t bá»‹",
+          message: "Đã đăng xuất thiết bị",
         };
       }
     } catch (error) {
