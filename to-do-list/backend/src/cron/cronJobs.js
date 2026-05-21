@@ -2,6 +2,7 @@ import cron from "node-cron";
 import Task from "../models/Task.js";
 import AuditLog from "../models/AuditLog.js";
 import taskViewModel from "../viewmodels/taskViewModel.js";
+import emailViewModel from "../viewmodels/emailViewModel.js";
 
 /**
  * Cron Job: Overdue Evaluator
@@ -57,6 +58,55 @@ const startOverdueEvaluator = () => {
 };
 
 /**
+ * Cron Job: Overdue Email Sender
+ * Chạy mỗi 15 phút — Quét các task quá hạn và xử lý gửi email pending
+ */
+const startOverdueEmailSender = () => {
+  cron.schedule("*/15 * * * *", async () => {
+    try {
+      await emailViewModel.queueOverdueNotifications();
+      await emailViewModel.processEmailQueue();
+    } catch (error) {
+      console.error("[Cron] Overdue Email Sender lỗi:", error.message);
+    }
+  });
+
+  console.log("[Cron] Overdue email sender đã khởi chạy (mỗi 15 phút)");
+};
+
+/**
+ * Cron Job: Daily Overdue Digest
+ * Chạy hàng giờ (phút thứ 0) — Gom công việc quá hạn gửi Daily Digest cho người dùng đúng múi giờ
+ */
+const startDailyDigestCron = () => {
+  cron.schedule("0 * * * *", async () => {
+    try {
+      await emailViewModel.sendDailyDigests();
+    } catch (error) {
+      console.error("[Cron] Daily Digest Cron lỗi:", error.message);
+    }
+  });
+
+  console.log("[Cron] Daily Digest scheduler đã khởi chạy (hàng giờ)");
+};
+
+/**
+ * Cron Job: Email Retry Queue
+ * Chạy mỗi 30 phút — Tự động thử lại gửi email bị lỗi với Exponential Backoff
+ */
+const startEmailRetryCron = () => {
+  cron.schedule("*/30 * * * *", async () => {
+    try {
+      await emailViewModel.processRetryQueue();
+    } catch (error) {
+      console.error("[Cron] Email Retry Cron lỗi:", error.message);
+    }
+  });
+
+  console.log("[Cron] Email retry queue scheduler đã khởi chạy (mỗi 30 phút)");
+};
+
+/**
  * Cron Job: Purge Expired Deleted Tasks
  * Chạy lúc 3h sáng mỗi ngày — dọn task đã hết hạn khôi phục
  */
@@ -78,8 +128,12 @@ const startExpiredTaskPurge = () => {
  */
 const initCronJobs = () => {
   startOverdueEvaluator();
+  startOverdueEmailSender();
+  startDailyDigestCron();
+  startEmailRetryCron();
   startExpiredTaskPurge();
   console.log("[Cron] Tất cả cron jobs đã sẵn sàng ✓");
 };
 
 export default initCronJobs;
+
