@@ -3,6 +3,15 @@ import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import RefreshSession from "../models/RefreshSession.js";
 import { getPermissionsByRole } from "../config/permissions.js";
+import {
+  applyBetterAuthHeaders,
+  fetchBetterAuthSession,
+  getBetterAuth,
+  getOAuthErrorURL,
+  getOAuthSuccessURL,
+  getOAuthLinkSuccessURL,
+  getOAuthLinkErrorURL,
+} from "../services/betterAuthService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_REFRESH_SECRET =
@@ -11,11 +20,12 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "15m";
 const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || "7d";
 
 class AuthViewModelError extends Error {
-  constructor(statusCode, errorCode, message) {
+  constructor(statusCode, errorCode, message, meta = {}) {
     super(message);
     this.name = "AuthViewModelError";
     this.statusCode = statusCode;
     this.errorCode = errorCode;
+    this.meta = meta;
   }
 }
 
@@ -70,6 +80,57 @@ const formatUserResponse = (user) => ({
   providers: user.providers,
   permissions: getPermissionsByRole(user.role),
 });
+
+const mapBetterAuthError = (error, fallbackMessage = "Auth flow failed") => {
+  const statusCode = error?.statusCode || error?.status || 500;
+  const errorCode =
+    error?.body?.code || error?.code || error?.errorCode || "BETTER_AUTH_ERROR";
+  const message = error?.body?.message || error?.message || fallbackMessage;
+
+  return new AuthViewModelError(statusCode, errorCode, message, {
+    headers: error?.headers,
+  });
+};
+
+const getActiveUserOrThrow = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AuthViewModelError(401, "USER_NOT_FOUND", "User không tồn tại");
+  }
+
+  if (user.status === "disabled") {
+    throw new AuthViewModelError(
+      403,
+      "USER_DISABLED",
+      "Tài khoản đã bị vô hiệu hóa",
+    );
+  }
+
+  return user;
+};
+
+const tryBetterAuthSession = async (headers) => {
+  try {
+    return await fetchBetterAuthSession(headers);
+  } catch {
+    return null;
+  }
+};
+
+const generateAccessToken = (userId) => {
+  return jwt.sign({ userId }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRY,
+  });
+};
+
+const buildCompatibilitySession = async (userId) => {
+  const user = await getActiveUserOrThrow(userId);
+
+  return {
+    accessToken: generateAccessToken(user._id),
+    user: formatUserResponse(user),
+  };
+};
 
 const authViewModel = {
   async register(payload) {
@@ -181,6 +242,19 @@ const authViewModel = {
   },
 
   async refresh(payload) {
+    const betterAuthSession = await tryBetterAuthSession(payload.headers);
+    if (betterAuthSession?.user?.id) {
+      const user = await getActiveUserOrThrow(betterAuthSession.user.id);
+
+      return {
+        statusCode: 200,
+        success: true,
+        data: {
+          accessToken: generateAccessToken(user._id),
+        },
+      };
+    }
+
     const { refreshToken } = payload;
 
     if (!refreshToken) {
@@ -241,8 +315,27 @@ const authViewModel = {
     };
   },
 
+  async getSession(payload) {
+    const betterAuthSession = await fetchBetterAuthSession(payload.headers);
+    if (!betterAuthSession?.user?.id) {
+      throw new AuthViewModelError(
+        401,
+        "SESSION_NOT_FOUND",
+        "Không tìm thấy Better Auth session hợp lệ",
+      );
+    }
+
+    const data = await buildCompatibilitySession(betterAuthSession.user.id);
+
+    return {
+      statusCode: 200,
+      success: true,
+      data,
+    };
+  },
+
   async logout(payload) {
-    const { userId } = payload;
+    const { userId, headers } = payload;
 
     if (!userId) {
       throw new AuthViewModelError(
@@ -252,15 +345,113 @@ const authViewModel = {
       );
     }
 
+    let betterAuthHeaders = null;
+    let betterAuthStatus = 200;
+
+    try {
+      const auth = getBetterAuth();
+      const result = await auth.api.signOut({
+        headers,
+        returnHeaders: true,
+        returnStatus: true,
+      });
+
+      betterAuthHeaders = result.headers;
+      betterAuthStatus = result.status || 200;
+    } catch (error) {
+      // Ignore if not a Better Auth session
+    }
+
     await RefreshSession.deleteMany({ userId });
 
     return {
-      statusCode: 200,
+      statusCode: betterAuthStatus,
       success: true,
+      headers: betterAuthHeaders,
       message: "Đăng xuất thành công",
     };
   },
+
+  async startGoogleOAuth(headers, token) {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      throw new AuthViewModelError(
+        500,
+        "GOOGLE_OAUTH_NOT_CONFIGURED",
+        "Google OAuth chưa được cấu hình trong môi trường",
+      );
+    }
+
+    try {
+      let activeHeaders = headers;
+      let isAlreadyLoggedIn = false;
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          if (decoded?.userId) {
+            const sessionResult = await getBetterAuth().api.createSession({
+              userId: String(decoded.userId),
+              headers,
+              returnHeaders: true,
+            });
+
+            if (sessionResult?.headers) {
+              const mergedHeaders = new Headers(headers);
+              sessionResult.headers.forEach((value, key) => {
+                if (key.toLowerCase() === "set-cookie") {
+                  mergedHeaders.append(key, value);
+                } else {
+                  mergedHeaders.set(key, value);
+                }
+              });
+              activeHeaders = mergedHeaders;
+            }
+            isAlreadyLoggedIn = true;
+          }
+        } catch (jwtError) {
+          console.error("JWT verification failed during OAuth start:", jwtError);
+        }
+      }
+
+      if (!isAlreadyLoggedIn) {
+        const session = await tryBetterAuthSession(headers);
+        isAlreadyLoggedIn = !!session?.user?.id;
+      }
+
+      const successURL = isAlreadyLoggedIn ? getOAuthLinkSuccessURL() : getOAuthSuccessURL();
+      const errorURL = isAlreadyLoggedIn ? getOAuthLinkErrorURL() : getOAuthErrorURL();
+
+      const result = await getBetterAuth().api.signInSocial({
+        body: {
+          provider: "google",
+          callbackURL: successURL,
+          newUserCallbackURL: successURL,
+          errorCallbackURL: errorURL,
+        },
+        headers: activeHeaders,
+        returnHeaders: true,
+        returnStatus: true,
+      });
+
+      const finalHeaders = new Headers(result.headers);
+      if (activeHeaders !== headers) {
+        activeHeaders.forEach((value, key) => {
+          if (key.toLowerCase() === "set-cookie") {
+            finalHeaders.append(key, value);
+          }
+        });
+      }
+
+      return {
+        statusCode: result.status || 302,
+        headers: finalHeaders,
+        data: result.response,
+      };
+    } catch (error) {
+      throw mapBetterAuthError(error, "Khởi tạo Google OAuth thất bại");
+    }
+  },
 };
 
-export { AuthViewModelError };
+export { AuthViewModelError, applyBetterAuthHeaders };
 export default authViewModel;
