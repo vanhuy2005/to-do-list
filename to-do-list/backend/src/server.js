@@ -1,4 +1,6 @@
 import "./config/env.js";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -6,7 +8,9 @@ import tasksRouters from "./routes/tasksRouters.js";
 import voiceTaskRouters from "./routes/voiceTaskRouters.js";
 import sttRouters from "./routes/sttRouter.js";
 import authRouters from "./routes/authRouters.js";
-import profileRouters, { publicProfileRouter } from "./routes/profileRouters.js";
+import profileRouters, {
+  publicProfileRouter,
+} from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
 import projectsRouters from "./routes/projectsRouters.js";
@@ -15,6 +19,11 @@ import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
 import { toNodeHandler } from "better-auth/node";
 import { getBetterAuth } from "./services/betterAuthService.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDistPath = path.resolve(__dirname, "../dist/client");
+const frontendIndexPath = path.join(frontendDistPath, "index.html");
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error({
@@ -73,6 +82,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(express.static(frontendDistPath));
 
 // Public routes
 app.use("/api/v1/auth", authRouters);
@@ -93,7 +103,25 @@ app.use(
   requireRole("user"),
   auditLogsRouters,
 );
-app.use("/api/v1/projects", authMiddleware, requireRole("user"), projectsRouters);
+app.use(
+  "/api/v1/projects",
+  authMiddleware,
+  requireRole("user"),
+  projectsRouters,
+);
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    res.status(404).json({ message: "Not Found" });
+    return;
+  }
+
+  res.sendFile(frontendIndexPath, (error) => {
+    if (error) {
+      next(error);
+    }
+  });
+});
 
 connectDB()
   .then(() => {
