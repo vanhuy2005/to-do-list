@@ -155,4 +155,27 @@ router.delete(
   }),
 );
 
+router.get(
+  "/:id/comments",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getTaskComments(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+router.post(
+  "/:id/comments",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.createTaskComment(req.params.id, req.body, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  })
+);
+
 export default router;

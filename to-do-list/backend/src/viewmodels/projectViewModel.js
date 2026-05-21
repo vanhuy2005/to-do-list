@@ -785,6 +785,7 @@ const projectViewModel = {
     }
 
     const newLink = {
+      token: plainToken,
       tokenHash,
       role,
       label: payload.label || `Link ${role} ${new Date().toLocaleDateString()}`,
@@ -841,7 +842,7 @@ const projectViewModel = {
       throw new ViewModelError(400, "ALREADY_REVOKED", "Liên kết này đã bị vô hiệu hóa từ trước");
     }
 
-    link.isRevoked = true;
+    project.shareLinks.pull(linkId);
     await project.save();
 
     await writeProjectAuditLog({

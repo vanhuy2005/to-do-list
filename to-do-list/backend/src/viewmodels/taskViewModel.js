@@ -2,6 +2,7 @@ import Task from "../models/Task.js";
 import Project from "../models/Project.js";
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
+import Comment from "../models/Comment.js";
 import mongoose from "mongoose";
 import { realtimeService } from "../services/realtimeService.js";
 
@@ -100,9 +101,10 @@ const resolveOwnerId = (userId) => {
 
 const asStringId = (value) => String(value);
 
-const buildReadableTaskFilter = (userId) => ({
+const buildReadableTaskFilter = (userId, projectIds = []) => ({
   $or: [
     { ownerId: userId },
+    { projectId: { $in: projectIds } },
     {
       shares: {
         $elemMatch: {
@@ -127,7 +129,7 @@ const findShareEntry = (task, userId) => {
   );
 };
 
-const getTaskAccessLevel = (task, userId) => {
+const getTaskAccessLevel = async (task, userId) => {
   if (!task || !userId) {
     return null;
   }
@@ -137,19 +139,41 @@ const getTaskAccessLevel = (task, userId) => {
   }
 
   const shareEntry = findShareEntry(task, userId);
-  return shareEntry?.permission || null;
+  if (shareEntry) {
+    return shareEntry.permission;
+  }
+
+  if (task.projectId) {
+    const project = await Project.findOne({ _id: task.projectId, deletedAt: null }).lean();
+    if (project) {
+      if (asStringId(project.ownerId) === asStringId(userId)) {
+        return "owner";
+      }
+      const member = project.members?.find(
+        (m) => asStringId(m.userId) === asStringId(userId),
+      );
+      if (member) {
+        if (member.role === "owner") return "owner";
+        if (member.role === "editor") return "edit";
+        if (member.role === "comment") return "comment";
+        if (member.role === "viewer") return "view";
+      }
+    }
+  }
+
+  return null;
 };
 
-const ensureReadAccess = (task, userId) => {
-  const accessLevel = getTaskAccessLevel(task, userId);
+const ensureReadAccess = async (task, userId) => {
+  const accessLevel = await getTaskAccessLevel(task, userId);
   if (!accessLevel) {
     throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
   }
   return accessLevel;
 };
 
-const ensureEditAccess = (task, userId) => {
-  const accessLevel = ensureReadAccess(task, userId);
+const ensureEditAccess = async (task, userId) => {
+  const accessLevel = await ensureReadAccess(task, userId);
   if (
     accessLevel !== "owner" &&
     !EDIT_SHARE_PERMISSIONS.includes(accessLevel)
@@ -177,9 +201,9 @@ const ensureOwnerAccess = (task, userId) => {
   }
 };
 
-const toTaskResponse = (task, userId) => {
+const toTaskResponse = async (task, userId) => {
   const plainTask = task?.toObject ? task.toObject() : task;
-  const accessLevel = getTaskAccessLevel(task, userId);
+  const accessLevel = await getTaskAccessLevel(task, userId);
   return {
     ...plainTask,
     accessLevel,
@@ -331,7 +355,16 @@ const taskViewModel = {
     const normalizedOrder = String(order).toLowerCase() === "asc" ? 1 : -1;
 
     const ownerId = resolveOwnerId(userId);
-    const readableFilter = buildReadableTaskFilter(ownerId);
+    const userProjects = await Project.find({
+      $or: [
+        { ownerId },
+        { "members.userId": ownerId },
+      ],
+      deletedAt: null,
+    }).select("_id").lean();
+    const userProjectIds = userProjects.map((p) => p._id);
+
+    const readableFilter = buildReadableTaskFilter(ownerId, userProjectIds);
     const filter = {
       ...readableFilter,
     };
@@ -490,13 +523,45 @@ const taskViewModel = {
       Task.countDocuments(filter),
     ]);
 
-    const enrichedTasks = tasks.map((task) => ({
-      ...task,
-      accessLevel:
-        asStringId(task.ownerId) === asStringId(ownerId)
-          ? "owner"
-          : findShareEntry(task, ownerId)?.permission || null,
-    }));
+    // Gather all unique projectIds from tasks
+    const projectIds = [...new Set(tasks.map((t) => t.projectId).filter(Boolean))];
+    const projects = projectIds.length > 0
+      ? await Project.find({ _id: { $in: projectIds }, deletedAt: null }).lean()
+      : [];
+    const projectMap = new Map(projects.map((p) => [String(p._id), p]));
+
+    const enrichedTasks = tasks.map((task) => {
+      let accessLevel = null;
+      if (asStringId(task.ownerId) === asStringId(ownerId)) {
+        accessLevel = "owner";
+      } else {
+        const shareEntry = findShareEntry(task, ownerId);
+        if (shareEntry) {
+          accessLevel = shareEntry.permission;
+        } else if (task.projectId) {
+          const project = projectMap.get(String(task.projectId));
+          if (project) {
+            if (asStringId(project.ownerId) === asStringId(ownerId)) {
+              accessLevel = "owner";
+            } else {
+              const member = project.members?.find(
+                (m) => asStringId(m.userId) === asStringId(ownerId),
+              );
+              if (member) {
+                if (member.role === "owner") accessLevel = "owner";
+                else if (member.role === "editor") accessLevel = "edit";
+                else if (member.role === "comment") accessLevel = "comment";
+                else if (member.role === "viewer") accessLevel = "view";
+              }
+            }
+          }
+        }
+      }
+      return {
+        ...task,
+        accessLevel,
+      };
+    });
 
     return {
       statusCode: 200,
@@ -514,12 +579,12 @@ const taskViewModel = {
     const ownerId = resolveOwnerId(userId);
 
     const task = await Task.findOne({ _id: taskId, deletedAt: null });
-    ensureReadAccess(task, ownerId);
+    await ensureReadAccess(task, ownerId);
 
     return {
       statusCode: 200,
       success: true,
-      data: toTaskResponse(task, ownerId),
+      data: await toTaskResponse(task, ownerId),
     };
   },
 
@@ -615,7 +680,7 @@ const taskViewModel = {
       _id: taskId,
       deletedAt: null,
     });
-    ensureEditAccess(existingTask, actorId);
+    await ensureEditAccess(existingTask, actorId);
 
     const allowedFields = [
       "title",
@@ -672,7 +737,7 @@ const taskViewModel = {
     return {
       statusCode: 200,
       success: true,
-      data: toTaskResponse(updatedTask, actorId),
+      data: await toTaskResponse(updatedTask, actorId),
     };
   },
 
@@ -683,7 +748,7 @@ const taskViewModel = {
 
     const existingTask = await Task.findOne({ _id: taskId, deletedAt: null });
     // allow owner or users with `edit` permission to soft-delete
-    ensureEditAccess(existingTask, actorId);
+    await ensureEditAccess(existingTask, actorId);
 
     const deletedAt = new Date();
     const restoreUntil = new Date(deletedAt);
@@ -1009,6 +1074,74 @@ const taskViewModel = {
         shares,
       },
       message: "Đã thu hồi quyền truy cập task",
+    };
+  },
+
+  async getTaskComments(taskId, userId) {
+    ensureValidObjectId(taskId);
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    if (!task) {
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+    }
+
+    await ensureReadAccess(task, userId);
+
+    const comments = await Comment.find({ taskId })
+      .populate("userId", "email displayName avatarUrl")
+      .sort({ createdAt: 1 });
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: comments,
+    };
+  },
+
+  async createTaskComment(taskId, payload, userId) {
+    ensureValidObjectId(taskId);
+    const { content } = payload;
+    if (!content || !content.trim()) {
+      throw new ViewModelError(400, "MISSING_CONTENT", "Nội dung nhận xét không được để trống");
+    }
+
+    const task = await Task.findOne({ _id: taskId, deletedAt: null });
+    if (!task) {
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Task không tồn tại");
+    }
+
+    const accessLevel = await getTaskAccessLevel(task, userId);
+    if (!accessLevel || accessLevel === "view") {
+      throw new ViewModelError(403, "FORBIDDEN", "Bạn không có quyền nhận xét nhiệm vụ này");
+    }
+
+    const comment = await Comment.create({
+      taskId,
+      userId,
+      content: content.trim(),
+    });
+
+    // Increment commentCount in Task schema
+    await Task.updateOne({ _id: taskId }, { $inc: { commentCount: 1 } });
+    task.commentCount = (task.commentCount || 0) + 1;
+
+    const populated = await Comment.findById(comment._id).populate("userId", "email displayName avatarUrl");
+
+    if (task.projectId) {
+      try {
+        realtimeService.publishProjectEvent(task.projectId, "task_updated", {
+          taskId: task._id,
+          task,
+        });
+      } catch (e) {
+        console.error("Realtime emit failed:", e.message);
+      }
+    }
+
+    return {
+      statusCode: 201,
+      success: true,
+      data: populated,
+      message: "Đã thêm nhận xét thành công",
     };
   },
 };

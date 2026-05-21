@@ -92,6 +92,10 @@ const taskSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    commentCount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true },
 );
