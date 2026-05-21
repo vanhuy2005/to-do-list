@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import RefreshSession from "../models/RefreshSession.js";
 import AuditLog from "../models/AuditLog.js";
+import NotificationLog from "../models/NotificationLog.js";
+import cloudinaryService from "../services/cloudinaryService.js";
+import emailService from "../services/emailService.js";
 import { getPermissionsByRole } from "../config/permissions.js";
 
 class ProfileViewModelError extends Error {
@@ -18,6 +21,7 @@ const formatUserResponse = (user) => ({
   email: user.email,
   displayName: user.displayName,
   avatarUrl: user.avatarUrl,
+  avatarPublicId: user.avatarPublicId,
   role: user.role,
   status: user.status,
   providers: user.providers,
@@ -25,6 +29,13 @@ const formatUserResponse = (user) => ({
   preferredLanguage: user.preferredLanguage,
   themePreference: user.themePreference,
   customStatuses: user.customStatuses,
+  notificationPreferences: user.notificationPreferences || {
+    emailOverdue: true,
+    emailDigest: true,
+    digestHour: 8,
+    timezone: "Asia/Ho_Chi_Minh",
+    unsubscribedAt: null,
+  },
   createdAt: user.createdAt,
 });
 
@@ -510,6 +521,291 @@ const profileViewModel = {
         keptCount: 0,
       },
       message: `Đã xóa toàn bộ ${(deleteResult.deletedCount || 0).toLocaleString("vi-VN")} audit log của user`,
+    };
+  },
+
+  async uploadAvatar(userId, fileBuffer) {
+    if (!userId) {
+      throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
+    }
+    if (!fileBuffer) {
+      throw new ProfileViewModelError(400, "AVATAR_FILE_REQUIRED", "Không có tệp ảnh nào được gửi lên");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    const oldAvatarPublicId = user.avatarPublicId;
+    const oldAvatarUrl = user.avatarUrl;
+
+    try {
+      const uploadResult = await cloudinaryService.uploadAvatar(fileBuffer, userId);
+
+      user.avatarUrl = uploadResult.secureUrl;
+      user.avatarPublicId = uploadResult.publicId;
+      await user.save();
+
+      // Clean up old avatar assets on Cloudinary in the background
+      if (oldAvatarPublicId) {
+        cloudinaryService.deleteAvatar(oldAvatarPublicId).catch((err) => {
+          console.error("Failed to delete old avatar on Cloudinary:", err);
+        });
+      }
+
+      // Log success to AuditLog
+      await AuditLog.create({
+        actorId: userId,
+        action: "profile.avatar_uploaded",
+        entityType: "user",
+        entityId: userId,
+        summaryBefore: { avatarUrl: oldAvatarUrl },
+        summaryAfter: { avatarUrl: uploadResult.secureUrl },
+      });
+
+      return {
+        statusCode: 200,
+        success: true,
+        data: {
+          avatarUrl: uploadResult.secureUrl,
+          thumbnails: uploadResult.thumbnails,
+        },
+        message: "Ảnh đại diện đã được tải lên thành công",
+      };
+    } catch (error) {
+      console.error("Avatar upload VM error:", error);
+      throw new ProfileViewModelError(500, "AVATAR_UPLOAD_FAILED", "Tải ảnh đại diện lên thất bại: " + error.message);
+    }
+  },
+
+  async deleteAvatar(userId) {
+    if (!userId) {
+      throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    if (!user.avatarUrl && !user.avatarPublicId) {
+      throw new ProfileViewModelError(400, "AVATAR_NOT_FOUND", "Người dùng chưa thiết lập ảnh đại diện nào để xóa");
+    }
+
+    const oldAvatarUrl = user.avatarUrl;
+    const oldAvatarPublicId = user.avatarPublicId;
+
+    user.avatarUrl = null;
+    user.avatarPublicId = null;
+    await user.save();
+
+    if (oldAvatarPublicId) {
+      await cloudinaryService.deleteAvatar(oldAvatarPublicId);
+    }
+
+    // Log deletion to AuditLog
+    await AuditLog.create({
+      actorId: userId,
+      action: "profile.avatar_deleted",
+      entityType: "user",
+      entityId: userId,
+      summaryBefore: { avatarUrl: oldAvatarUrl },
+      summaryAfter: { avatarUrl: null },
+    });
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Đã gỡ bỏ ảnh đại diện thành công",
+    };
+  },
+
+  async getNotificationPreferences(userId) {
+    if (!userId) {
+      throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    const prefs = user.notificationPreferences || {
+      emailOverdue: true,
+      emailDigest: true,
+      digestHour: 8,
+      timezone: "Asia/Ho_Chi_Minh",
+      unsubscribedAt: null,
+    };
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: prefs,
+    };
+  },
+
+  async updateNotificationPreferences(userId, payload) {
+    if (!userId) {
+      throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    const { emailOverdue, emailDigest, digestHour, timezone } = payload;
+    const oldPreferences = JSON.parse(JSON.stringify(user.notificationPreferences || {}));
+
+    if (user.notificationPreferences === undefined || user.notificationPreferences === null) {
+      user.notificationPreferences = {
+        emailOverdue: true,
+        emailDigest: true,
+        digestHour: 8,
+        timezone: "Asia/Ho_Chi_Minh",
+        unsubscribedAt: null,
+      };
+    }
+
+    if (emailOverdue !== undefined) {
+      user.notificationPreferences.emailOverdue = !!emailOverdue;
+    }
+    if (emailDigest !== undefined) {
+      user.notificationPreferences.emailDigest = !!emailDigest;
+    }
+
+    if (digestHour !== undefined) {
+      const parsedHour = Number.parseInt(digestHour, 10);
+      if (Number.isNaN(parsedHour) || parsedHour < 0 || parsedHour > 23 || !Number.isInteger(parsedHour)) {
+        throw new ProfileViewModelError(400, "INVALID_DIGEST_HOUR", "Giờ gộp thư phải là số nguyên từ 0 đến 23");
+      }
+      user.notificationPreferences.digestHour = parsedHour;
+    }
+
+    if (timezone !== undefined) {
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: timezone });
+        user.notificationPreferences.timezone = timezone;
+      } catch (e) {
+        throw new ProfileViewModelError(400, "INVALID_TIMEZONE", "Múi giờ IANA gửi lên không hợp lệ");
+      }
+    }
+
+    // Capture unsubscribe timestamp if either email preference toggles to false
+    const wasReceiving = (oldPreferences.emailOverdue !== false || oldPreferences.emailDigest !== false);
+    const isReceiving = (user.notificationPreferences.emailOverdue !== false || user.notificationPreferences.emailDigest !== false);
+    
+    if (wasReceiving && !isReceiving) {
+      user.notificationPreferences.unsubscribedAt = new Date();
+    } else if (isReceiving) {
+      user.notificationPreferences.unsubscribedAt = null;
+    }
+
+    await user.save();
+
+    // Log to AuditLog
+    await AuditLog.create({
+      actorId: userId,
+      action: "profile.notification_preferences_updated",
+      entityType: "user",
+      entityId: userId,
+      summaryBefore: oldPreferences,
+      summaryAfter: user.notificationPreferences,
+    });
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: user.notificationPreferences,
+    };
+  },
+
+  async unsubscribe(userId, token) {
+    if (!userId || !token) {
+      throw new ProfileViewModelError(400, "MISSING_DATA", "Thiếu thông tin người dùng hoặc chữ ký bảo mật");
+    }
+
+    const verified = emailService.verifyUnsubscribeToken(userId, token);
+    if (!verified) {
+      throw new ProfileViewModelError(400, "INVALID_UNSUBSCRIBE_TOKEN", "Chữ ký bảo mật không khớp hoặc hết hiệu lực.");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    const oldPreferences = JSON.parse(JSON.stringify(user.notificationPreferences || {}));
+
+    if (user.notificationPreferences === undefined || user.notificationPreferences === null) {
+      user.notificationPreferences = {
+        emailOverdue: true,
+        emailDigest: true,
+        digestHour: 8,
+        timezone: "Asia/Ho_Chi_Minh",
+        unsubscribedAt: null,
+      };
+    }
+
+    user.notificationPreferences.emailOverdue = false;
+    user.notificationPreferences.emailDigest = false;
+    user.notificationPreferences.unsubscribedAt = new Date();
+
+    await user.save();
+
+    // Log to AuditLog
+    await AuditLog.create({
+      actorId: userId,
+      action: "profile.unsubscribed_via_email_link",
+      entityType: "user",
+      entityId: userId,
+      summaryBefore: oldPreferences,
+      summaryAfter: user.notificationPreferences,
+    });
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Đã hủy đăng ký nhận thông báo thành công",
+    };
+  },
+
+  async getNotificationHistory(userId, query = {}) {
+    if (!userId) {
+      throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
+    }
+
+    const { page = 1, limit = 20 } = query;
+    const normalizedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
+    const skip = (normalizedPage - 1) * normalizedLimit;
+
+    const filter = { userId };
+
+    const [logs, total] = await Promise.all([
+      NotificationLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(normalizedLimit),
+      NotificationLog.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / normalizedLimit));
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        logs,
+        pagination: {
+          page: normalizedPage,
+          limit: normalizedLimit,
+          total,
+          totalPages,
+        },
+      },
     };
   },
 };
