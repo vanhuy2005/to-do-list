@@ -13,6 +13,8 @@ import projectsRouters from "./routes/projectsRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
+import { toNodeHandler } from "better-auth/node";
+import { getBetterAuth } from "./services/betterAuthService.js";
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error({
@@ -74,6 +76,9 @@ app.use(cookieParser());
 
 // Public routes
 app.use("/api/v1/auth", authRouters);
+app.use("/api/v1/auth/core", (req, res) => {
+  return toNodeHandler(getBetterAuth())(req, res);
+});
 app.use("/api/v1/profile", publicProfileRouter);
 
 // Protected routes
