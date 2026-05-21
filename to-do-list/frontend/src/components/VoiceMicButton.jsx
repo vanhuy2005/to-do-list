@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { MicIcon, AudioLinesIcon, Loader2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
