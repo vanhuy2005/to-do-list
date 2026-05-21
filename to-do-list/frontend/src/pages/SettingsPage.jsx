@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/axios";
+import AvatarUpload from "@/components/settings/AvatarUpload";
+import NotificationSection from "@/components/settings/NotificationSection";
 
 const themeOptions = [
   {
@@ -57,8 +59,6 @@ const formatCount = (value) => (Number.isFinite(value) ? value : 0);
 export default function SettingsPage() {
   const [profile, setProfile] = useState(null);
   const [displayNameDraft, setDisplayNameDraft] = useState("");
-  const [avatarUrlDraft, setAvatarUrlDraft] = useState("");
-  const [avatarFileName, setAvatarFileName] = useState("");
   const [sessionCount, setSessionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -82,8 +82,6 @@ export default function SettingsPage() {
 
         setProfile(profileResponse?.data || null);
         setDisplayNameDraft(profileResponse?.data?.displayName || "");
-        setAvatarUrlDraft(profileResponse?.data?.avatarUrl || "");
-        setAvatarFileName("");
         setSessionCount(
           Array.isArray(sessionsResponse?.data)
             ? sessionsResponse.data.length
@@ -131,45 +129,6 @@ export default function SettingsPage() {
     setDisplayNameDraft(profile?.displayName || "");
   }, [profile?.displayName]);
 
-  useEffect(() => {
-    setAvatarUrlDraft(profile?.avatarUrl || "");
-  }, [profile?.avatarUrl]);
-
-  const handleAvatarFileChange = async (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("File không hợp lệ", {
-        description: "Vui lòng chọn một file ảnh.",
-      });
-      event.target.value = "";
-      return;
-    }
-
-    const maxSizeInBytes = 2 * 1024 * 1024;
-    if (file.size > maxSizeInBytes) {
-      toast.error("Ảnh quá lớn", {
-        description: "Vui lòng chọn ảnh nhỏ hơn 2MB.",
-      });
-      event.target.value = "";
-      return;
-    }
-
-    const fileDataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("Không thể đọc file ảnh."));
-      reader.readAsDataURL(file);
-    });
-
-    setAvatarUrlDraft(fileDataUrl);
-    setAvatarFileName(file.name);
-  };
-
   const activeLanguage = profile?.preferredLanguage || "vi";
   const activeTheme = profile?.themePreference || "light";
 
@@ -214,18 +173,6 @@ export default function SettingsPage() {
     }
 
     await saveProfile({ displayName: nextDisplayName });
-  };
-
-  const handleSaveAvatar = async () => {
-    const nextAvatarUrl = avatarUrlDraft.trim();
-
-    await saveProfile({ avatarUrl: nextAvatarUrl || null });
-  };
-
-  const handleClearAvatar = async () => {
-    setAvatarUrlDraft("");
-    setAvatarFileName("");
-    await saveProfile({ avatarUrl: null });
   };
 
   if (isLoading) {
@@ -376,65 +323,14 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-3 text-sm font-bold text-foreground">
-              <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-base uppercase font-black">
-                    Avatar ảnh
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="secondary"
-                      disabled={isSaving}
-                      onClick={handleClearAvatar}
-                      className="border-[2px] comic-shadow-sm"
-                    >
-                      Xóa
-                    </Button>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="default"
-                      disabled={isSaving}
-                      onClick={handleSaveAvatar}
-                      className="border-[2px] comic-shadow-sm"
-                    >
-                      Lưu
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-border bg-[#ffd400] comic-shadow-sm">
-                    {avatarUrlDraft ? (
-                      <img
-                        src={avatarUrlDraft}
-                        alt="Avatar preview"
-                        className="size-full object-cover"
-                        onError={(event) => {
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <UserRoundIcon className="size-7 text-foreground" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarFileChange}
-                      disabled={isSaving}
-                      className="h-11 rounded-xl bg-background py-2 border-[2px] cursor-pointer"
-                    />
-                    <p className="truncate text-xs font-bold text-muted-foreground">
-                      {avatarFileName || "Chọn file ảnh để làm avatar"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Cloudinary-based Avatar Upload component */}
+              <AvatarUpload
+                avatarUrl={profile?.avatarUrl}
+                displayName={profile?.displayName}
+                onAvatarChange={(newUrl) => {
+                  setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
+                }}
+              />
 
               <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
                 <div className="flex items-center justify-between gap-3 mb-2">
@@ -476,6 +372,9 @@ export default function SettingsPage() {
         </div>
         {/* End 2-column grid */}
       </div>
+
+      {/* Overdue notifications configuration and timeline log */}
+      <NotificationSection />
     </section>
   );
 }
