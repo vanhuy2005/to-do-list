@@ -91,12 +91,18 @@ ensureFrontendBuild();
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         callback(null, true);
         return;
       }
 
-      callback(new Error("Not allowed by CORS"));
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(null, false);
     },
     credentials: true,
   }),
