@@ -47,6 +47,66 @@ router.get(
 );
 
 router.get(
+  "/:id/shares",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getTaskShares(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
+router.post(
+  "/:id/shares",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.shareTask(
+      req.params.id,
+      req.body,
+      req.userId,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+router.patch(
+  "/:id/shares/:collaboratorId",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.updateTaskShare(
+      req.params.id,
+      req.params.collaboratorId,
+      req.body,
+      req.userId,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+router.delete(
+  "/:id/shares/:collaboratorId",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.removeTaskShare(
+      req.params.id,
+      req.params.collaboratorId,
+      req.userId,
+    );
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+router.get(
   "/:id",
   errorHandler(async (req, res) => {
     const result = await taskViewModel.getTaskById(req.params.id, req.userId);
@@ -93,6 +153,29 @@ router.delete(
       message: result.message,
     });
   }),
+);
+
+router.get(
+  "/:id/comments",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getTaskComments(req.params.id, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+router.post(
+  "/:id/comments",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.createTaskComment(req.params.id, req.body, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  })
 );
 
 export default router;

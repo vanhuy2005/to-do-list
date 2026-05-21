@@ -12,6 +12,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => navigateMock,
+    useSearchParams: () => [new URLSearchParams()],
   };
 });
 
@@ -66,7 +67,7 @@ describe("NewTaskPage voice flow", () => {
 
     expect(screen.getByText(/ai draft/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /tạo task/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tạo ngay/i }));
 
     await waitFor(() => {
       expect(taskService.createTask).toHaveBeenCalledWith(

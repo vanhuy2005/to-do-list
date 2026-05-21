@@ -215,6 +215,7 @@ export default function ViewAllPage() {
     const priority = searchParams.get("priority") || undefined;
     const tag = searchParams.get("tag") || undefined;
     const search = searchParams.get("search") || undefined;
+    const projectId = searchParams.get("projectId") || undefined;
 
     try {
       const payload = await taskService.getTasks({
@@ -222,6 +223,7 @@ export default function ViewAllPage() {
         limit: 100,
         sort: "updatedAt",
         order: "desc",
+        projectId: projectId || "null", // Show project tasks if projectId param exists, otherwise show only non-project tasks
         ...(priority ? { priority } : {}),
         ...(tag ? { tag } : {}),
         ...(search ? { search } : {}),

@@ -80,7 +80,7 @@ const getDeadlineLabel = (task) => {
 
 const isOverdueLabel = (label) => label.startsWith("TRỄ");
 
-function KanbanCardInner({ task, onOpenTask }) {
+function KanbanCardInner({ task, onOpenTask, onOpenComments }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task._id });
 
@@ -104,7 +104,7 @@ function KanbanCardInner({ task, onOpenTask }) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-center gap-1.5 rounded-lg border-[3px] border-border bg-card px-1.5 py-1 transition-all duration-150",
+        "relative group flex items-center gap-1.5 rounded-lg border-[3px] border-border bg-card px-1.5 py-1 transition-all duration-150",
         "border-l-[4px]",
         borderClass,
         isDragging
@@ -112,6 +112,19 @@ function KanbanCardInner({ task, onOpenTask }) {
           : "comic-shadow hover:-translate-y-0.5 active:translate-y-0",
       )}
     >
+      {task?.commentCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenComments?.(task);
+          }}
+          className="absolute -top-2 -right-2 size-5 rounded-full border-2 border-border bg-[#ffd400] hover:bg-[#ffd400]/90 text-foreground font-black text-[9px] flex items-center justify-center comic-shadow-sm hover:scale-110 active:scale-95 transition-transform z-10 animate-in fade-in zoom-in duration-200"
+          title="Bình luận"
+        >
+          !
+        </button>
+      )}
       {/* Drag handle */}
       <button
         type="button"
@@ -161,7 +174,8 @@ const KanbanCard = memo(KanbanCardInner, (prev, next) => {
     pt.title === nt.title &&
     pt.dueDate === nt.dueDate &&
     pt.priority === nt.priority &&
-    pt.completedAt === nt.completedAt
+    pt.completedAt === nt.completedAt &&
+    pt.commentCount === nt.commentCount
   );
 });
 

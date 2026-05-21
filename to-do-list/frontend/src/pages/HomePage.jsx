@@ -7,6 +7,7 @@ import ErrorState from "@/components/ErrorState";
 import StatusCounter from "@/components/StatusCounter";
 import TaskCard from "@/components/TaskCard";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import TaskCommentsModal from "@/components/TaskCommentsModal";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -148,6 +149,16 @@ export default function HomePage() {
   const [pageInput, setPageInput] = useState("");
   const [isJumpInputVisible, setIsJumpInputVisible] = useState(false);
 
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentTaskId, setCommentTaskId] = useState(null);
+  const [commentTaskTitle, setCommentTaskTitle] = useState("");
+
+  const handleOpenComments = (task) => {
+    setCommentTaskId(task._id);
+    setCommentTaskTitle(task.title);
+    setCommentsOpen(true);
+  };
+
   const currentPage = useMemo(
     () => getPageFromSearch(location.search),
     [location.search],
@@ -191,6 +202,7 @@ export default function HomePage() {
         limit: HOME_PAGE_SIZE,
         sort: "updatedAt",
         order: "desc",
+        projectId: "null", // Only show tasks without a project
         ...(status ? { status } : {}),
         ...(priority ? { priority } : {}),
         ...(tag ? { tag } : {}),
@@ -360,6 +372,7 @@ export default function HomePage() {
               onOpen={handleOpenTask}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
+              onOpenComments={handleOpenComments}
             />
           ))}
         </div>
@@ -488,6 +501,13 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <TaskCommentsModal
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        taskId={commentTaskId}
+        taskTitle={commentTaskTitle}
+      />
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

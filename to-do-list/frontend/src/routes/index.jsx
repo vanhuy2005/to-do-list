@@ -6,9 +6,13 @@ import NewTaskPage from "@/pages/NewTaskPage";
 import EditTaskPage from "@/pages/EditTaskPage";
 import FilterPage from "@/pages/FilterPage";
 import ViewAllPage from "@/pages/ViewAllPage";
+import ProjectsPage from "@/pages/ProjectsPage";
+import ProjectDetailPage from "@/pages/ProjectDetailPage";
+import ProjectJoinPage from "@/pages/ProjectJoinPage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
+import EditProfilePage from "@/pages/EditProfilePage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -42,6 +46,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "tasks", element: <Navigate to="/" replace /> },
+      { path: "projects", element: <ProjectsPage /> },
+      { path: "projects/:id", element: <ProjectDetailPage /> },
+      { path: "projects/join/:token", element: <ProjectJoinPage /> },
       { path: "tasks/new", element: <NewTaskPage /> },
       { path: "tasks/:id", element: <TaskDetailPage /> },
       { path: "tasks/:id/edit", element: <EditTaskPage /> },
@@ -50,6 +57,7 @@ export const router = createBrowserRouter([
       { path: "activities", element: <ActivitiesPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "profile", element: <ProfilePage /> },
+      { path: "profile/edit", element: <EditProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

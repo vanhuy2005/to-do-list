@@ -19,6 +19,11 @@ const parsePositiveInteger = (value) => {
   return parsed;
 };
 
+const isValidObjectId = (id) => {
+  if (!id) return false;
+  return /^[0-9a-fA-F]{24}$/.test(String(id));
+};
+
 const isValidCompletedValue = (value) => {
   if (value === undefined) {
     return true;
@@ -92,6 +97,23 @@ const taskQueryMiddleware = (req, res, next) => {
         message: "sort field không hợp lệ",
       },
     });
+  }
+
+  if (req.query.projectId !== undefined) {
+    const projectId = String(req.query.projectId).trim();
+    if (
+      projectId !== "null" &&
+      projectId !== "" &&
+      !isValidObjectId(projectId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_PROJECT_ID",
+          message: "projectId không hợp lệ",
+        },
+      });
+    }
   }
 
   return next();

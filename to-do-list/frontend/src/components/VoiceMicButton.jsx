@@ -41,24 +41,27 @@ export default function VoiceMicButton({ onDraftReady, disabled = false }) {
     );
   }, []);
 
-  const handleTranscript = useCallback(async (transcript) => {
+  const handleTranscript = useCallback((transcript) => {
     setInterimTranscript(''); // Clear interim
     const optimisticDraft = { ...INITIAL_DRAFT, title: transcript };
     localDraftRef.current = optimisticDraft;
     onDraftReady?.(optimisticDraft, transcript, UI_STATES.ENRICHING);
     setUiState(UI_STATES.ENRICHING);
 
-    try {
-      const enriched = await createVoiceDraft(transcript);
-      const finalDraft = { ...optimisticDraft, ...enriched };
-      localDraftRef.current = finalDraft;
-      onDraftReady?.(finalDraft, transcript, UI_STATES.PREVIEW);
-      setUiState(UI_STATES.IDLE);
-    } catch (err) {
-      console.warn('AI enrichment failed, showing minimal draft:', err.message);
-      onDraftReady?.(optimisticDraft, transcript, UI_STATES.PREVIEW);
-      setUiState(UI_STATES.IDLE);
-    }
+    // Perform the async AI enrichment in the background so we don't block
+    (async () => {
+      try {
+        const enriched = await createVoiceDraft(transcript);
+        const finalDraft = { ...optimisticDraft, ...enriched };
+        localDraftRef.current = finalDraft;
+        onDraftReady?.(finalDraft, transcript, UI_STATES.PREVIEW);
+        setUiState(UI_STATES.IDLE);
+      } catch (err) {
+        console.warn('AI enrichment failed, showing minimal draft:', err.message);
+        onDraftReady?.(optimisticDraft, transcript, UI_STATES.PREVIEW);
+        setUiState(UI_STATES.IDLE);
+      }
+    })();
   }, [onDraftReady]);
 
   const recorderCallbacks = useMemo(() => ({
@@ -125,6 +128,7 @@ export default function VoiceMicButton({ onDraftReady, disabled = false }) {
       <Button
         type="button"
         size="icon-lg"
+        aria-label={displayState === 'RECORDING' ? "dang nghe" : "bat dau ghi am"}
         disabled={disabled || displayState === 'TRANSCRIBING' || displayState === 'ENRICHING'}
         onClick={handleClick}
         onTouchStart={isTouchDevice ? handleActionStart : undefined}

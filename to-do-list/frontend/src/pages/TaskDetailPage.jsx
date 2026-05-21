@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarDaysIcon, ClockIcon, AlertTriangleIcon, Edit3Icon, Trash2Icon } from "lucide-react";
+import {
+  CalendarDaysIcon,
+  ClockIcon,
+  AlertTriangleIcon,
+  Edit3Icon,
+  Trash2Icon,
+  Share2Icon,
+  UserRoundIcon,
+  UserXIcon,
+} from "lucide-react";
 
 import useCountdown from "@/hooks/useCountdown";
 
@@ -14,6 +23,26 @@ import { cn } from "@/lib/utils";
 import { taskModalFooterClass } from "@/lib/taskModalDesignSystem";
 import taskService from "@/services/taskService";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import TaskCommentsModal from "@/components/TaskCommentsModal";
+
+const sharePermissionLabel = {
+  owner: "Chủ sở hữu",
+  view: "Chỉ xem",
+  comment: "Nhận xét",
+  edit: "Chỉnh sửa",
+};
+
+const parseSharesFromPayload = (payload) => {
+  if (Array.isArray(payload?.data?.shares)) {
+    return payload.data.shares;
+  }
+
+  if (Array.isArray(payload?.shares)) {
+    return payload.shares;
+  }
+
+  return [];
+};
 
 /* ── colour maps ─────────────────────────────────────────── */
 const statusTone = {
@@ -139,6 +168,14 @@ export default function TaskDetailPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [shares, setShares] = useState([]);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [sharePermission, setSharePermission] = useState("view");
+  const [isSharing, setIsSharing] = useState(false);
+  const [pendingPermissionUserId, setPendingPermissionUserId] = useState("");
+  const [pendingRemoveUserId, setPendingRemoveUserId] = useState("");
   const auditLog = location.state?.auditLog || null;
   const closeTo =
     location.state?.returnTo || searchParams.get("returnTo") || "/";
@@ -198,6 +235,114 @@ export default function TaskDetailPage() {
   useEffect(() => {
     fetchTask();
   }, [fetchTask]);
+
+  const fetchShares = useCallback(async () => {
+    if (!id) {
+      return;
+    }
+
+    setIsLoadingShares(true);
+    try {
+      const payload = await taskService.getTaskShares(id);
+      setShares(parseSharesFromPayload(payload));
+    } catch (error) {
+      setShares([]);
+      const status = error?.response?.status;
+      if (status !== 403) {
+        const msg =
+          error?.response?.data?.error?.message ||
+          "Không tải được danh sách chia sẻ.";
+        toast.error("Lỗi chia sẻ", { description: msg });
+      }
+    } finally {
+      setIsLoadingShares(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!task || openedFromAudit || task.accessLevel !== "owner") {
+      setShares([]);
+      return;
+    }
+
+    fetchShares();
+  }, [fetchShares, openedFromAudit, task]);
+
+  const handleShareTask = async () => {
+    const email = shareEmail.trim();
+    if (!email) {
+      toast.error("Thiếu email", {
+        description: "Nhập email người bạn muốn chia sẻ.",
+      });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const payload = await taskService.shareTask(id, {
+        email,
+        permission: sharePermission,
+      });
+
+      setShares(parseSharesFromPayload(payload));
+      setShareEmail("");
+      toast.success("Đã chia sẻ", {
+        description: `Đã cấp quyền ${sharePermissionLabel[sharePermission].toLowerCase()} cho ${email}.`,
+      });
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error?.message ||
+        "Không thể chia sẻ task lúc này.";
+      toast.error("Chia sẻ thất bại", { description: msg });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleUpdatePermission = async (collaboratorId, permission) => {
+    if (!collaboratorId) {
+      return;
+    }
+
+    setPendingPermissionUserId(collaboratorId);
+    try {
+      const payload = await taskService.updateTaskShare(id, collaboratorId, {
+        permission,
+      });
+      setShares(parseSharesFromPayload(payload));
+      toast.success("Đã cập nhật quyền", {
+        description: `Quyền mới: ${sharePermissionLabel[permission]}.`,
+      });
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error?.message ||
+        "Không thể cập nhật quyền chia sẻ.";
+      toast.error("Cập nhật thất bại", { description: msg });
+    } finally {
+      setPendingPermissionUserId("");
+    }
+  };
+
+  const handleRemoveShare = async (collaboratorId) => {
+    if (!collaboratorId) {
+      return;
+    }
+
+    setPendingRemoveUserId(collaboratorId);
+    try {
+      const payload = await taskService.removeTaskShare(id, collaboratorId);
+      setShares(parseSharesFromPayload(payload));
+      toast.success("Đã thu hồi quyền", {
+        description: "Người dùng này không còn truy cập task.",
+      });
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error?.message || "Không thể thu hồi quyền.";
+      toast.error("Thu hồi thất bại", { description: msg });
+    } finally {
+      setPendingRemoveUserId("");
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -268,6 +413,10 @@ export default function TaskDetailPage() {
   const statusVal = task.status || "todo";
   const priorityVal = task.priority || "medium";
   const isAuditFallback = !!auditLog;
+  const accessLevel = task.accessLevel || null;
+  const canEdit = accessLevel === "owner" || accessLevel === "edit";
+  const canDelete = accessLevel === "owner";
+  const canManageShares = accessLevel === "owner";
 
   return (
     <TaskModalShell closeTo={closeTo} forceCloseTo bodyClassName="pb-0">
@@ -331,28 +480,162 @@ export default function TaskDetailPage() {
           </div>
         )}
 
+        {!isAuditFallback && (
+          <div className="space-y-2.5 rounded-xl border-[3px] border-border bg-card p-3 comic-shadow">
+            <div className="flex items-center gap-2">
+              <Share2Icon className="size-4" />
+              <p className="text-xs font-extrabold uppercase text-muted-foreground">
+                Quyền truy cập
+              </p>
+              <Badge className="ml-auto text-xs uppercase" variant="secondary">
+                {sharePermissionLabel[accessLevel] || "Không xác định"}
+              </Badge>
+            </div>
+
+            {!canManageShares && (
+              <p className="text-sm font-medium text-muted-foreground">
+                Bạn chỉ có quyền{" "}
+                {sharePermissionLabel[accessLevel]?.toLowerCase() || "truy cập"}
+                . Chỉ chủ sở hữu mới quản lý danh sách chia sẻ.
+              </p>
+            )}
+
+            {canManageShares && (
+              <>
+                <div className="grid gap-2 md:grid-cols-[1fr_150px_auto]">
+                  <input
+                    type="email"
+                    value={shareEmail}
+                    onChange={(event) => setShareEmail(event.target.value)}
+                    placeholder="email người nhận quyền"
+                    className="h-10 rounded-lg border-[3px] border-border bg-background px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#00C2FF]"
+                  />
+
+                  <select
+                    value={sharePermission}
+                    onChange={(event) => setSharePermission(event.target.value)}
+                    className="h-10 rounded-lg border-[3px] border-border bg-background px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#00C2FF]"
+                  >
+                    <option value="view">Chỉ xem</option>
+                    <option value="comment">Nhận xét</option>
+                    <option value="edit">Chỉnh sửa</option>
+                  </select>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="font-bold uppercase"
+                    onClick={handleShareTask}
+                    disabled={isSharing}
+                  >
+                    {isSharing ? "Đang cấp quyền..." : "Chia sẻ"}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {isLoadingShares ? (
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                  ) : shares.length === 0 ? (
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Task này chưa chia sẻ cho ai.
+                    </p>
+                  ) : (
+                    shares.map((share) => {
+                      const collaboratorId = share?.userId;
+                      const isUpdating =
+                        pendingPermissionUserId ===
+                        String(collaboratorId || "");
+                      const isRemoving =
+                        pendingRemoveUserId === String(collaboratorId || "");
+
+                      return (
+                        <div
+                          key={String(collaboratorId)}
+                          className="grid gap-2 rounded-lg border-[3px] border-border bg-background p-2.5 md:grid-cols-[1fr_140px_auto] md:items-center"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black">
+                              {share.displayName || share.email || "Người dùng"}
+                            </p>
+                            <p className="truncate text-xs font-medium text-muted-foreground">
+                              {share.email || "Không có email"}
+                            </p>
+                          </div>
+
+                          <select
+                            value={share.permission}
+                            onChange={(event) =>
+                              handleUpdatePermission(
+                                collaboratorId,
+                                event.target.value,
+                              )
+                            }
+                            disabled={isUpdating || isRemoving}
+                            className="h-9 rounded-lg border-[3px] border-border bg-card px-2 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#00C2FF]"
+                          >
+                            <option value="view">Chỉ xem</option>
+                            <option value="comment">Nhận xét</option>
+                            <option value="edit">Chỉnh sửa</option>
+                          </select>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="gap-1.5 font-bold uppercase"
+                            onClick={() => handleRemoveShare(collaboratorId)}
+                            disabled={isRemoving || isUpdating}
+                          >
+                            {isRemoving ? (
+                              "Đang thu hồi..."
+                            ) : (
+                              <>
+                                <UserXIcon className="size-4" />
+                                Thu hồi
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Footer actions */}
         {!isAuditFallback ? (
           <div
-            className={cn("-mx-4 grid grid-cols-2 gap-2", taskModalFooterClass)}
+            className={cn("-mx-4 grid grid-cols-3 gap-2", taskModalFooterClass)}
           >
             <Button
               type="button"
               variant="secondary"
               className="gap-2 font-bold uppercase"
+              onClick={() => setIsCommentsOpen(true)}
+            >
+              💬 Bình luận
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2 font-bold uppercase"
               onClick={() => navigate(`/tasks/${id}/edit`)}
+              disabled={!canEdit}
             >
               <Edit3Icon className="size-4" />
-              Sửa
+              {canEdit ? "Sửa" : "Không sửa"}
             </Button>
             <Button
               type="button"
               variant="primary"
               className="gap-2 bg-destructive font-bold uppercase text-destructive-foreground hover:bg-destructive/90"
               onClick={() => setIsDeleteOpen(true)}
+              disabled={!canDelete}
             >
               <Trash2Icon className="size-4" />
-              Xóa công việc
+              {canDelete ? "Xóa" : "Chỉ owner"}
             </Button>
           </div>
         ) : (
@@ -367,6 +650,14 @@ export default function TaskDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Comments Modal */}
+        <TaskCommentsModal
+          open={isCommentsOpen}
+          onOpenChange={setIsCommentsOpen}
+          taskId={id}
+          taskTitle={task.title}
+        />
 
         {/* Delete Dialog */}
         <DeleteConfirmDialog

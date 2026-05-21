@@ -132,6 +132,13 @@ export default function EditTaskPage() {
     },
   });
 
+  useEffect(() => {
+    register("status");
+    register("priority");
+    register("dueDate");
+    register("tags");
+  }, [register]);
+
   const watchedTitle = watch("title");
   const watchedStatus = watch("status");
   const watchedPriority = watch("priority");
@@ -199,7 +206,7 @@ export default function EditTaskPage() {
         description: data.description || undefined,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate || undefined,
+        dueDate: data.dueDate || null,
         tags: data.tags?.length > 0 ? data.tags : undefined,
       };
 
