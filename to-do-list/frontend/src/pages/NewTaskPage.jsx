@@ -102,40 +102,42 @@ export default function NewTaskPage() {
   const [voiceRawText, setVoiceRawText] = useState("");
   const [voiceUiState, setVoiceUiState] = useState("IDLE");
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const queryProjectId = searchParams.get("projectId");
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    queryProjectId || "personal"
+  );
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectError, setProjectError] = useState("");
 
-  // Get projectId from query params or use selected one
-  const queryProjectId = searchParams.get("projectId");
   const finalProjectId = queryProjectId || selectedProjectId;
 
-  // Load projects if no projectId in query params
+  // Load projects always so the user can select one
   useEffect(() => {
-    if (queryProjectId) {
-      setSelectedProjectId(queryProjectId);
-      return;
-    }
-
     const loadProjects = async () => {
       setIsLoadingProjects(true);
       setProjectError("");
       try {
         const response = await projectService.getProjects();
         const projectList = response?.data || [];
-        if (projectList.length === 0) {
-          setProjectError("Bạn chưa có dự án nào. Hãy tạo một dự án trước.");
-          return;
-        }
         setProjects(projectList);
       } catch (error) {
-        setProjectError("Không thể tải danh sách dự án.", error);
+        setProjectError("Không thể tải danh sách dự án.");
+        console.error(error);
       } finally {
         setIsLoadingProjects(false);
       }
     };
 
     loadProjects();
+  }, []);
+
+  // Sync selectedProjectId if queryProjectId changes
+  useEffect(() => {
+    if (queryProjectId) {
+      setSelectedProjectId(queryProjectId);
+    } else {
+      setSelectedProjectId("personal");
+    }
   }, [queryProjectId]);
 
   const {
@@ -148,6 +150,13 @@ export default function NewTaskPage() {
     resolver: zodResolver(taskSchema),
     defaultValues: taskDefaultValues,
   });
+
+  useEffect(() => {
+    register("status");
+    register("priority");
+    register("dueDate");
+    register("tags");
+  }, [register]);
 
   const watchedTitle = watch("title");
   const watchedStatus = watch("status");
@@ -184,9 +193,9 @@ export default function NewTaskPage() {
   };
 
   const normalizeVoiceDueDate = (dueDate) => {
-    if (!dueDate) return undefined;
+    if (!dueDate) return null;
     const parsed = new Date(dueDate);
-    if (Number.isNaN(parsed.getTime())) return undefined;
+    if (Number.isNaN(parsed.getTime())) return null;
     return parsed.toISOString();
   };
 
@@ -209,11 +218,6 @@ export default function NewTaskPage() {
       return;
     }
 
-    if (!finalProjectId) {
-      toast.error("Lỗi!", { description: "Vui lòng chọn một dự án." });
-      return;
-    }
-
     setIsVoiceSaving(true);
     try {
       const payload = {
@@ -223,15 +227,22 @@ export default function NewTaskPage() {
         priority: draft?.priority || "medium",
         dueDate: normalizeVoiceDueDate(draft?.dueDate),
         tags: draft?.tags?.length ? draft.tags : undefined,
-        projectId: finalProjectId,
       };
+
+      if (finalProjectId && finalProjectId !== "personal") {
+        payload.projectId = finalProjectId;
+      }
 
       await taskService.createTask(payload);
       toast.success("Tạo thành công!", {
         description: `Nhiệm vụ "${title}" đã được tạo.`,
       });
       resetVoiceDraft();
-      navigate(`/projects/${finalProjectId}`);
+      if (finalProjectId && finalProjectId !== "personal") {
+        navigate(`/projects/${finalProjectId}`);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       const msg =
         error?.response?.data?.error?.message ||
@@ -244,11 +255,6 @@ export default function NewTaskPage() {
   };
 
   const onSubmit = async (data) => {
-    if (!finalProjectId) {
-      toast.error("Lỗi!", { description: "Vui lòng chọn một dự án." });
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const payload = {
@@ -256,16 +262,23 @@ export default function NewTaskPage() {
         description: data.description || undefined,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate || undefined,
+        dueDate: data.dueDate || null,
         tags: data.tags?.length > 0 ? data.tags : undefined,
-        projectId: finalProjectId,
       };
+
+      if (finalProjectId && finalProjectId !== "personal") {
+        payload.projectId = finalProjectId;
+      }
 
       await taskService.createTask(payload);
       toast.success("Tạo thành công!", {
         description: `Nhiệm vụ "${data.title}" đã được tạo.`,
       });
-      navigate(`/projects/${finalProjectId}`);
+      if (finalProjectId && finalProjectId !== "personal") {
+        navigate(`/projects/${finalProjectId}`);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       const msg =
         error?.response?.data?.error?.message ||
@@ -285,84 +298,54 @@ export default function NewTaskPage() {
           onClose={() => navigate("/", { replace: true })}
         />
 
-        {/* Project Selector — hiện nếu chưa có projectId */}
-        {!finalProjectId && (
+        {/* Project Selector */}
+        {!queryProjectId ? (
           <div className="space-y-3 rounded-xl border-[3px] border-border bg-card p-4 comic-shadow">
-            <div className="space-y-2">
-              <p className="text-sm font-black uppercase tracking-wide text-foreground">
-                Chọn Dự Án
+            <div className="space-y-1">
+              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+                Nơi thực hiện (Dự án / Cá nhân)
               </p>
-              <p className="text-xs text-muted-foreground">
-                Task phải được tạo trong một dự án. Chọn dự án của bạn.
-              </p>
-            </div>
-
-            {isLoadingProjects && (
-              <div className="flex items-center justify-center py-6">
-                <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-
-            {projectError && (
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-destructive">
-                  {projectError}
-                </p>
-                <Button
-                  onClick={() => navigate("/projects", { replace: true })}
-                  size="sm"
-                  variant="secondary"
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProjectId("personal")}
+                  className={cn(
+                    "rounded-xl border-2 px-3 py-2 text-xs font-extrabold transition-all duration-200 comic-shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
+                    selectedProjectId === "personal"
+                      ? "border-primary bg-[#ffde43] text-black"
+                      : "border-border bg-white text-foreground hover:bg-muted/50"
+                  )}
                 >
-                  Tạo Dự Án
-                </Button>
-              </div>
-            )}
-
-            {!isLoadingProjects && !projectError && projects.length > 0 && (
-              <div className="grid gap-2">
+                  👤 Công việc cá nhân
+                </button>
                 {projects.map((project) => (
                   <button
                     key={project._id}
                     type="button"
                     onClick={() => setSelectedProjectId(project._id)}
                     className={cn(
-                      "rounded-lg border-2 p-3 text-left transition-all",
+                      "rounded-xl border-2 px-3 py-2 text-xs font-extrabold transition-all duration-200 comic-shadow active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
                       selectedProjectId === project._id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50 hover:bg-muted/50",
+                        ? "border-primary bg-[#ffde43] text-black"
+                        : "border-border bg-white text-foreground hover:bg-muted/50"
                     )}
                   >
-                    <div className="font-bold">{project.name}</div>
-                    {project.description && (
-                      <div className="text-xs text-muted-foreground">
-                        {project.description}
-                      </div>
-                    )}
+                    📂 {project.name}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {finalProjectId && (
-          <div className="space-y-3 rounded-xl border-[3px] border-border bg-card p-4 comic-shadow">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-black uppercase tracking-wide text-foreground">
-                Dự Án Đã Chọn
-              </p>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelectedProjectId(null)}
-                disabled={!!queryProjectId}
-              >
-                Đổi
-              </Button>
             </div>
-            <div className="text-sm font-bold">
-              {projects.find((p) => p._id === finalProjectId)?.name ||
-                queryProjectId}
+          </div>
+        ) : (
+          <div className="space-y-2 rounded-xl border-[3px] border-border bg-card p-4 comic-shadow">
+            <p className="text-[10px] font-black uppercase text-muted-foreground">
+              Dự án đã chọn
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📂</span>
+              <span className="text-sm font-black">
+                {projects.find((p) => p._id === queryProjectId)?.name || "Dự án hợp tác"}
+              </span>
             </div>
           </div>
         )}

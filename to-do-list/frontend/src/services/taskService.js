@@ -15,6 +15,8 @@ const taskService = {
     api.patch(`/tasks/${id}/shares/${collaboratorId}`, data),
   removeTaskShare: (id, collaboratorId) =>
     api.delete(`/tasks/${id}/shares/${collaboratorId}`),
+  getTaskComments: (id) => api.get(`/tasks/${id}/comments`),
+  createTaskComment: (id, data) => api.post(`/tasks/${id}/comments`, data),
 };
 
 export default taskService;

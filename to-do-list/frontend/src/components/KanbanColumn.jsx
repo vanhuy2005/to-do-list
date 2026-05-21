@@ -40,6 +40,7 @@ export default function KanbanColumn({
   isExpanded,
   onToggleExpand,
   onOpenTask,
+  onOpenComments,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
@@ -98,6 +99,7 @@ export default function KanbanColumn({
                   key={task._id}
                   task={task}
                   onOpenTask={onOpenTask}
+                  onOpenComments={onOpenComments}
                 />
               ))}
             </div>
@@ -109,6 +111,7 @@ export default function KanbanColumn({
                   key={task._id}
                   task={task}
                   onOpenTask={onOpenTask}
+                  onOpenComments={onOpenComments}
                 />
               ))}
             </div>

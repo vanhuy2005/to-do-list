@@ -16,6 +16,7 @@ import projectService from "@/services/projectService";
 import authService from "@/services/authService";
 import ablyService from "@/services/ablyService";
 import ProjectMembersModal from "@/components/ProjectMembersModal";
+import TaskCommentsModal from "@/components/TaskCommentsModal";
 import { toast } from "sonner";
 import { 
   UsersIcon, 
@@ -105,6 +106,16 @@ export default function ProjectDetailPage() {
   const [expandedStatus, setExpandedStatus] = useState("");
   const [activeDragTask, setActiveDragTask] = useState(null);
 
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentTaskId, setCommentTaskId] = useState(null);
+  const [commentTaskTitle, setCommentTaskTitle] = useState("");
+
+  const handleOpenComments = (task) => {
+    setCommentTaskId(task._id);
+    setCommentTaskTitle(task.title);
+    setCommentsOpen(true);
+  };
+
   const currentUser = authService.getUser();
   const currentUserId = currentUser?._id || currentUser?.id;
 
@@ -131,7 +142,10 @@ export default function ProjectDetailPage() {
 
   // Fetch Project & Tasks
   const fetchProject = useCallback(async () => {
-    setIsLoading(true);
+    const shouldShowFullLoading = !project || project._id !== id;
+    if (shouldShowFullLoading) {
+      setIsLoading(true);
+    }
     try {
       const p = await projectService.getProject(id);
       setProject(p?.data || p);
@@ -409,9 +423,9 @@ export default function ProjectDetailPage() {
     <section className="space-y-6 pb-16">
       
       {/* Dynamic Pop Art Workspace Header */}
-      <header className="relative border-4 border-border rounded-[2.5rem] bg-[#FFFDF7] p-6 comic-shadow overflow-hidden">
+      <header className="relative border-4 border-border rounded-[2.5rem] bg-[#FFFDF7] p-6 comic-shadow overflow-visible">
         {/* Comic dot grid inside header */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(0,0,0,0.035)_1px,transparent_1px)] bg-[size:16px_16px]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(0,0,0,0.035)_1px,transparent_1px)] bg-[size:16px_16px] rounded-[2.2rem]" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-3 min-w-0">
@@ -581,6 +595,7 @@ export default function ProjectDetailPage() {
                 )
               }
               onOpenTask={handleOpenTask}
+              onOpenComments={handleOpenComments}
             />
           ))}
         </div>
@@ -668,6 +683,13 @@ export default function ProjectDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TaskCommentsModal
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        taskId={commentTaskId}
+        taskTitle={commentTaskTitle}
+      />
     </section>
   );
 }

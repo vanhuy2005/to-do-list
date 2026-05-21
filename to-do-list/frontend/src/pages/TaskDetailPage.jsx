@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { taskModalFooterClass } from "@/lib/taskModalDesignSystem";
 import taskService from "@/services/taskService";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import TaskCommentsModal from "@/components/TaskCommentsModal";
 
 const sharePermissionLabel = {
   owner: "Chủ sở hữu",
@@ -167,6 +168,7 @@ export default function TaskDetailPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [shares, setShares] = useState([]);
   const [isLoadingShares, setIsLoadingShares] = useState(false);
   const [shareEmail, setShareEmail] = useState("");
@@ -605,8 +607,16 @@ export default function TaskDetailPage() {
         {/* Footer actions */}
         {!isAuditFallback ? (
           <div
-            className={cn("-mx-4 grid grid-cols-2 gap-2", taskModalFooterClass)}
+            className={cn("-mx-4 grid grid-cols-3 gap-2", taskModalFooterClass)}
           >
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2 font-bold uppercase"
+              onClick={() => setIsCommentsOpen(true)}
+            >
+              💬 Bình luận
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -615,7 +625,7 @@ export default function TaskDetailPage() {
               disabled={!canEdit}
             >
               <Edit3Icon className="size-4" />
-              {canEdit ? "Sửa" : "Không có quyền sửa"}
+              {canEdit ? "Sửa" : "Không sửa"}
             </Button>
             <Button
               type="button"
@@ -625,7 +635,7 @@ export default function TaskDetailPage() {
               disabled={!canDelete}
             >
               <Trash2Icon className="size-4" />
-              {canDelete ? "Xóa công việc" : "Chỉ owner được xóa"}
+              {canDelete ? "Xóa" : "Chỉ owner"}
             </Button>
           </div>
         ) : (
@@ -640,6 +650,14 @@ export default function TaskDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Comments Modal */}
+        <TaskCommentsModal
+          open={isCommentsOpen}
+          onOpenChange={setIsCommentsOpen}
+          taskId={id}
+          taskTitle={task.title}
+        />
 
         {/* Delete Dialog */}
         <DeleteConfirmDialog

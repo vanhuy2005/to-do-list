@@ -414,7 +414,7 @@ export default function ProjectMembersModal({
                   Mã Mời 6 Ký Tự (Invite Code)
                 </h3>
 
-                {project?.inviteCode?.code ? (
+                {project?.inviteCode?.code && !project?.inviteCode?.isRevoked ? (
                   <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-muted/20 border-2 border-border rounded-xl">
                       <div className="text-center sm:text-left">
@@ -520,11 +520,13 @@ export default function ProjectMembersModal({
                 {/* Active Links List */}
                 <div className="space-y-2 pt-2">
                   <div className="text-[10px] font-black uppercase text-muted-foreground">Link mời hoạt động (Tối đa 10)</div>
-                  {project?.shareLinks?.length === 0 ? (
+                  {!project?.shareLinks || project.shareLinks.filter(link => !link.isRevoked).length === 0 ? (
                     <div className="text-xs font-bold text-muted-foreground text-center py-4">Chưa tạo liên kết chia sẻ nào.</div>
                   ) : (
                     <div className="space-y-2">
-                      {project?.shareLinks?.map((link) => {
+                      {project.shareLinks
+                        .filter((link) => !link.isRevoked)
+                        .map((link) => {
                         const joinUrl = `${window.location.origin}/projects/join/${link.token}`;
                         const isCopied = copiedLinkId === link._id;
                         const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();

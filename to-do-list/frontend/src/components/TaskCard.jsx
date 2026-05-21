@@ -31,7 +31,7 @@ const priorityLabel = {
 
 const MAX_VISIBLE_TAGS = 2;
 
-export default function TaskCard({ task, onOpen }) {
+export default function TaskCard({ task, onOpen, onOpenComments }) {
   const [isTagExpanded, setIsTagExpanded] = useState(false);
   const tags = Array.isArray(task?.tags) ? task.tags.filter(Boolean) : [];
   const visibleTags = tags.slice(0, MAX_VISIBLE_TAGS);
@@ -48,7 +48,20 @@ export default function TaskCard({ task, onOpen }) {
   const isDone = statusValue === "done";
 
   return (
-    <article className="space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow desktop-hover-lift">
+    <article className="relative space-y-4 rounded-xl border-[3px] border-border bg-card px-4 py-3 comic-shadow desktop-hover-lift">
+      {task?.commentCount > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenComments?.(task);
+          }}
+          className="absolute -top-2.5 -right-2.5 size-7 rounded-full border-[3px] border-border bg-[#ffd400] hover:bg-[#ffd400]/90 text-foreground font-black text-sm flex items-center justify-center comic-shadow-sm hover:scale-110 active:scale-95 transition-transform z-10"
+          title="Bình luận"
+        >
+          !
+        </button>
+      )}
       <div className="flex items-start justify-between gap-3">
         <h3 className="min-w-0 flex-1 line-clamp-2 text-[1.6rem] lg:text-[1.8rem] leading-[1.2] font-black uppercase">
           {task?.title || "Nhiệm vụ chưa có tiêu đề"}
