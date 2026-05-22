@@ -21,7 +21,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@better-auth/infra": "^0.2.8",
     "ably": "^2.21.0",
     "bcrypt": "^6.0.0",
     "better-auth": "^1.6.11",
@@ -44,7 +43,7 @@
     "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^4.2.1",
-    "openai": "^4.93.0",
+    "openai": "^6.39.0",
     "p-limit": "^3.1.0",
     "resend": "^6.12.3",
     "uuid": "^13.0.0",
