@@ -15,7 +15,6 @@ import {
   InboxIcon
 } from "lucide-react";
 import projectService from "@/services/projectService";
-import authService from "@/services/authService";
 import ProjectIcon from "@/components/ProjectIcon";
 
 const EMOJIS = ["📁", "🚀", "🎯", "💻", "🎨", "🔥", "🌈", "💡", "🧠", "💼", "📅", "🔒"];
@@ -51,7 +50,7 @@ export default function ProjectsPage() {
     try {
       const res = await projectService.getProjects();
       setProjects(res?.data || res || []);
-    } catch (err) {
+    } catch {
       toast.error("Không thể tải danh sách dự án.");
     } finally {
       setIsLoading(false);
@@ -303,7 +302,6 @@ export default function ProjectsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {projects.map((p, idx) => {
               const borderAccent = BORDER_COLORS[idx % BORDER_COLORS.length];
-              const isOwner = p.ownerId?._id === p.ownerId || p.ownerId === authService.getUser()?._id; 
               
               return (
                 <Link
