@@ -80,9 +80,9 @@ const getDeadlineLabel = (task) => {
 
 const isOverdueLabel = (label) => label.startsWith("TRỄ");
 
-function KanbanCardInner({ task, onOpenTask, onOpenComments }) {
+function KanbanCardInner({ task, canEdit, onOpenTask, onOpenComments }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: task._id });
+    useDraggable({ id: task._id, disabled: !canEdit });
 
   const priorityValue = task?.priority || "medium";
   const borderClass = PRIORITY_BORDER[priorityValue] || PRIORITY_BORDER.medium;
@@ -107,6 +107,7 @@ function KanbanCardInner({ task, onOpenTask, onOpenComments }) {
         "relative group flex items-center gap-1.5 rounded-lg border-[3px] border-border bg-card px-1.5 py-1 transition-all duration-150",
         "border-l-[4px]",
         borderClass,
+        !canEdit && "pl-2.5",
         isDragging
           ? "z-50 scale-[1.02] opacity-50 shadow-lg"
           : "comic-shadow hover:-translate-y-0.5 active:translate-y-0",
@@ -126,16 +127,18 @@ function KanbanCardInner({ task, onOpenTask, onOpenComments }) {
         </button>
       )}
       {/* Drag handle */}
-      <button
-        type="button"
-        className="flex-shrink-0 cursor-grab rounded p-0.5 text-muted-foreground/40 transition-colors hover:text-foreground active:cursor-grabbing"
-        style={{ touchAction: "none" }}
-        aria-label="Kéo để thay đổi trạng thái"
-        {...listeners}
-        {...attributes}
-      >
-        <GripVerticalIcon className="size-3" />
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          className="flex-shrink-0 cursor-grab rounded p-0.5 text-muted-foreground/40 transition-colors hover:text-foreground active:cursor-grabbing"
+          style={{ touchAction: "none" }}
+          aria-label="Kéo để thay đổi trạng thái"
+          {...listeners}
+          {...attributes}
+        >
+          <GripVerticalIcon className="size-3" />
+        </button>
+      )}
 
       {/* Content — single line, clickable */}
       <button
@@ -169,6 +172,7 @@ const KanbanCard = memo(KanbanCardInner, (prev, next) => {
   const pt = prev.task;
   const nt = next.task;
   return (
+    prev.canEdit === next.canEdit &&
     pt._id === nt._id &&
     pt.status === nt.status &&
     pt.title === nt.title &&

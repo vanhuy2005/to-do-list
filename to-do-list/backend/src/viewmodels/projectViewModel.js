@@ -1073,10 +1073,23 @@ const projectViewModel = {
     );
 
     if (alreadyMember) {
+      const existingMember = project.members.find(
+        (m) => asStringId(m.userId) === asStringId(joiningUserId)
+      );
       return {
         statusCode: 200,
         success: true,
-        data: { projectId: project._id },
+        data: {
+          project: {
+            _id: project._id,
+            name: project.name,
+            role: existingMember?.role || "viewer",
+            description: project.description,
+            members: project.members,
+          },
+          projectId: project._id,
+          alreadyMember: true,
+        },
         message: "Bạn đã là thành viên của dự án này từ trước",
       };
     }
@@ -1118,7 +1131,17 @@ const projectViewModel = {
     return {
       statusCode: 200,
       success: true,
-      data: { projectId: project._id },
+      data: {
+        project: {
+          _id: project._id,
+          name: project.name,
+          role: link.role,
+          description: project.description,
+          members: project.members,
+        },
+        projectId: project._id,
+        alreadyMember: false,
+      },
       message: "Tham gia dự án thành công",
     };
   },
@@ -1167,10 +1190,23 @@ const projectViewModel = {
     );
 
     if (alreadyMember) {
+      const existingMember = project.members.find(
+        (m) => asStringId(m.userId) === asStringId(joiningUserId)
+      );
       return {
         statusCode: 200,
         success: true,
-        data: { projectId: project._id },
+        data: {
+          project: {
+            _id: project._id,
+            name: project.name,
+            role: existingMember?.role || "viewer",
+            description: project.description,
+            members: project.members,
+          },
+          projectId: project._id,
+          alreadyMember: true,
+        },
         message: "Bạn đã là thành viên của dự án này từ trước",
       };
     }
@@ -1210,7 +1246,17 @@ const projectViewModel = {
     return {
       statusCode: 200,
       success: true,
-      data: { projectId: project._id },
+      data: {
+        project: {
+          _id: project._id,
+          name: project.name,
+          role: inv.role,
+          description: project.description,
+          members: project.members,
+        },
+        projectId: project._id,
+        alreadyMember: false,
+      },
       message: "Tham gia dự án thành công",
     };
   },
@@ -1239,6 +1285,176 @@ const projectViewModel = {
       statusCode: 200,
       success: true,
       data: logs,
+    };
+  },
+
+  async getMyProjectInvitations(userId) {
+    const ownerId = resolveUserId(userId);
+    const user = await User.findById(ownerId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+    const invitations = await ProjectInvitation.find({
+      email: user.email.toLowerCase(),
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    })
+    .populate("projectId", "name emoji description")
+    .populate("invitedBy", "email displayName avatarUrl");
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: invitations,
+    };
+  },
+
+  async previewProjectInvitation(token) {
+    if (!token || typeof token !== "string") {
+      throw new ViewModelError(400, "MISSING_TOKEN", "Mã lời mời là bắt buộc");
+    }
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const invitation = await ProjectInvitation.findOne({
+      tokenHash,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    })
+    .populate("projectId", "name emoji description")
+    .populate("invitedBy", "email displayName avatarUrl");
+
+    if (!invitation || !invitation.projectId) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        name: invitation.projectId.name,
+        description: invitation.projectId.description,
+        emoji: invitation.projectId.emoji,
+        invitedBy: {
+          email: invitation.invitedBy?.email,
+          displayName: invitation.invitedBy?.displayName,
+          avatarUrl: invitation.invitedBy?.avatarUrl,
+        },
+        role: invitation.role,
+      }
+    };
+  },
+
+  async acceptProjectInvitation(token, userId) {
+    if (!token || typeof token !== "string") {
+      throw new ViewModelError(400, "MISSING_TOKEN", "Mã lời mời là bắt buộc");
+    }
+    const joiningUserId = resolveUserId(userId);
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    
+    // Support accepting via tokenHash or _id (if token is a valid ObjectId)
+    const invitation = await ProjectInvitation.findOne({
+      $or: [
+        { tokenHash },
+        { _id: mongoose.isValidObjectId(token) ? token : new mongoose.Types.ObjectId() }
+      ],
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!invitation) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    const user = await User.findById(joiningUserId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ViewModelError(403, "FORBIDDEN", "Email của bạn không khớp với email được mời");
+    }
+
+    const project = await Project.findOne({ _id: invitation.projectId, deletedAt: null });
+    if (!project) {
+      throw new ViewModelError(404, "PROJECT_NOT_FOUND", "Dự án không tồn tại hoặc đã bị xóa");
+    }
+
+    // Check if already a member
+    const alreadyMember = project.members.some(
+      (m) => asStringId(m.userId) === asStringId(joiningUserId)
+    );
+
+    if (!alreadyMember) {
+      project.members.push({
+        userId: joiningUserId,
+        role: invitation.role,
+        addedBy: invitation.invitedBy,
+        addedAt: new Date(),
+      });
+      await project.save();
+    }
+
+    invitation.status = "accepted";
+    await invitation.save();
+
+    await writeProjectAuditLog({
+      actorId: joiningUserId,
+      action: "member.joined_via_invitation",
+      entityId: project._id,
+      summaryAfter: { email: user.email, role: invitation.role },
+    });
+
+    realtimeService.publishProjectEvent(project._id, "member_joined", {
+      projectId: project._id,
+      userId: joiningUserId,
+      email: user.email,
+      displayName: user.displayName,
+      role: invitation.role,
+    });
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Chấp nhận lời mời tham gia dự án thành công",
+      data: project,
+    };
+  },
+
+  async declineProjectInvitation(token, userId) {
+    if (!token || typeof token !== "string") {
+      throw new ViewModelError(400, "MISSING_TOKEN", "Mã lời mời là bắt buộc");
+    }
+    const decliningUserId = resolveUserId(userId);
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    
+    const invitation = await ProjectInvitation.findOne({
+      $or: [
+        { tokenHash },
+        { _id: mongoose.isValidObjectId(token) ? token : new mongoose.Types.ObjectId() }
+      ],
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!invitation) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    const user = await User.findById(decliningUserId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ViewModelError(403, "FORBIDDEN", "Email của bạn không khớp với email được mời");
+    }
+
+    invitation.status = "declined";
+    await invitation.save();
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Từ chối lời mời thành công",
     };
   },
 

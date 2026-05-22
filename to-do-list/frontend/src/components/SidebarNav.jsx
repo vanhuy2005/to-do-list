@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   ActivityIcon,
   HouseIcon,
@@ -8,6 +9,8 @@ import {
 import { Link, NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
+import authService from "@/services/authService";
+import UserAvatar from "@/components/UserAvatar";
 
 const navItems = [
   { to: "/", label: "Trang chủ", icon: HouseIcon },
@@ -17,6 +20,18 @@ const navItems = [
 ];
 
 export default function SidebarNav() {
+  const [currentUser, setCurrentUser] = useState(() => authService.getUser());
+
+  useEffect(() => {
+    const handleUserChanged = () => {
+      setCurrentUser(authService.getUser());
+    };
+    window.addEventListener("auth_user_changed", handleUserChanged);
+    return () => {
+      window.removeEventListener("auth_user_changed", handleUserChanged);
+    };
+  }, []);
+
   return (
     <aside className="hidden w-20 shrink-0 flex-col border-r-[3px] border-border bg-card comic-shadow lg:flex">
       <nav
@@ -60,6 +75,7 @@ export default function SidebarNav() {
         {/* Nav Items — last two */}
         {navItems.slice(2).map((item) => {
           const Icon = item.icon;
+          const isProfile = item.to === "/profile";
 
           return (
             <NavLink
@@ -75,7 +91,17 @@ export default function SidebarNav() {
                 )
               }
             >
-              <Icon className="size-5 transition-transform duration-200 group-hover:scale-110" />
+              {isProfile ? (
+                <UserAvatar
+                  avatarUrl={currentUser?.avatarUrl}
+                  displayName={currentUser?.displayName}
+                  email={currentUser?.email}
+                  sizeClassName="size-6"
+                  className="transition-transform duration-200 group-hover:scale-110 shadow-[1px_1px_0px_0px_#000000] border border-border"
+                />
+              ) : (
+                <Icon className="size-5 transition-transform duration-200 group-hover:scale-110" />
+              )}
               <span className="whitespace-nowrap">{item.label}</span>
             </NavLink>
           );

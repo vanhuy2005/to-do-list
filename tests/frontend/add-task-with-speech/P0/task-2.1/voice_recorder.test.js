@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 // Mocking Browser APIs
 global.navigator.mediaDevices = {
@@ -17,7 +17,11 @@ global.MediaRecorder = vi.fn().mockImplementation(() => ({
 }));
 global.MediaRecorder.isTypeSupported = vi.fn().mockReturnValue(true);
 
-vi.mock('axios');
+vi.mock('@/lib/axios', () => ({
+  default: {
+    post: vi.fn(),
+  },
+}));
 
 describe('useVoiceRecorder Hook', () => {
   beforeEach(() => {
@@ -60,7 +64,7 @@ describe('useVoiceRecorder Hook', () => {
   it('should stop recording and send to STT', async () => {
     const onTranscript = vi.fn();
     const mockTranscript = 'Hello world';
-    axios.post.mockResolvedValue({ data: { transcript: mockTranscript } });
+    api.post.mockResolvedValue({ transcript: mockTranscript });
 
     global.navigator.mediaDevices.getUserMedia.mockResolvedValue({
       getTracks: () => [{ stop: vi.fn() }],

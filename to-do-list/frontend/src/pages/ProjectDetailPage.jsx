@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   DndContext,
@@ -95,6 +95,12 @@ export default function ProjectDetailPage() {
   
   // Project & Task States
   const [project, setProject] = useState(null);
+  const projectRef = useRef(null);
+
+  // Keep projectRef up-to-date
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -143,8 +149,8 @@ export default function ProjectDetailPage() {
   const sensors = useSensors(pointerSensor, touchSensor);
 
   // Fetch Project & Tasks
-  const fetchProject = useCallback(async () => {
-    const shouldShowFullLoading = !project || project._id !== id;
+  const fetchProject = useCallback(async (silent = false) => {
+    const shouldShowFullLoading = !silent && (!projectRef.current || projectRef.current._id !== id);
     if (shouldShowFullLoading) {
       setIsLoading(true);
     }
@@ -565,7 +571,7 @@ export default function ProjectDetailPage() {
             <Button
               size="icon"
               variant="secondary"
-              onClick={fetchProject}
+              onClick={() => fetchProject(false)}
               className="h-10 w-10 rounded-xl border-[3px] border-border bg-white text-foreground font-black comic-shadow"
             >
               <RefreshCwIcon className="size-4" />
@@ -589,6 +595,7 @@ export default function ProjectDetailPage() {
               status={status}
               tasks={tasksByStatus[status]}
               isExpanded={expandedStatus === status}
+              canEdit={canEdit}
               onToggleExpand={() =>
                 setExpandedStatus((current) =>
                   current === status ? "" : status,
@@ -611,7 +618,7 @@ export default function ProjectDetailPage() {
         open={membersOpen}
         onOpenChange={setMembersOpen}
         project={project}
-        onMembersUpdated={fetchProject}
+        onMembersUpdated={() => fetchProject(true)}
       />
 
       {/* Leave Project Confirmation Dialog */}

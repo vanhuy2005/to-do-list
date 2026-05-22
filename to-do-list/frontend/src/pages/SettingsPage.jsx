@@ -362,6 +362,11 @@ export default function SettingsPage() {
                 displayName={profile?.displayName}
                 onAvatarChange={(newUrl) => {
                   setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
+                  const currentUser = authService.getUser();
+                  if (currentUser) {
+                    currentUser.avatarUrl = newUrl;
+                    authService.setUser(currentUser);
+                  }
                 }}
               />
 

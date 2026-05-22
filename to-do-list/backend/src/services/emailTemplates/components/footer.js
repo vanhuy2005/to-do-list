@@ -15,14 +15,14 @@ export const getFooter = (userId, token, lang = "vi") => {
   };
 
   return `
-      <div style="margin-top: 40px; border-top: 3px dashed #000000; padding-top: 30px; text-align: center;">
-        <p style="font-size: 13px; font-weight: 700; color: #666666; margin: 0 0 10px 0;">
+      <div style="margin-top: 40px; border-top: 3px dashed #000000; padding-top: 30px; text-align: center; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <p style="font-size: 13px; font-weight: 700; color: #666666; margin: 0 0 10px 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ${text.unsub}
         </p>
-        <a href="${unsubUrl}" style="display: inline-block; background-color: #FFDE47; border: 2px solid #000000; color: #000000; font-size: 12px; font-weight: 800; text-decoration: none; padding: 8px 16px; box-shadow: 3px 3px 0px #000000; text-transform: uppercase;">
+        <a href="${unsubUrl}" style="display: inline-block; background-color: #FFDE47; border: 2px solid #000000; color: #000000; font-size: 12px; font-weight: 800; text-decoration: none; padding: 8px 16px; box-shadow: 3px 3px 0px #000000; text-transform: uppercase; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ⚡ ${text.clickHere} ⚡
         </a>
-        <p style="font-size: 11px; color: #888888; font-weight: 500; margin: 25px 0 0 0; line-height: 1.5;">
+        <p style="font-size: 11px; color: #888888; font-weight: 500; margin: 25px 0 0 0; line-height: 1.5; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ${text.safe}<br>
           ${text.rights}
         </p>
