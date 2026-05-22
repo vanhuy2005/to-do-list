@@ -357,7 +357,6 @@ const formatShareMembers = async (task) => {
 
   return [...activeShares, ...formattedPending];
 };
-};
 
 const buildTaskSummary = (task) => {
   if (!task) {
