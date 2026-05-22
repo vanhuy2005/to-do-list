@@ -461,8 +461,8 @@ export default function NewTaskPage() {
               >
                 <DeadlinePicker
                   value={watchedDueDate}
-                  onChange={(iso) => setValue("dueDate", iso)}
-                  onClear={() => setValue("dueDate", "")}
+                  onChange={(iso) => setValue("dueDate", iso, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+                  onClear={() => setValue("dueDate", "", { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
                 />
               </CollapsibleSection>
 

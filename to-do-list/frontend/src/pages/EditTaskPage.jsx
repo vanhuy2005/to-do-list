@@ -313,8 +313,8 @@ export default function EditTaskPage() {
             <CollapsibleSection label="Hạn chót" defaultOpen={!!watchedDueDate}>
               <DeadlinePicker
                 value={watchedDueDate}
-                onChange={(iso) => setValue("dueDate", iso)}
-                onClear={() => setValue("dueDate", "")}
+                onChange={(iso) => setValue("dueDate", iso, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+                onClear={() => setValue("dueDate", "", { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
               />
             </CollapsibleSection>
 
