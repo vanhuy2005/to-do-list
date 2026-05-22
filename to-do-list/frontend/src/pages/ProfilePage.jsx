@@ -79,6 +79,11 @@ export default function ProfilePage() {
   const [taskStats, setTaskStats] = useState({ todo: 0, doing: 0, done: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [profile?.avatarUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -211,11 +216,13 @@ export default function ProfilePage() {
         <div className="absolute left-1/2 bottom-0 flex w-full -translate-x-1/2 translate-y-1/2 justify-center">
           <div className="relative">
             <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-[4px] border-border bg-[radial-gradient(circle_at_30%_30%,#ffd400_0%,#ff7a59_35%,#1f7bdc_68%,#0d324d_100%)] comic-shadow">
-              {profile?.avatarUrl ? (
+              {profile?.avatarUrl && !avatarError ? (
                 <img
                   src={profile.avatarUrl}
                   alt={profile.displayName || "User avatar"}
+                  referrerPolicy="no-referrer"
                   className="size-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="flex size-full items-center justify-center text-[2.6rem] font-black uppercase text-white">
@@ -236,11 +243,13 @@ export default function ProfilePage() {
         <div className="flex min-w-0 items-center gap-4">
           <div className="relative">
             <div className="flex size-24 items-center justify-center overflow-hidden rounded-full border-[4px] border-border bg-[radial-gradient(circle_at_30%_30%,#ffd400_0%,#ff7a59_35%,#1f7bdc_68%,#0d324d_100%)] comic-shadow">
-              {profile?.avatarUrl ? (
+              {profile?.avatarUrl && !avatarError ? (
                 <img
                   src={profile.avatarUrl}
                   alt={profile.displayName || "User avatar"}
+                  referrerPolicy="no-referrer"
                   className="size-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="flex size-full items-center justify-center text-[2.4rem] font-black uppercase text-white">

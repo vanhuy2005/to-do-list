@@ -179,22 +179,8 @@ export default function AvatarUpload({ avatarUrl, displayName, onAvatarChange })
               src={previewUrl}
               alt="Profile"
               className="size-full object-cover"
-              onError={async () => {
-                const currentUrl = previewUrl;
+              onError={() => {
                 setPreviewUrl("");
-                // Background self-healing: if online and the remote Cloudinary image returns 404, clean it up
-                if (navigator.onLine !== false && currentUrl.startsWith("http")) {
-                  try {
-                    const response = await fetch(currentUrl, { method: "HEAD" });
-                    if (response.status === 404) {
-                      await api.delete("/profile/avatar");
-                      onAvatarChange(null);
-                      console.log("Stale avatar URL automatically cleaned up from database.");
-                    }
-                  } catch (e) {
-                    // Ignore CORS or other network transient errors
-                  }
-                }
               }}
             />
           ) : initials ? (

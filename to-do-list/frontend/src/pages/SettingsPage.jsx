@@ -61,7 +61,6 @@ export default function SettingsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
-  const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [sessionCount, setSessionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +92,6 @@ export default function SettingsPage() {
             });
           }
         }
-        setDisplayNameDraft(profileData?.displayName || "");
         setSessionCount(
           Array.isArray(sessionsResponse?.data)
             ? sessionsResponse.data.length
@@ -153,7 +151,6 @@ export default function SettingsPage() {
 
           if (profileData) {
             setProfile(profileData);
-            setDisplayNameDraft(profileData.displayName || "");
           }
 
           toast.success("Liên kết tài khoản Google thành công!");
@@ -184,9 +181,7 @@ export default function SettingsPage() {
     try {
       const response = await api.put("/profile", updates);
       const nextProfile = response?.data || null;
-
       setProfile(nextProfile);
-      setDisplayNameDraft(nextProfile?.displayName || "");
 
       if (nextProfile?.themePreference === "dark") {
         document.documentElement.classList.add("dark");
@@ -205,18 +200,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveDisplayName = async () => {
-    const nextDisplayName = displayNameDraft.trim();
 
-    if (nextDisplayName.length < 2 || nextDisplayName.length > 50) {
-      toast.error("Tên hiển thị không hợp lệ", {
-        description: "Tên hiển thị phải từ 2 đến 50 ký tự.",
-      });
-      return;
-    }
-
-    await saveProfile({ displayName: nextDisplayName });
-  };
 
   const handleLinkGoogle = () => {
     if (!authService.isAuthenticated()) {
@@ -381,33 +365,7 @@ export default function SettingsPage() {
                 }}
               />
 
-              <div className="space-y-2 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-base uppercase font-black">
-                    Tên hiển thị
-                  </span>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="default"
-                    disabled={isSaving}
-                    onClick={handleSaveDisplayName}
-                    className="border-[2px] comic-shadow-sm"
-                  >
-                    Lưu
-                  </Button>
-                </div>
 
-                <Input
-                  type="text"
-                  value={displayNameDraft}
-                  onChange={(event) => setDisplayNameDraft(event.target.value)}
-                  disabled={isSaving}
-                  placeholder="Nhập tên hiển thị"
-                  className="h-12 rounded-xl border-[2px] bg-background uppercase"
-                  maxLength={50}
-                />
-              </div>
 
               <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
                 <span className="text-base uppercase font-black">Email</span>

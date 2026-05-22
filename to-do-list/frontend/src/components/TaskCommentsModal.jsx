@@ -9,6 +9,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import taskService from "@/services/taskService";
 import authService from "@/services/authService";
+import UserAvatar from "@/components/UserAvatar";
 import { toast } from "sonner";
 import { SendIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -107,13 +108,13 @@ export default function TaskCommentsModal({ open, onOpenChange, taskId, taskTitl
               return (
                 <div key={comment._id} className={cn("flex gap-2.5 items-start", isMe && "flex-row-reverse")}>
                   {/* Avatar */}
-                  <div className="size-8 rounded-full border-2 border-border bg-[#dbf5ff] flex items-center justify-center font-black uppercase text-xs overflow-hidden shrink-0">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="size-full object-cover" />
-                    ) : (
-                      displayName[0].toUpperCase()
-                    )}
-                  </div>
+                  <UserAvatar
+                    avatarUrl={avatarUrl}
+                    displayName={displayName}
+                    email={comment.userId?.email}
+                    sizeClassName="size-8"
+                    textClassName="text-xs font-black"
+                  />
 
                   {/* Speech Bubble */}
                   <div className="max-w-[75%] space-y-1">

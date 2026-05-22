@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Task from "../models/Task.js";
+import Project from "../models/Project.js";
 import NotificationLog from "../models/NotificationLog.js";
 import AuditLog from "../models/AuditLog.js";
 import emailService from "../services/emailService.js";
@@ -43,49 +44,78 @@ const emailViewModel = {
     let queuedCount = 0;
 
     for (const task of overdueTasks) {
-      const userId = task.ownerId;
-      if (!userId) continue;
-
-      // Find user and verify notification preferences
-      const user = await User.findById(userId);
-      if (!user || user.status !== "active") continue;
-
-      const prefs = user.notificationPreferences || {
-        emailOverdue: true,
-        emailDigest: true,
-        digestHour: 8,
-        timezone: "Asia/Ho_Chi_Minh",
-        unsubscribedAt: null,
-      };
-
-      // Skip if user has disabled single overdue email notifications
-      if (prefs.emailOverdue === false) continue;
-
-      // Deduplication: Check if an overdue notification was already queued/sent in the last 24 hours
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const existingLog = await NotificationLog.findOne({
-        userId,
-        taskId: task._id,
-        type: "overdue_single",
-        createdAt: { $gte: twentyFourHoursAgo }
-      });
-
-      if (existingLog) continue;
-
-      // Create pending NotificationLog atomically
-      await NotificationLog.create({
-        userId,
-        taskId: task._id,
-        type: "overdue_single",
-        status: "pending",
-        taskSnapshot: {
-          title: task.title,
-          priority: task.priority,
-          dueDate: task.dueDate,
+      const recipientIds = new Set();
+      if (task.ownerId) {
+        recipientIds.add(task.ownerId.toString());
+      }
+      if (task.shares && task.shares.length > 0) {
+        for (const share of task.shares) {
+          if (share.userId) {
+            recipientIds.add(share.userId.toString());
+          }
         }
-      });
+      }
+      if (task.projectId) {
+        const project = await Project.findOne({ _id: task.projectId, deletedAt: null }).lean();
+        if (project) {
+          if (project.ownerId) {
+            recipientIds.add(project.ownerId.toString());
+          }
+          if (project.members && project.members.length > 0) {
+            for (const member of project.members) {
+              if (member.userId) {
+                recipientIds.add(member.userId.toString());
+              }
+            }
+          }
+        }
+      }
 
-      queuedCount++;
+      for (const userIdStr of recipientIds) {
+        const userId = mongoose.Types.ObjectId.isValid(userIdStr)
+          ? new mongoose.Types.ObjectId(userIdStr)
+          : userIdStr;
+        // Find user and verify notification preferences
+        const user = await User.findById(userId);
+        if (!user || user.status !== "active") continue;
+
+        const prefs = user.notificationPreferences || {
+          emailOverdue: true,
+          emailDigest: true,
+          digestHour: 8,
+          timezone: "Asia/Ho_Chi_Minh",
+          unsubscribedAt: null,
+        };
+
+        // Skip if user has disabled single overdue email notifications
+        if (prefs.emailOverdue === false) continue;
+
+        // Deduplication: Check if an overdue notification was already queued/sent in the last 24 hours
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const existingLog = await NotificationLog.findOne({
+          userId,
+          taskId: task._id,
+          type: "overdue_single",
+          createdAt: { $gte: twentyFourHoursAgo }
+        });
+
+        if (existingLog) continue;
+
+        // Create pending NotificationLog atomically
+        await NotificationLog.create({
+          userId,
+          taskId: task._id,
+          type: "overdue_single",
+          status: "pending",
+          taskSnapshot: {
+            title: task.title,
+            priority: task.priority,
+            dueDate: task.dueDate,
+          }
+        });
+
+        queuedCount++;
+      }
     }
 
     console.log(`[Cron] Đã xếp hàng ${queuedCount} thông báo quá hạn ở trạng thái pending.`);

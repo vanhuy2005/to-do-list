@@ -167,6 +167,13 @@ export default function NewTaskPage() {
   // Progressive: cho phép hiện phần tiếp theo khi title có nội dung
   const hasTitle = (watchedTitle || "").trim().length > 0;
 
+  const selectedProject = projects.find((p) => p._id === finalProjectId);
+  const userRole = selectedProject?.role;
+  const isProjectRestricted =
+    finalProjectId !== "personal" &&
+    selectedProject &&
+    (userRole === "viewer" || userRole === "comment");
+
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
     if (!trimmed || watchedTags.length >= 8) return;
@@ -233,6 +240,8 @@ export default function NewTaskPage() {
         payload.projectId = finalProjectId;
       }
 
+      console.log("NewTaskPage voice submitting payload:", payload);
+
       await taskService.createTask(payload);
       toast.success("Tạo thành công!", {
         description: `Nhiệm vụ "${title}" đã được tạo.`,
@@ -269,6 +278,8 @@ export default function NewTaskPage() {
       if (finalProjectId && finalProjectId !== "personal") {
         payload.projectId = finalProjectId;
       }
+
+      console.log("NewTaskPage submitting payload:", payload);
 
       await taskService.createTask(payload);
       toast.success("Tạo thành công!", {
@@ -362,7 +373,7 @@ export default function NewTaskPage() {
             </div>
             <VoiceMicButton
               onDraftReady={handleVoiceDraftReady}
-              disabled={isSubmitting || isVoiceSaving || !finalProjectId}
+              disabled={isSubmitting || isVoiceSaving || !finalProjectId || isProjectRestricted}
             />
           </div>
 
@@ -461,8 +472,8 @@ export default function NewTaskPage() {
               >
                 <DeadlinePicker
                   value={watchedDueDate}
-                  onChange={(iso) => setValue("dueDate", iso)}
-                  onClear={() => setValue("dueDate", "")}
+                  onChange={(iso) => setValue("dueDate", iso, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+                  onClear={() => setValue("dueDate", "", { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
                 />
               </CollapsibleSection>
 
@@ -522,11 +533,17 @@ export default function NewTaskPage() {
               </CollapsibleSection>
             </div>
 
+            {isProjectRestricted && (
+              <div className="my-3 rounded-xl border-[3px] border-[#ff3b57] bg-[#fff1f2] p-4 text-xs font-black uppercase text-[#ff3b57] comic-shadow">
+                ⚠️ Bạn không có quyền tạo công việc trong dự án này
+              </div>
+            )}
+
             {/* Submit — luôn hiển thị */}
             <div className={cn("-mx-4 -mb-6", taskModalFooterClass)}>
               <Button
                 type="submit"
-                disabled={isSubmitting || !hasTitle}
+                disabled={isSubmitting || !hasTitle || isProjectRestricted}
                 className="w-full gap-2 py-6 text-lg font-black uppercase"
               >
                 {isSubmitting ? (

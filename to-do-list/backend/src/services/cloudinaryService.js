@@ -10,28 +10,27 @@ cloudinary.config({
 class CloudinaryService {
   async uploadAvatar(buffer, userId) {
     return new Promise((resolve, reject) => {
-      const base64Image = `data:image/png;base64,${buffer.toString("base64")}`;
-      cloudinary.uploader.upload(
-        base64Image,
+      const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `todoapp/avatars/${userId}`,
-          public_id: "avatar",
+          public_id: `avatar_${Date.now()}`,
           overwrite: true,
           invalidate: true,
           resource_type: "image",
           transformation: [
-            { width: 400, height: 400, crop: "fill", gravity: "face" }
-          ],
-          eager: [
-            { width: 80, height: 80, crop: "fill", gravity: "face", fetch_format: "auto", quality: "auto" },
-            { width: 200, height: 200, crop: "fill", gravity: "face", fetch_format: "auto", quality: "auto" }
+            { width: 400, height: 400, crop: "fill", gravity: "face", fetch_format: "auto", quality: "auto" }
           ]
         },
         (error, result) => {
           if (error) {
-            console.error("Cloudinary upload failed:", error);
+            console.error(`Cloudinary upload failed for user ${userId}:`, error.message || error);
             reject(error);
           } else {
+            console.log("Avatar upload successful:", {
+              userId,
+              publicId: result.public_id,
+              secureUrlExists: !!result.secure_url
+            });
             resolve({
               publicId: result.public_id,
               secureUrl: result.secure_url,
@@ -40,6 +39,7 @@ class CloudinaryService {
           }
         }
       );
+      uploadStream.end(buffer);
     });
   }
 

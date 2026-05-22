@@ -17,7 +17,9 @@ import authService from "@/services/authService";
 import ablyService from "@/services/ablyService";
 import ProjectMembersModal from "@/components/ProjectMembersModal";
 import TaskCommentsModal from "@/components/TaskCommentsModal";
+import UserAvatar from "@/components/UserAvatar";
 import { toast } from "sonner";
+import ProjectIcon from "@/components/ProjectIcon";
 import { 
   UsersIcon, 
   PlusIcon, 
@@ -431,8 +433,8 @@ export default function ProjectDetailPage() {
           <div className="space-y-3 min-w-0">
             {/* Title & Emoji */}
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-4xl shrink-0 size-14 flex items-center justify-center rounded-2xl border-[3px] border-border bg-white comic-shadow rotate-[-3deg]">
-                {project.emoji || "📁"}
+              <span className="shrink-0 size-14 flex items-center justify-center rounded-2xl border-[3px] border-border bg-white comic-shadow rotate-[-3deg]">
+                <ProjectIcon emoji={project.emoji || "📁"} className="size-8" />
               </span>
               <div className="min-w-0">
                 <h1 className="text-[2.2rem] sm:text-[2.6rem] leading-none font-black uppercase text-foreground truncate">
@@ -477,18 +479,16 @@ export default function ProjectDetailPage() {
               </div>
               <div className="flex -space-x-3 items-center overflow-visible">
                 {onlineMembers.map((m, idx) => (
-                  <div
-                    key={m.connectionId || idx}
-                    className="group relative size-10 rounded-full border-[3px] border-border bg-[#00C2FF] flex items-center justify-center font-black uppercase text-white text-xs comic-shadow hover:z-20 hover:scale-110 active:scale-95 transition-all cursor-pointer"
-                    title={`${m.displayName} (${m.email})`}
-                  >
-                    {m.avatarUrl ? (
-                      <img src={m.avatarUrl} alt="Online Avatar" className="size-full rounded-full object-cover" />
-                    ) : (
-                      String(m.displayName || "U")[0].toUpperCase()
-                    )}
+                  <div key={m.connectionId || idx} className="group relative">
+                    <UserAvatar
+                      avatarUrl={m.avatarUrl}
+                      displayName={m.displayName}
+                      email={m.email}
+                      sizeClassName="size-10"
+                      className="border-[3px] hover:z-20 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                    />
                     {/* Active pulsing green dot */}
-                    <span className="absolute bottom-0 right-0 size-3 rounded-full bg-[#7de228] border-2 border-border" />
+                    <span className="absolute bottom-0 right-0 size-3 rounded-full bg-[#7de228] border-2 border-border z-30" />
 
                     {/* Pop Art Custom Tooltip on Hover */}
                     <div className="absolute top-12 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-all duration-200 z-50 pointer-events-none rounded-xl border-2 border-border bg-white p-2 text-center text-[10px] font-black text-foreground comic-shadow w-44">

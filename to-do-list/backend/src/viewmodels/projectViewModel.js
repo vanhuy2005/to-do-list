@@ -2,9 +2,11 @@ import Project from "../models/Project.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
+import ProjectInvitation from "../models/ProjectInvitation.js";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { realtimeService } from "../services/realtimeService.js";
+import emailService from "../services/emailService.js";
 
 const RESTORE_WINDOW_DAYS = 7;
 const MAX_MEMBERS_PER_PROJECT = 50;
@@ -119,8 +121,8 @@ const projectViewModel = {
 
     const projects = await Project.find(filter)
       .sort({ updatedAt: -1 })
-      .populate("ownerId", "email displayName")
-      .populate("members.userId", "email displayName")
+      .populate("ownerId", "email displayName avatarUrl")
+      .populate("members.userId", "email displayName avatarUrl")
       .lean();
 
     const enriched = projects
@@ -142,10 +144,10 @@ const projectViewModel = {
     const ownerId = resolveUserId(userId);
 
     const project = await Project.findOne({ _id: projectId, deletedAt: null })
-      .populate("ownerId", "email displayName")
-      .populate("members.userId", "email displayName")
-      .populate("members.addedBy", "email displayName")
-      .populate("shareLinks.createdBy", "email displayName");
+      .populate("ownerId", "email displayName avatarUrl")
+      .populate("members.userId", "email displayName avatarUrl")
+      .populate("members.addedBy", "email displayName avatarUrl")
+      .populate("shareLinks.createdBy", "email displayName avatarUrl");
 
     if (!project) {
       throw new ViewModelError(404, "PROJECT_NOT_FOUND", "Dự án không tồn tại");
@@ -159,6 +161,30 @@ const projectViewModel = {
       delete result.shareLinks;
       delete result.inviteCode;
     }
+
+    const pendingInvites = await ProjectInvitation.find({
+      projectId: project._id,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    }).populate("invitedBy", "email displayName avatarUrl");
+
+    const formattedPending = pendingInvites.map(invite => ({
+      userId: {
+        _id: invite._id,
+        email: invite.email,
+        displayName: null,
+      },
+      role: invite.role,
+      addedBy: {
+        _id: invite.invitedBy?._id || invite.invitedBy,
+        email: invite.invitedBy?.email || null,
+        displayName: invite.invitedBy?.displayName || null,
+      },
+      addedAt: invite.createdAt,
+      isPending: true,
+    }));
+
+    result.members = [...(result.members || []), ...formattedPending];
 
     return {
       statusCode: 200,
@@ -495,51 +521,92 @@ const projectViewModel = {
     }
 
     const userToInvite = await User.findOne({ email, status: "active" });
-    if (!userToInvite) {
-      throw new ViewModelError(404, "USER_NOT_FOUND", "Không tìm thấy tài khoản hoạt động khớp với email này");
+    if (userToInvite) {
+      const alreadyMember = project.members.some(
+        (m) => asStringId(m.userId) === asStringId(userToInvite._id)
+      );
+      if (alreadyMember) {
+        throw new ViewModelError(400, "ALREADY_MEMBER", "Người dùng này đã là thành viên của dự án");
+      }
     }
 
-    const alreadyMember = project.members.some(
-      (m) => asStringId(m.userId) === asStringId(userToInvite._id)
-    );
-    if (alreadyMember) {
-      throw new ViewModelError(400, "ALREADY_MEMBER", "Người dùng này đã là thành viên của dự án");
-    }
-
-    project.members.push({
-      userId: userToInvite._id,
-      role,
-      addedBy: ownerId,
-      addedAt: new Date(),
+    // Clean up any existing pending invitations for this email and project
+    await ProjectInvitation.deleteMany({
+      projectId: project._id,
+      email,
+      status: "pending",
     });
 
-    await project.save();
+    // Create secure token and hash
+    const plainToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(plainToken).digest("hex");
+
+    await ProjectInvitation.create({
+      projectId: project._id,
+      email,
+      role,
+      tokenHash,
+      invitedBy: ownerId,
+    });
+
+    const inviterUser = await User.findById(ownerId);
+    let emailSkippedReason = null;
+    try {
+      const emailResult = await emailService.sendProjectInvitation(email, inviterUser, project, plainToken);
+      if (emailResult && emailResult.skipped) {
+        emailSkippedReason = emailResult.emailSkippedReason;
+      }
+    } catch (err) {
+      console.error("Lỗi gửi email lời mời dự án:", err.message);
+      emailSkippedReason = err.message;
+    }
 
     await writeProjectAuditLog({
       actorId: ownerId,
-      action: "member.added",
+      action: "member.invited",
       entityId: project._id,
-      summaryAfter: { email: userToInvite.email, role },
+      summaryAfter: { email, role },
     });
 
     const populatedProject = await Project.findById(projectId)
-      .populate("members.userId", "email displayName")
-      .populate("members.addedBy", "email displayName");
+      .populate("ownerId", "email displayName avatarUrl")
+      .populate("members.userId", "email displayName avatarUrl")
+      .populate("members.addedBy", "email displayName avatarUrl")
+      .populate("shareLinks.createdBy", "email displayName avatarUrl");
 
-    // Publish membership event
-    realtimeService.publishProjectEvent(projectId, "member_joined", {
-      projectId,
-      userId: userToInvite._id,
-      email: userToInvite.email,
-      displayName: userToInvite.displayName,
-      role,
-    });
+    // Load pending invitations and format them as members with isPending: true
+    const pendingInvites = await ProjectInvitation.find({
+      projectId: project._id,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    }).populate("invitedBy", "email displayName avatarUrl");
+
+    const formattedPending = pendingInvites.map(invite => ({
+      userId: {
+        _id: invite._id,
+        email: invite.email,
+        displayName: null,
+      },
+      role: invite.role,
+      addedBy: {
+        _id: invite.invitedBy?._id || invite.invitedBy,
+        email: invite.invitedBy?.email || null,
+        displayName: invite.invitedBy?.displayName || null,
+      },
+      addedAt: invite.createdAt,
+      isPending: true,
+    }));
+
+    const allMembers = [...(populatedProject.members || []), ...formattedPending];
 
     return {
       statusCode: 200,
       success: true,
-      data: populatedProject.members,
-      message: "Đã thêm thành viên mới",
+      data: {
+        members: allMembers,
+        emailSkippedReason,
+      },
+      message: "Đã gửi lời mời tham gia dự án thành công",
     };
   },
 
@@ -612,15 +679,22 @@ const projectViewModel = {
       throw new ViewModelError(400, "CANNOT_REMOVE_OWNER", "Không thể xóa chủ sở hữu khỏi dự án.");
     }
 
-    const memberIndex = project.members.findIndex(
+    let memberIndex = project.members.findIndex(
       (m) => asStringId(m.userId) === asStringId(memberUserId)
     );
     if (memberIndex === -1) {
-      throw new ViewModelError(404, "MEMBER_NOT_FOUND", "Không tìm thấy thành viên trong dự án");
+      const inviteDeleted = await ProjectInvitation.findOneAndDelete({
+        _id: memberUserId,
+        projectId: project._id,
+        status: "pending",
+      });
+      if (!inviteDeleted) {
+        throw new ViewModelError(404, "MEMBER_NOT_FOUND", "Không tìm thấy thành viên hoặc lời mời trong dự án");
+      }
+    } else {
+      project.members.splice(memberIndex, 1);
+      await project.save();
     }
-
-    project.members.splice(memberIndex, 1);
-    await project.save();
 
     await writeProjectAuditLog({
       actorId: ownerId,

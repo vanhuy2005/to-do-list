@@ -47,6 +47,51 @@ router.get(
 );
 
 router.get(
+  "/invitations/me",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.getMyTaskInvitations(req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
+router.get(
+  "/invitations/:token/preview",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.previewTaskInvitation(req.params.token);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
+router.post(
+  "/invitations/:token/accept",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.acceptTaskInvitation(req.params.token, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+router.post(
+  "/invitations/:token/decline",
+  errorHandler(async (req, res) => {
+    const result = await taskViewModel.declineTaskInvitation(req.params.token, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      message: result.message,
+    });
+  }),
+);
+
+router.get(
   "/:id/shares",
   errorHandler(async (req, res) => {
     const result = await taskViewModel.getTaskShares(req.params.id, req.userId);
