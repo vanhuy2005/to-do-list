@@ -47,29 +47,44 @@ describe("Production Config & Email Delivery Validations", () => {
     it("should throw error if EMAIL_FROM is missing in production", () => {
       const mockEnv = {
         NODE_ENV: "production",
+        MONGODB_CONNECTIONSTRING: "mongodb://localhost:27017/db",
+        JWT_SECRET: "prod_access_secret",
+        JWT_REFRESH_SECRET: "prod_refresh_secret",
+        BETTER_AUTH_SECRET: "prod_better_auth_secret",
+        RESEND_API_KEY: "re_test_key",
         EMAIL_DEV_REDIRECT_TO_ADMIN: "false"
       };
 
       expect(() => validateProductionEnv(mockEnv)).toThrow(
-        "CRITICAL: EMAIL_FROM is missing or contains 'onboarding@resend.dev' in production environment."
+        "CRITICAL: RESEND_API_KEY or EMAIL_FROM is missing."
       );
     });
 
     it("should throw error if EMAIL_FROM contains onboarding@resend.dev in production", () => {
       const mockEnv = {
         NODE_ENV: "production",
+        MONGODB_CONNECTIONSTRING: "mongodb://localhost:27017/db",
+        JWT_SECRET: "prod_access_secret",
+        JWT_REFRESH_SECRET: "prod_refresh_secret",
+        BETTER_AUTH_SECRET: "prod_better_auth_secret",
+        RESEND_API_KEY: "re_test_key",
         EMAIL_FROM: "onboarding@resend.dev",
         EMAIL_DEV_REDIRECT_TO_ADMIN: "false"
       };
 
       expect(() => validateProductionEnv(mockEnv)).toThrow(
-        "CRITICAL: EMAIL_FROM is missing or contains 'onboarding@resend.dev' in production environment."
+        "CRITICAL: EMAIL_FROM contains 'onboarding@resend.dev' in production environment."
       );
     });
 
     it("should throw error if EMAIL_DEV_REDIRECT_TO_ADMIN is true in production", () => {
       const mockEnv = {
         NODE_ENV: "production",
+        MONGODB_CONNECTIONSTRING: "mongodb://localhost:27017/db",
+        JWT_SECRET: "prod_access_secret",
+        JWT_REFRESH_SECRET: "prod_refresh_secret",
+        BETTER_AUTH_SECRET: "prod_better_auth_secret",
+        RESEND_API_KEY: "re_test_key",
         EMAIL_FROM: "Tasket <notifications@tasket.io.vn>",
         EMAIL_DEV_REDIRECT_TO_ADMIN: "true"
       };

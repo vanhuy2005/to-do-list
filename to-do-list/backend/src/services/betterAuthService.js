@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { fromNodeHeaders } from "better-auth/node";
-import { createRequire } from "module";
+
 import User from "../models/User.js";
 
 const BETTER_AUTH_BASE_PATH = "/api/v1/auth/core";
@@ -55,47 +55,6 @@ const getTrustedOrigins = () => {
   return [...origins].filter(Boolean);
 };
 
-const getInfraPlugins = () => {
-  const apiKey = process.env.BETTER_AUTH_API_KEY;
-  if (!apiKey) {
-    return [];
-  }
-
-  const apiUrl = process.env.BETTER_AUTH_API_URL;
-  const kvUrl = process.env.BETTER_AUTH_KV_URL;
-
-  try {
-    const require = createRequire(import.meta.url);
-    const { dash, sentinel } = require("@better-auth/infra");
-
-    return [
-      dash({
-        apiKey,
-        apiUrl,
-        kvUrl,
-      }),
-      sentinel({
-        apiKey,
-        apiUrl,
-        kvUrl,
-        security: {
-          credentialStuffing: {
-            enabled: true,
-            thresholds: {
-              challenge: 5,
-              block: 8,
-            },
-          },
-        },
-      }),
-    ];
-  } catch (err) {
-    console.warn(
-      "[betterAuth] @better-auth/infra not installed or failed to load; skipping infra plugins",
-    );
-    return [];
-  }
-};
 
 const normalizeProviderId = (providerId) => {
   return PROVIDER_ALIASES[providerId] || providerId;
@@ -259,7 +218,7 @@ const buildAuth = () => {
         },
       },
     },
-    plugins: getInfraPlugins(),
+    plugins: [],
   });
 
   return auth;
