@@ -14,6 +14,7 @@ import profileRouters, {
 } from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
+import publicUsersRouters from "./routes/publicUsersRouters.js";
 import projectsRouters from "./routes/projectsRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
@@ -21,7 +22,9 @@ import initCronJobs from "./cron/cronJobs.js";
 import { getBetterAuth } from "./services/betterAuthService.js";
 import { toBetterAuthHeaders } from "./services/betterAuthService.js";
 import { toNodeHandler } from "better-auth/node";
-import authViewModel, { AuthViewModelError } from "./viewmodels/authViewModel.js";
+import authViewModel, {
+  AuthViewModelError,
+} from "./viewmodels/authViewModel.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,8 +81,6 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
     process.exit(1);
   }
 }
-
-
 
 const PORT = process.env.PORT || 5001;
 
@@ -170,11 +171,18 @@ app.use("/api/v1/auth", authRouters);
 app.use("/api/v1/profile", publicProfileRouter);
 
 // Protected routes
-app.use("/api/v1/profile", authMiddleware, requireRole("user"), profileRouters);
+app.use(
+  "/api/v1/profile",
+  authMiddleware,
+  requireRole("user", "admin"),
+  profileRouters,
+);
 app.use("/api/v1/tasks", authMiddleware, requireRole("user"), tasksRouters);
 app.use("/api/v1/voice-task", authMiddleware, voiceTaskRouters);
 app.use("/api/v1/voice/stt", authMiddleware, sttRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
+// Public fallback for user list (development / unauthenticated clients)
+app.use("/api/v1/public", publicUsersRouters);
 app.use(
   "/api/v1/audit-logs",
   authMiddleware,

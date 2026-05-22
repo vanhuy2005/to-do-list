@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Rocket,
-  BarChart2,
-  Users,
-  Home,
-  CalendarDays,
-  FileText,
-  FileDown,
-} from "lucide-react";
+import { Rocket, CalendarDays, FileText, FileDown } from "lucide-react";
 import api from "@/lib/axios";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import AdminSidebarNav from "./AdminSidebarNav";
 
-// Mobile Header
-const MobileHeader = () => (
+// ─────────────────────────────────────────────────────────────────────────────
+// Header Component
+// ─────────────────────────────────────────────────────────────────────────────
+const AnalyticsHeader = () => (
   <header
-    className="h-20.25 md:h-27.5 bg-[#FFD60A] border-b-4 md:border-b-5 border-[#111111] flex items-center justify-between px-4 md:px-12"
+    className="h-20.25 md:h-27.5 bg-[#FFD60A] border-b-4 md:border-b-5 border-[#111111] flex items-center justify-between px-4 md:px-12 shrink-0"
     style={{ boxShadow: "0 4px 0 #111111" }}
   >
     {/* Logo */}
@@ -55,10 +50,12 @@ const MobileHeader = () => (
   </header>
 );
 
-// Filter Bar
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter Bar Component
+// ─────────────────────────────────────────────────────────────────────────────
 const FilterBar = ({ timeRange, setTimeRange, onExportCSV, onExportPDF }) => (
   <div
-    className="w-full px-4 md:px-8 py-3 bg-[#FFFDF7] border-b-4 md:border-b-5 border-[#111111] flex gap-2 md:gap-3 overflow-x-auto"
+    className="w-full px-4 md:px-8 py-3 bg-[#FFFDF7] border-b-4 md:border-b-5 border-[#111111] flex gap-2 md:gap-3 overflow-x-auto shrink-0"
     style={{ boxShadow: "0 4px 0 #111111" }}
   >
     <button
@@ -106,6 +103,43 @@ const FilterBar = ({ timeRange, setTimeRange, onExportCSV, onExportPDF }) => (
     </button>
   </div>
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mobile Bottom Navigation Component
+// ─────────────────────────────────────────────────────────────────────────────
+const AnalyticsBottomNav = ({ activeTab, setActiveTab }) => {
+  const NAV_ITEMS = [
+    { id: "home", label: "Trang chủ" },
+    { id: "analytics", label: "Phân tích" },
+    { id: "users", label: "Người dùng" },
+    { id: "profile", label: "Cá nhân" },
+  ];
+
+  return (
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-[#FFFDF7] border-t-4 border-[#111111] flex items-center justify-around px-4 shrink-0"
+      style={{ boxShadow: "0 -4px 0 #111111" }}
+    >
+      {NAV_ITEMS.map(({ id, label }) => (
+        <button
+          key={id}
+          onClick={() => setActiveTab(id)}
+          className="flex flex-col items-center gap-2 focus:outline-none transition text-xs font-bold uppercase"
+        >
+          <span
+            className={activeTab === id ? "text-[#FF2E54]" : "text-[#64748B]"}
+            style={{
+              letterSpacing: "0.5px",
+              fontFamily: "Segoe UI",
+            }}
+          >
+            {label}
+          </span>
+        </button>
+      ))}
+    </nav>
+  );
+};
 
 // User Growth Bar Chart Card
 const UserGrowthCard = ({ data = [] }) => {
@@ -226,7 +260,7 @@ const TaskStatusCard = ({ data = {} }) => {
       {/* Chart + Legend */}
       <div className="flex items-center gap-6 md:gap-8">
         {/* Donut Chart */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <div
             className="relative w-32 h-32 md:w-40 md:h-40 rounded-full flex items-center justify-center"
             style={{
@@ -317,7 +351,7 @@ const TopUsersCard = ({ users = [] }) => {
             <div className="flex items-center gap-3 md:gap-4 flex-1">
               {/* Avatar */}
               <div
-                className="w-8 md:w-10 h-8 md:h-10 border-3 border-[#111111] rounded-full flex-shrink-0"
+                className="w-8 md:w-10 h-8 md:h-10 border-3 border-[#111111] rounded-full shrink-0"
                 style={{ backgroundColor: user.color || "#CBD5E1" }}
               />
               {/* Name */}
@@ -354,76 +388,6 @@ const TopUsersCard = ({ users = [] }) => {
   );
 };
 
-// Desktop Sidebar
-const DesktopSidebar = ({ activeTab, setActiveTab }) => (
-  <aside
-    className="hidden md:flex md:flex-col shrink-0 w-64 bg-[#FFD60A] border-r-4 border-[#111111] items-start justify-start gap-4 p-6 overflow-y-auto"
-    style={{ boxShadow: "-4px 0 0 #111111" }}
-  >
-    {[
-      { id: "home", label: "TRANG CHỦ", icon: Home },
-      { id: "analytics", label: "PHÂN TÍCH", icon: BarChart2 },
-      { id: "users", label: "NGƯỜI DÙNG", icon: Users },
-    ].map(({ id, label, icon: Icon }) => (
-      <button
-        key={id}
-        onClick={() => setActiveTab(id)}
-        className={`w-full flex items-center gap-3 py-3 px-4 rounded-lg border-3 border-[#111111] font-bold uppercase transition ${
-          activeTab === id
-            ? "bg-[#FF2D55] text-white border-t-4 border-b-4"
-            : "bg-[#FFFDF7] text-[#111111] hover:bg-[#FFE66D]"
-        }`}
-        style={{
-          letterSpacing: "1px",
-          fontFamily: "Segoe UI",
-          fontSize: "12px",
-          boxShadow: "3px 3px 0 #111111",
-        }}
-      >
-        <Icon width={20} height={20} />
-        <span>{label}</span>
-      </button>
-    ))}
-  </aside>
-);
-
-// Mobile Bottom Nav
-const MobileBottomNav = ({ activeTab, setActiveTab }) => (
-  <nav
-    className="md:hidden fixed bottom-0 left-0 right-0 h-24 bg-[#FFFDF7] border-t-4 border-[#111111] flex items-center justify-around px-4"
-    style={{ boxShadow: "0 -4px 0 #111111" }}
-  >
-    {[
-      { id: "home", label: "TRANG CHỦ", icon: Home },
-      { id: "analytics", label: "PHÂN TÍCH", icon: BarChart2 },
-      { id: "users", label: "NGƯỜI DÙNG", icon: Users },
-    ].map(({ id, label, icon: Icon }) => (
-      <button
-        key={id}
-        onClick={() => setActiveTab(id)}
-        className="flex flex-col items-center gap-2 focus:outline-none transition"
-      >
-        <Icon
-          width={24}
-          height={24}
-          className={activeTab === id ? "text-[#FF2E54]" : "text-[#64748B]"}
-        />
-        <span
-          className={`text-xs font-bold uppercase ${
-            activeTab === id ? "text-[#FF2E54]" : "text-[#64748B]"
-          }`}
-          style={{
-            letterSpacing: "1px",
-            fontFamily: "Segoe UI",
-          }}
-        >
-          {label}
-        </span>
-      </button>
-    ))}
-  </nav>
-);
-
 export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
   const [analyticsData, setAnalyticsData] = useState({
     userGrowthTrend: [],
@@ -437,7 +401,11 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
 
   // ─── Export CSV ────────────────────────────────────────────────
   const handleExportCSV = () => {
-    const { userGrowthTrend = [], taskDistribution = {}, topUsers = [] } = analyticsData;
+    const {
+      userGrowthTrend = [],
+      taskDistribution = {},
+      topUsers = [],
+    } = analyticsData;
     const days = ["TH2", "TH3", "TH4", "TH5", "TH6", "TH7", "CN"];
 
     const rows = [
@@ -447,20 +415,24 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
         days[i] ?? `Ngày ${i + 1}`,
         count,
       ]),
-      ["Trạng thái nhiệm vụ", "Đã xong",  taskDistribution.done  ?? 0],
+      ["Trạng thái nhiệm vụ", "Đã xong", taskDistribution.done ?? 0],
       ["Trạng thái nhiệm vụ", "Đang làm", taskDistribution.doing ?? 0],
-      ["Trạng thái nhiệm vụ", "Đã hủy",   taskDistribution.todo  ?? 0],
+      ["Trạng thái nhiệm vụ", "Đã hủy", taskDistribution.todo ?? 0],
       ...topUsers.map((u) => ["Top người dùng", u.displayName, u.taskCount]),
     ];
 
     const csvContent =
       "\uFEFF" +
-      rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      rows
+        .map((r) =>
+          r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+        )
+        .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
     a.download = `analytics_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -479,11 +451,15 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
       });
 
       const imgData = canvas.toDataURL("image/png");
-      const pdf     = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
 
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const imgH  = (canvas.height * pageW) / canvas.width;
+      const imgH = (canvas.height * pageW) / canvas.width;
 
       let yPos = 0;
       while (yPos < imgH) {
@@ -520,78 +496,104 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
 
   if (error) {
     return (
-      <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col md:flex-row">
-        <DesktopSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <div className="flex-1 flex flex-col">
-          <MobileHeader />
+      <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col lg:flex-row">
+        {/* Header - Mobile only */}
+        <div className="lg:hidden w-full order-first">
+          <AnalyticsHeader />
+        </div>
+
+        {/* Sidebar - Desktop only, narrow */}
+        <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
+          {/* Header - Desktop only */}
+          <div className="hidden lg:block">
+            <AnalyticsHeader />
+          </div>
+
+          {/* Filter Bar */}
           <FilterBar timeRange={timeRange} setTimeRange={setTimeRange} />
-          <main className="flex-1 px-4 md:px-8 pt-6 md:pt-8 pb-32 md:pb-8 overflow-y-auto flex items-center justify-center">
+
+          {/* Error Message */}
+          <main className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8 overflow-y-auto flex items-center justify-center">
             <div className="text-center">
               <p className="text-red-600 font-bold">Lỗi: {error}</p>
             </div>
           </main>
         </div>
-        <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Mobile Bottom Nav */}
+        <AnalyticsBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
     );
   }
 
   return (
-    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col md:flex-row">
-      {/* Desktop Sidebar */}
-      <DesktopSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col lg:flex-row">
+      {/* Header - Mobile only */}
+      <div className="lg:hidden w-full order-first">
+        <AnalyticsHeader />
+      </div>
 
-      {/* Main Column */}
-      <div className="flex-1 flex flex-col md:flex-row">
-        <div className="w-full flex flex-col">
-          {/* Header */}
-          <MobileHeader />
+      {/* Sidebar - Desktop only, narrow */}
+      <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-          {/* Filter Bar */}
-          <FilterBar timeRange={timeRange} setTimeRange={setTimeRange} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
+        {/* Header - Desktop only */}
+        <div className="hidden lg:block">
+          <AnalyticsHeader />
+        </div>
 
-          {/* Main Content */}
-          <main ref={contentRef} className="flex-1 px-4 md:px-8 pt-6 md:pt-8 pb-32 md:pb-8 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center h-96">
-                <p className="text-lg font-bold text-[#0F172A]">
-                  Đang tải dữ liệu...
-                </p>
+        {/* Filter Bar */}
+        <FilterBar
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+        />
+
+        {/* Main Content */}
+        <main
+          ref={contentRef}
+          className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8 overflow-y-auto"
+        >
+          {loading ? (
+            <div className="flex items-center justify-center h-96">
+              <p className="text-lg font-bold text-[#0F172A]">
+                Đang tải dữ liệu...
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile: Single column */}
+              <div className="lg:hidden space-y-6">
+                <UserGrowthCard data={analyticsData.userGrowthTrend || []} />
+                <TaskStatusCard data={analyticsData.taskDistribution || {}} />
+                <TopUsersCard users={analyticsData.topUsers || []} />
               </div>
-            ) : (
-              <>
-                {/* Mobile: Single column */}
-                <div className="md:hidden space-y-6">
+
+              {/* Desktop: 3-column grid */}
+              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6">
+                {/* Left Column - 2 columns wide */}
+                <div className="lg:col-span-2 flex flex-col gap-6">
                   <UserGrowthCard data={analyticsData.userGrowthTrend || []} />
                   <TaskStatusCard data={analyticsData.taskDistribution || {}} />
+                </div>
+
+                {/* Right Column - 1 column */}
+                <div>
                   <TopUsersCard users={analyticsData.topUsers || []} />
                 </div>
-
-                {/* Desktop: 3-column grid */}
-                <div className="hidden md:grid md:grid-cols-3 md:gap-6">
-                  {/* Left Column - 2 columns wide */}
-                  <div className="md:col-span-2 flex flex-col gap-6">
-                    <UserGrowthCard
-                      data={analyticsData.userGrowthTrend || []}
-                    />
-                    <TaskStatusCard
-                      data={analyticsData.taskDistribution || {}}
-                    />
-                  </div>
-
-                  {/* Right Column - 1 column */}
-                  <div>
-                    <TopUsersCard users={analyticsData.topUsers || []} />
-                  </div>
-                </div>
-              </>
-            )}
-          </main>
-        </div>
+              </div>
+            </>
+          )}
+        </main>
       </div>
 
       {/* Mobile Bottom Nav */}
-      <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <AnalyticsBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }

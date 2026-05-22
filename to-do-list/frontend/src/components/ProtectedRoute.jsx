@@ -45,16 +45,16 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  const role = authService.getRole();
-  const isDashboardPath = location.pathname.startsWith("/dashboard");
+  // const role = authService.getRole();
+  // const isDashboardPath = location.pathname.startsWith("/dashboard");
 
-  if (role === "admin" && !isDashboardPath) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // if (role === "admin" && !isDashboardPath) {
+  //   return <Navigate to="/dashboard" replace />;
+  // }
 
-  if (role === "user" && isDashboardPath) {
-    return <Navigate to="/" replace />;
-  }
+  // if (role === "user" && isDashboardPath) {
+  //   return <Navigate to="/" replace />;
+  // }
 
   return children;
 }

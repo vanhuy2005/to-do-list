@@ -8,6 +8,7 @@ import {
   PaletteIcon,
   ShieldIcon,
   SunMediumIcon,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,13 +58,14 @@ function SettingsSkeleton() {
 
 const formatCount = (value) => (Number.isFinite(value) ? value : 0);
 
-export default function SettingsPage() {
+export default function SettingsPage({ setActiveTab }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [sessionCount, setSessionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const isAdmin = authService.getRole() === "admin";
 
   useEffect(() => {
     let isMounted = true;
@@ -223,6 +225,20 @@ export default function SettingsPage() {
 
   return (
     <section className="space-y-8 px-4 pt-6 pb-24 lg:space-y-5 lg:px-0 lg:pt-3 lg:pb-8">
+      {isAdmin && (
+        <div className="flex items-center">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setActiveTab ? setActiveTab("home") : navigate("/dashboard")
+            }
+            className="group flex items-center gap-2 rounded-xl border-[3px] border-border bg-card font-black uppercase text-foreground comic-shadow active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(0,0,0,1)] transition-all hover:bg-black/5"
+          >
+            <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-1" />
+            Quay lại
+          </Button>
+        </div>
+      )}
       <div className="space-y-8 lg:grid lg:grid-cols-12 lg:gap-5 lg:space-y-0">
         <div className="space-y-8 lg:col-span-5 lg:space-y-5">
           <div>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/axios";
+import authService from "@/services/authService";
 import AvatarUpload from "@/components/settings/AvatarUpload";
 
 function EditProfileSkeleton() {
@@ -26,6 +27,7 @@ export default function EditProfilePage() {
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const isAdmin = authService.getRole() === "admin";
 
   useEffect(() => {
     let isMounted = true;
@@ -40,7 +42,9 @@ export default function EditProfilePage() {
       } catch (error) {
         if (!isMounted) return;
         toast.error("Không tải được hồ sơ", {
-          description: error?.response?.data?.error?.message || "Không thể tải dữ liệu hồ sơ.",
+          description:
+            error?.response?.data?.error?.message ||
+            "Không thể tải dữ liệu hồ sơ.",
         });
       } finally {
         if (isMounted) {
@@ -65,7 +69,8 @@ export default function EditProfilePage() {
       toast.success("Đã cập nhật hồ sơ thành công");
     } catch (error) {
       toast.error("Cập nhật thất bại", {
-        description: error?.response?.data?.error?.message || "Không thể cập nhật hồ sơ.",
+        description:
+          error?.response?.data?.error?.message || "Không thể cập nhật hồ sơ.",
       });
     } finally {
       setIsSaving(false);
@@ -93,7 +98,7 @@ export default function EditProfilePage() {
       <div className="flex items-center">
         <Button
           variant="outline"
-          onClick={() => navigate("/profile")}
+          onClick={() => navigate(isAdmin ? "/dashboard" : "/profile")}
           className="group flex items-center gap-2 rounded-xl border-[3px] border-border bg-card font-black uppercase text-foreground comic-shadow active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(0,0,0,1)] transition-all hover:bg-black/5"
         >
           <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-1" />
@@ -110,7 +115,9 @@ export default function EditProfilePage() {
         <div className="space-y-4 text-sm font-bold text-foreground">
           {/* Cloudinary-based Avatar Upload component */}
           <div className="rounded-[1.4rem] border-[3px] border-border bg-card p-4 comic-shadow">
-            <p className="text-xs font-black uppercase tracking-wide text-muted-foreground mb-3">Ảnh đại diện</p>
+            <p className="text-xs font-black uppercase tracking-wide text-muted-foreground mb-3">
+              Ảnh đại diện
+            </p>
             <AvatarUpload
               avatarUrl={profile?.avatarUrl}
               displayName={profile?.displayName}
@@ -153,7 +160,9 @@ export default function EditProfilePage() {
           <div className="flex items-center justify-between gap-4 rounded-[1.4rem] border-[3px] border-border bg-[#fffaf0] px-5 py-5 comic-shadow">
             <div className="flex items-center gap-3">
               <Mail className="size-6 text-muted-foreground" />
-              <span className="text-base uppercase font-black">Email đăng nhập</span>
+              <span className="text-base uppercase font-black">
+                Email đăng nhập
+              </span>
             </div>
             <span className="truncate text-right lowercase font-black text-muted-foreground select-all bg-card/50 px-3 py-1.5 rounded-lg border-2 border-border/10">
               {profile?.email || "---"}

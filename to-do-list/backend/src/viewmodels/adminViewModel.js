@@ -36,24 +36,38 @@ const adminViewModel = {
     const total = await User.countDocuments(filter);
     const totalPages = Math.ceil(total / limit);
 
-    const formattedUsers = users.map((user) => ({
-      id: user._id,
-      email: user.email,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      role: user.role,
-      status: user.status,
-      providers: user.providers,
-      lastOnlineAt: user.lastOnlineAt,
-      createdAt: user.createdAt,
-    }));
+    // Get completed tasks count for each user
+    const formattedUsers = await Promise.all(
+      users.map(async (user) => {
+        const completedCount = await Task.countDocuments({
+          assigneeId: user._id,
+          status: "completed",
+        });
+
+        return {
+          id: user._id,
+          name: user.displayName,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          role: user.role === "admin" ? "ADMIN" : "USER",
+          completedTasks: completedCount,
+          isOnline:
+            user.lastOnlineAt && new Date() - user.lastOnlineAt < 5 * 60 * 1000,
+          lastOnlineAt: user.lastOnlineAt,
+          createdAt: user.createdAt,
+        };
+      }),
+    );
 
     return {
       statusCode: 200,
       success: true,
-      data: {
-        users: formattedUsers,
-        pagination: { page, limit, total, totalPages },
+      data: formattedUsers,
+      meta: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
       },
     };
   },
