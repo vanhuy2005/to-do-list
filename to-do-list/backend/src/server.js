@@ -20,6 +20,7 @@ import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
 import { getBetterAuth } from "./services/betterAuthService.js";
 import { toBetterAuthHeaders } from "./services/betterAuthService.js";
+import { toNodeHandler } from "better-auth/node";
 import authViewModel, { AuthViewModelError } from "./viewmodels/authViewModel.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -112,14 +113,9 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(express.static(frontendDistPath));
 
-// Public routes
-app.use("/api/v1/auth", authRouters);
 // Compatibility wrapper: expose /api/v1/auth/core/session with the legacy app payload shape.
+// Must be placed before the catch-all to prevent it from matching standard Better Auth session endpoint.
 app.get("/api/v1/auth/core/session", async (req, res) => {
   try {
     const result = await authViewModel.getSession({
@@ -149,16 +145,28 @@ app.get("/api/v1/auth/core/session", async (req, res) => {
     });
   }
 });
-app.use("/api/v1/auth/core", async (req, res, next) => {
-  try {
-    const mod = await import("better-auth/node");
-    const toNodeHandler = mod.toNodeHandler;
-    return toNodeHandler(getBetterAuth())(req, res, next);
-  } catch (err) {
-    console.warn("[server] better-auth not installed or failed to load; /api/v1/auth/core disabled");
-    res.status(501).json({ message: "Better Auth integration not available" });
+
+// Better Auth routes must be mounted before express.json() to prevent stream consumption issues.
+let betterAuthNodeHandler = null;
+
+const getBetterAuthNodeHandler = () => {
+  if (!betterAuthNodeHandler) {
+    betterAuthNodeHandler = toNodeHandler(getBetterAuth());
   }
+  return betterAuthNodeHandler;
+};
+
+app.all("/api/v1/auth/core/*", (req, res, next) => {
+  return getBetterAuthNodeHandler()(req, res, next);
 });
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static(frontendDistPath));
+
+// Public routes
+app.use("/api/v1/auth", authRouters);
 app.use("/api/v1/profile", publicProfileRouter);
 
 // Protected routes
