@@ -62,7 +62,7 @@ export default function NotificationSection() {
     fetchHistory(1);
   }, []);
 
-  const fetchPreferences = async () => {
+  async function fetchPreferences() {
     setIsLoadingPrefs(true);
     try {
       const response = await api.get("/profile/notifications/preferences");
@@ -77,9 +77,9 @@ export default function NotificationSection() {
     } finally {
       setIsLoadingPrefs(false);
     }
-  };
+  }
 
-  const fetchHistory = async (targetPage) => {
+  async function fetchHistory(targetPage) {
     setIsLoadingHistory(true);
     try {
       const response = await api.get(`/profile/notifications/history?page=${targetPage}&limit=5`);
@@ -95,7 +95,7 @@ export default function NotificationSection() {
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }
 
   const handleUpdatePreference = async (key, value) => {
     setIsUpdating(true);

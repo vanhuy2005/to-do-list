@@ -11,8 +11,18 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: true,
+      required: function () {
+        if (this && typeof this.get === "function") {
+          const providers = this.providers || [];
+          return providers.includes("local") || providers.includes("credential");
+        }
+        return false;
+      },
       default: null,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
     },
     displayName: {
       type: String,

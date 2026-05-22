@@ -88,6 +88,37 @@ const validateCreatePayload = (payload) => {
   }
 };
 
+const normalizeCreateTaskPayload = (payload) => {
+  const source =
+    payload?.data && typeof payload.data === "object" ? payload.data : payload;
+
+  const normalized = {
+    title: String(source?.title || "").trim(),
+    description:
+      typeof source?.description === "string"
+        ? source.description.trim()
+        : source?.description,
+    status: source?.status || "todo",
+    priority: source?.priority || "medium",
+    tags: Array.isArray(source?.tags)
+      ? source.tags
+          .map((tag) => String(tag).trim())
+          .filter(Boolean)
+      : source?.tags,
+    dueDate:
+      source?.dueDate === "" || source?.dueDate === undefined
+        ? null
+        : source?.dueDate,
+    projectId: source?.projectId,
+  };
+
+  if (!normalized.description) {
+    normalized.description = undefined;
+  }
+
+  return normalized;
+};
+
 const resolveOwnerId = (userId) => {
   if (!userId) {
     throw new ViewModelError(
@@ -589,7 +620,8 @@ const taskViewModel = {
   },
 
   async createTask(payload, userId) {
-    validateCreatePayload(payload);
+    const normalizedPayload = normalizeCreateTaskPayload(payload);
+    validateCreatePayload(normalizedPayload);
 
     const ownerId = resolveOwnerId(userId);
 
@@ -603,12 +635,14 @@ const taskViewModel = {
     ];
     const taskData = {};
     for (const field of allowedFields) {
-      if (payload[field] !== undefined) taskData[field] = payload[field];
+      if (normalizedPayload[field] !== undefined) {
+        taskData[field] = normalizedPayload[field];
+      }
     }
 
     // Support optional projectId: ensure project exists and user is member/owner
-    if (payload.projectId) {
-      const proj = await Project.findById(payload.projectId);
+    if (normalizedPayload.projectId) {
+      const proj = await Project.findById(normalizedPayload.projectId);
       if (!proj) {
         throw new ViewModelError(
           400,
@@ -628,7 +662,7 @@ const taskViewModel = {
         );
       }
 
-      taskData.projectId = payload.projectId;
+      taskData.projectId = normalizedPayload.projectId;
     }
 
     const task = await Task.create({

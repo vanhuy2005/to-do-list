@@ -1,6 +1,8 @@
 import { jsonrepair } from 'jsonrepair';
 import { z } from 'zod';
 
+const getZodIssues = (error) => error?.issues || error?.errors || [];
+
 // --- Zod Schema (nguồn sự thật duy nhất cho task structure) ---
 export const TaskDraftSchema = z.object({
   title: z
@@ -47,7 +49,7 @@ export function recoverAndValidate(rawOutput, fallbackTitle = '') {
   if (rawOutput && typeof rawOutput === 'object') {
     const result = TaskDraftSchema.safeParse(rawOutput);
     if (!result.success) {
-      const fieldErrors = result.error.errors
+      const fieldErrors = getZodIssues(result.error)
         .map(e => `${e.path.join('.')}: ${e.message}`)
         .join('; ');
       throw new ParseError(`Schema validation failed: ${fieldErrors}`, JSON.stringify(rawOutput));
@@ -101,7 +103,7 @@ export function recoverAndValidate(rawOutput, fallbackTitle = '') {
 
   const result = TaskDraftSchema.safeParse(parsed);
   if (!result.success) {
-    const fieldErrors = result.error.errors
+    const fieldErrors = getZodIssues(result.error)
       .map(e => `${e.path.join('.')}: ${e.message}`)
       .join('; ');
     throw new ParseError(`Schema validation failed: ${fieldErrors}`, rawOutput);
