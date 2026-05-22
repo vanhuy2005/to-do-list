@@ -11,6 +11,7 @@ import {
   getOAuthSuccessURL,
   getOAuthLinkSuccessURL,
   getOAuthLinkErrorURL,
+  syncLegacyCredentialAccount,
 } from "../services/betterAuthService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -132,8 +133,36 @@ const buildCompatibilitySession = async (userId) => {
   };
 };
 
+const createBetterAuthSessionHeaders = async (email, password, headers) => {
+  try {
+    const result = await getBetterAuth().api.signInEmail({
+      headers,
+      body: {
+        email,
+        password,
+      },
+      returnHeaders: true,
+      returnStatus: true,
+    });
+
+    return {
+      headers: result?.headers || null,
+      statusCode: result?.status || 200,
+    };
+  } catch (error) {
+    console.warn(
+      "[betterAuth] Failed to create session cookie:",
+      error?.message || error,
+    );
+    return {
+      headers: null,
+      statusCode: 200,
+    };
+  }
+};
+
 const authViewModel = {
-  async register(payload) {
+  async register(payload, headers) {
     validateRegisterPayload(payload);
     const { email, password, displayName } = payload;
 
@@ -167,9 +196,17 @@ const authViewModel = {
       expiresAt: expiryDate,
     });
 
+    await syncLegacyCredentialAccount(newUser);
+    const betterAuthSession = await createBetterAuthSessionHeaders(
+      email,
+      password,
+      headers,
+    );
+
     return {
       statusCode: 201,
       success: true,
+      headers: betterAuthSession.headers,
       refreshToken,
       data: {
         accessToken,
@@ -179,7 +216,7 @@ const authViewModel = {
     };
   },
 
-  async login(payload) {
+  async login(payload, headers) {
     const { email, password } = payload;
 
     if (!email || !password) {
@@ -229,9 +266,17 @@ const authViewModel = {
       expiresAt: expiryDate,
     });
 
+    await syncLegacyCredentialAccount(user);
+    const betterAuthSession = await createBetterAuthSessionHeaders(
+      email,
+      password,
+      headers,
+    );
+
     return {
-      statusCode: 200,
+      statusCode: betterAuthSession.statusCode || 200,
       success: true,
+      headers: betterAuthSession.headers,
       refreshToken,
       data: {
         accessToken,

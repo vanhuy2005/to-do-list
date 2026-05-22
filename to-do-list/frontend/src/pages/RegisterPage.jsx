@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +25,7 @@ const registerSchema = z
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
@@ -35,6 +36,33 @@ export default function RegisterPage() {
   } = useForm({
     resolver: zodResolver(registerSchema),
   });
+
+  useEffect(() => {
+    const oauthStatus = searchParams.get("oauth");
+
+    if (oauthStatus === "success") {
+      const hydrate = async () => {
+        const session = await authService.hydrateFromSessionCookie();
+
+        if (session?.user) {
+          toast.success("Đăng ký Google thành công!");
+          navigate(
+            authService.getDefaultRouteByRole(session.user.role || "user"),
+            { replace: true },
+          );
+        }
+      };
+
+      hydrate();
+      navigate(window.location.pathname, { replace: true });
+      return;
+    }
+
+    if (oauthStatus === "error") {
+      toast.error("Đăng ký Google thất bại. Vui lòng thử lại.");
+      navigate(window.location.pathname, { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -67,9 +95,17 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setIsOAuthLoading(true);
-    window.location.href = authService.getGoogleAuthUrl();
+
+    try {
+      await authService.loginWithGoogle();
+    } catch (error) {
+      setIsOAuthLoading(false);
+      toast.error(
+        error?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.",
+      );
+    }
   };
 
   return (

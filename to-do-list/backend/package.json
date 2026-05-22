@@ -10,8 +10,10 @@
   "scripts": {
     "test": "cross-env NODE_ENV=test node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "cross-env NODE_ENV=test node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
+    "dev": "cross-env NODE_ENV=development nodemon src/server.js",
+    "start": "cross-env NODE_ENV=production node src/server.js",
+    "start:dev": "cross-env NODE_ENV=development node src/server.js",
+    "start:prod:local": "cross-env NODE_ENV=production node src/server.js",
     "copy:frontend": "node scripts/copy-frontend-dist.js",
     "postinstall": "npm run copy:frontend"
   },
@@ -19,8 +21,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@better-auth/infra": "^0.2.8",
     "ably": "^2.21.0",
     "bcrypt": "^6.0.0",
+    "better-auth": "^1.6.11",
     "bottleneck": "^2.19.5",
     "chrono-node": "^2.9.1",
     "cloudinary": "^2.10.0",

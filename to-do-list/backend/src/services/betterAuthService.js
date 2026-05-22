@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { fromNodeHeaders } from "better-auth/node";
-import { dash, sentinel } from "@better-auth/infra";
+import { createRequire } from "module";
 import User from "../models/User.js";
 
 const BETTER_AUTH_BASE_PATH = "/api/v1/auth/core";
@@ -16,12 +16,22 @@ const PROVIDER_ALIASES = {
 
 let authInstance = null;
 
+const normalizeOriginURL = (value) => {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return String(value || "").replace(/\/+$/, "");
+  }
+};
+
 const getBaseURL = () => {
-  return (
+  const rawURL =
     process.env.BETTER_AUTH_URL ||
     process.env.API_URL ||
-    DEFAULT_API_URL
-  );
+    DEFAULT_API_URL;
+
+  return normalizeOriginURL(rawURL);
 };
 
 const getFrontendURL = () => {
@@ -54,27 +64,37 @@ const getInfraPlugins = () => {
   const apiUrl = process.env.BETTER_AUTH_API_URL;
   const kvUrl = process.env.BETTER_AUTH_KV_URL;
 
-  return [
-    dash({
-      apiKey,
-      apiUrl,
-      kvUrl,
-    }),
-    sentinel({
-      apiKey,
-      apiUrl,
-      kvUrl,
-      security: {
-        credentialStuffing: {
-          enabled: true,
-          thresholds: {
-            challenge: 5,
-            block: 8,
+  try {
+    const require = createRequire(import.meta.url);
+    const { dash, sentinel } = require("@better-auth/infra");
+
+    return [
+      dash({
+        apiKey,
+        apiUrl,
+        kvUrl,
+      }),
+      sentinel({
+        apiKey,
+        apiUrl,
+        kvUrl,
+        security: {
+          credentialStuffing: {
+            enabled: true,
+            thresholds: {
+              challenge: 5,
+              block: 8,
+            },
           },
         },
-      },
-    }),
-  ];
+      }),
+    ];
+  } catch (err) {
+    console.warn(
+      "[betterAuth] @better-auth/infra not installed or failed to load; skipping infra plugins",
+    );
+    return [];
+  }
 };
 
 const normalizeProviderId = (providerId) => {
@@ -142,7 +162,7 @@ const buildAuth = () => {
       modelName: "better_auth_accounts",
       accountLinking: {
         enabled: true,
-        disableImplicitLinking: false,
+        disableImplicitLinking: true,
       },
     },
     verification: {

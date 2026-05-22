@@ -71,6 +71,19 @@ class EmailService {
   }
 
   /**
+   * Helper to resolve target recipient based on DEV redirect configuration.
+   */
+  getTargetRecipient(email) {
+    const isDevRedirect = process.env.EMAIL_DEV_REDIRECT_TO_ADMIN === "true" || process.env.EMAIL_DEV_REDIRECT_TO_ADMIN === true;
+    if (isDevRedirect && process.env.NODE_ENV !== "production") {
+      const adminEmail = process.env.ADMIN_EMAIL || "nguyen.van.quang.huy.2105@gmail.com";
+      console.log(`[email] DEV redirect enabled, original recipient = ${email}, actual recipient = ${adminEmail}`);
+      return adminEmail;
+    }
+    return email;
+  }
+
+  /**
    * Send single task overdue alert
    * @param {object} user - User document
    * @param {object} task - Task document
@@ -91,9 +104,13 @@ class EmailService {
     const appUrl = process.env.APP_URL || "http://localhost:5173";
     const unsubUrl = `${appUrl}/unsubscribe?userId=${user._id || user.id}&token=${token}`;
 
+    const originalRecipient = user.email;
+    const actualRecipient = this.getTargetRecipient(originalRecipient);
+    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+
     const mailOptions = {
-      from: `TaskDo <${this.fromEmail}>`,
-      to: user.email,
+      from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
+      to: actualRecipient,
       subject,
       html: htmlContent,
       headers: {
@@ -102,11 +119,50 @@ class EmailService {
       }
     };
 
-    const result = await this.resend.emails.send(mailOptions);
-    if (result.error) {
-      throw new Error(`Resend Error: ${result.error.message} (${result.error.name})`);
+    try {
+      const result = await this.resend.emails.send(mailOptions);
+      if (result.error) {
+        const errMsg = result.error.message || "";
+        if (
+          result.error.name === "validation_error" || 
+          errMsg.includes("testing emails") || 
+          errMsg.includes("own email address")
+        ) {
+          console.error(`
+[Resend Error] Không thể gửi email tới ${actualRecipient} do tài khoản ở chế độ thử nghiệm (Sandbox/Unverified Domain).
+👉 Hướng dẫn khắc phục:
+1. Truy cập Resend Dashboard và verify domain gửi thư tasket.io.vn của bạn.
+2. Cấu hình biến môi trường EMAIL_FROM bằng domain đã được verify (ví dụ: Tasket <notifications@tasket.io.vn>).
+3. Không sử dụng email mặc định 'onboarding@resend.dev' cho môi trường production.
+          `);
+        }
+        console.error("[email] resend error details", {
+          originalRecipient,
+          actualRecipient,
+          from: mailOptions.from,
+          providerMessageId: null,
+          error: result.error,
+        });
+        throw new Error(`Resend Error: ${result.error.message} (${result.error.name})`);
+      }
+      console.log("[email] resend success log", {
+        originalRecipient,
+        actualRecipient,
+        from: mailOptions.from,
+        providerMessageId: result.data?.id,
+        error: null,
+      });
+      return result.data;
+    } catch (err) {
+      console.error("[email] resend error details", {
+        originalRecipient,
+        actualRecipient,
+        from: mailOptions.from,
+        providerMessageId: null,
+        error: { message: err.message, name: err.name, stack: err.stack },
+      });
+      throw err;
     }
-    return result.data;
   }
 
   /**
@@ -134,9 +190,13 @@ class EmailService {
     const appUrl = process.env.APP_URL || "http://localhost:5173";
     const unsubUrl = `${appUrl}/unsubscribe?userId=${user._id || user.id}&token=${token}`;
 
+    const originalRecipient = user.email;
+    const actualRecipient = this.getTargetRecipient(originalRecipient);
+    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+
     const mailOptions = {
-      from: `TaskDo <${this.fromEmail}>`,
-      to: user.email,
+      from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
+      to: actualRecipient,
       subject,
       html: htmlContent,
       headers: {
@@ -145,11 +205,50 @@ class EmailService {
       }
     };
 
-    const result = await this.resend.emails.send(mailOptions);
-    if (result.error) {
-      throw new Error(`Resend Error: ${result.error.message} (${result.error.name})`);
+    try {
+      const result = await this.resend.emails.send(mailOptions);
+      if (result.error) {
+        const errMsg = result.error.message || "";
+        if (
+          result.error.name === "validation_error" || 
+          errMsg.includes("testing emails") || 
+          errMsg.includes("own email address")
+        ) {
+          console.error(`
+[Resend Error] Không thể gửi email tới ${actualRecipient} do tài khoản ở chế độ thử nghiệm (Sandbox/Unverified Domain).
+👉 Hướng dẫn khắc phục:
+1. Truy cập Resend Dashboard và verify domain gửi thư tasket.io.vn của bạn.
+2. Cấu hình biến môi trường EMAIL_FROM bằng domain đã được verify (ví dụ: Tasket <notifications@tasket.io.vn>).
+3. Không sử dụng email mặc định 'onboarding@resend.dev' cho môi trường production.
+          `);
+        }
+        console.error("[email] resend error details", {
+          originalRecipient,
+          actualRecipient,
+          from: mailOptions.from,
+          providerMessageId: null,
+          error: result.error,
+        });
+        throw new Error(`Resend Error: ${result.error.message} (${result.error.name})`);
+      }
+      console.log("[email] resend success log", {
+        originalRecipient,
+        actualRecipient,
+        from: mailOptions.from,
+        providerMessageId: result.data?.id,
+        error: null,
+      });
+      return result.data;
+    } catch (err) {
+      console.error("[email] resend error details", {
+        originalRecipient,
+        actualRecipient,
+        from: mailOptions.from,
+        providerMessageId: null,
+        error: { message: err.message, name: err.name, stack: err.stack },
+      });
+      throw err;
     }
-    return result.data;
   }
 }
 

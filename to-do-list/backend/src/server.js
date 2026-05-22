@@ -17,8 +17,9 @@ import projectsRouters from "./routes/projectsRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
 import initCronJobs from "./cron/cronJobs.js";
-import { toNodeHandler } from "better-auth/node";
 import { getBetterAuth } from "./services/betterAuthService.js";
+import { toBetterAuthHeaders } from "./services/betterAuthService.js";
+import authViewModel, { AuthViewModelError } from "./viewmodels/authViewModel.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,8 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
   }
 }
 
+
+
 const PORT = process.env.PORT || 5001;
 
 const allowedOrigins = (
@@ -86,8 +89,45 @@ app.use(express.static(frontendDistPath));
 
 // Public routes
 app.use("/api/v1/auth", authRouters);
-app.use("/api/v1/auth/core", (req, res) => {
-  return toNodeHandler(getBetterAuth())(req, res);
+// Compatibility wrapper: expose /api/v1/auth/core/session with the legacy app payload shape.
+app.get("/api/v1/auth/core/session", async (req, res) => {
+  try {
+    const result = await authViewModel.getSession({
+      headers: toBetterAuthHeaders(req),
+    });
+
+    return res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  } catch (err) {
+    if (err instanceof AuthViewModelError) {
+      return res.status(err.statusCode).json({
+        success: false,
+        error: {
+          code: err.errorCode,
+          message: err.message,
+        },
+      });
+    }
+
+    console.error("/auth/core/session proxy error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Internal server error" },
+    });
+  }
+});
+app.use("/api/v1/auth/core", async (req, res, next) => {
+  try {
+    const mod = await import("better-auth/node");
+    const toNodeHandler = mod.toNodeHandler;
+    return toNodeHandler(getBetterAuth())(req, res, next);
+  } catch (err) {
+    console.warn("[server] better-auth not installed or failed to load; /api/v1/auth/core disabled");
+    res.status(501).json({ message: "Better Auth integration not available" });
+  }
 });
 app.use("/api/v1/profile", publicProfileRouter);
 

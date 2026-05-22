@@ -110,6 +110,35 @@ describe("Email Service & Email ViewModel (Overdue Notifications)", () => {
     });
   });
 
+  // ── 3. Resend delivery behavior tests ─────────────────────────────────────
+  describe("emailService.sendOverdueNotification", () => {
+    it("should throw explicit error when Resend rejects unverified recipient", async () => {
+      const user = {
+        _id: "507f1f77bcf86cd799439011",
+        id: "507f1f77bcf86cd799439011",
+        email: "someone_else@gmail.com",
+        preferredLanguage: "vi",
+        notificationPreferences: { timezone: "Asia/Ho_Chi_Minh" },
+      };
+      const task = {
+        _id: "task-1",
+        title: "Task test resend",
+        dueDate: new Date().toISOString(),
+      };
+
+      mockSendEmail.mockResolvedValue({
+        error: {
+          message: "You can only send testing emails to your own email address",
+          name: "validation_error",
+        },
+      });
+
+      await expect(emailService.sendOverdueNotification(user, task)).rejects.toThrow(
+        "Resend Error: You can only send testing emails to your own email address",
+      );
+    });
+  });
+
   // ── 3. emailViewModel.queueOverdueNotifications Tests ───────────────────────
   describe("emailViewModel.queueOverdueNotifications", () => {
     it("should queue overdue tasks that are pending and not yet sent in the last 24h", async () => {

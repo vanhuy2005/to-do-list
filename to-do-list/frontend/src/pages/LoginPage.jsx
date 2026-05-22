@@ -29,14 +29,36 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (searchParams.get("oauth") !== "error") {
+    const oauthStatus = searchParams.get("oauth");
+
+    if (oauthStatus === "success") {
+      const hydrate = async () => {
+        const session = await authService.hydrateFromSessionCookie();
+
+        if (session?.user) {
+          toast.success("Đăng nhập Google thành công!");
+          navigate(
+            authService.getDefaultRouteByRole(session.user.role || "user"),
+            { replace: true },
+          );
+        }
+      };
+
+      hydrate();
+      navigate(window.location.pathname, { replace: true });
+      return;
+    }
+
+    if (oauthStatus !== "error") {
       return;
     }
 
     const errorCode = searchParams.get("error") || searchParams.get("code");
     const message =
+      errorCode === "GOOGLE_ACCOUNT_NOT_LINKED" ||
+      errorCode === "ACCOUNT_NOT_LINKED" ||
       errorCode === "account_not_linked"
-        ? "Tài khoản Google này chưa được liên kết. Hãy đăng nhập bằng mật khẩu hiện tại trước."
+        ? "Email này đã được đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng mật khẩu trước, sau đó vào Cài đặt để liên kết Google."
         : errorCode === "GOOGLE_OAUTH_NOT_CONFIGURED"
           ? "Google OAuth chưa được cấu hình trên backend. Hãy thêm GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET trước."
           : "Đăng nhập Google thất bại. Vui lòng thử lại.";
@@ -72,9 +94,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setIsOAuthLoading(true);
-    window.location.href = authService.getGoogleAuthUrl();
+
+    try {
+      await authService.loginWithGoogle();
+    } catch (error) {
+      setIsOAuthLoading(false);
+      toast.error(
+        error?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.",
+      );
+    }
   };
 
   return (

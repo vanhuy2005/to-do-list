@@ -138,18 +138,32 @@ export default function SettingsPage() {
   }, [profile?.themePreference]);
 
   useEffect(() => {
-    setDisplayNameDraft(profile?.displayName || "");
-  }, [profile?.displayName]);
-
-  useEffect(() => {
     const oauthStatus = searchParams.get("oauth");
     if (!oauthStatus) {
       return;
     }
 
-    if (oauthStatus === "success") {
-      toast.success("Liên kết tài khoản Google thành công!");
-    } else if (oauthStatus === "error") {
+    if (oauthStatus === "link-success") {
+      const refreshLinkedAccount = async () => {
+        await authService.hydrateFromSessionCookie();
+
+        try {
+          const profileResponse = await api.get("/profile");
+          const profileData = profileResponse?.data || null;
+
+          if (profileData) {
+            setProfile(profileData);
+            setDisplayNameDraft(profileData.displayName || "");
+          }
+
+          toast.success("Liên kết tài khoản Google thành công!");
+        } catch {
+          toast.success("Liên kết tài khoản Google thành công!");
+        }
+      };
+
+      refreshLinkedAccount();
+    } else if (oauthStatus === "link-error") {
       toast.error("Liên kết tài khoản Google thất bại. Vui lòng thử lại.");
     }
 
@@ -172,6 +186,7 @@ export default function SettingsPage() {
       const nextProfile = response?.data || null;
 
       setProfile(nextProfile);
+      setDisplayNameDraft(nextProfile?.displayName || "");
 
       if (nextProfile?.themePreference === "dark") {
         document.documentElement.classList.add("dark");
@@ -204,18 +219,18 @@ export default function SettingsPage() {
   };
 
   const handleLinkGoogle = () => {
-    const token = authService.getToken();
-
-    if (!token) {
+    if (!authService.isAuthenticated()) {
       toast.error("Không thể liên kết Google", {
         description: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
       });
       return;
     }
 
-    const googleAuthUrl = new URL(authService.getGoogleAuthUrl(), window.location.origin);
-    googleAuthUrl.searchParams.set("token", token);
-    window.location.href = googleAuthUrl.toString();
+    authService.linkGoogleAccount().catch((error) => {
+      toast.error(
+        error?.message || "Không thể liên kết Google. Vui lòng thử lại.",
+      );
+    });
   };
 
   if (isLoading) {

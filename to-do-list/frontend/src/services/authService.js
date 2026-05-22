@@ -25,7 +25,49 @@ const authService = {
   logout: () => api.post("/auth/logout"),
   refresh: () => api.post("/auth/refresh"),
 
-  getGoogleAuthUrl: () => `${API_BASE_URL}/auth/google`,
+  loginWithGoogle: async () => {
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/core/sign-in/social`,
+      {
+        provider: "google",
+        callbackURL: `${window.location.origin}/login?oauth=success`,
+        errorCallbackURL: `${window.location.origin}/login?oauth=error`,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+
+    const url = response?.data?.url || response?.data?.data?.url;
+
+    if (!url) {
+      throw new Error("Google auth URL not returned");
+    }
+
+    window.location.href = url;
+  },
+
+  linkGoogleAccount: async () => {
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/core/link-social`,
+      {
+        provider: "google",
+        callbackURL: `${window.location.origin}/settings?oauth=link-success`,
+        errorCallbackURL: `${window.location.origin}/settings?oauth=link-error`,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+
+    const url = response?.data?.url || response?.data?.data?.url;
+
+    if (!url) {
+      throw new Error("Google link URL not returned");
+    }
+
+    window.location.href = url;
+  },
 
   setToken: (token) => {
     if (token) {
@@ -64,7 +106,7 @@ const authService = {
 
   hydrateFromSessionCookie: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/auth/session`, {
+      const response = await axios.get(`${API_BASE_URL}/auth/core/session`, {
         withCredentials: true,
       });
 

@@ -40,6 +40,19 @@ const formatUserResponse = (user) => ({
   createdAt: user.createdAt,
 });
 
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+  emailOverdue: true,
+  emailDigest: true,
+  digestHour: 8,
+  timezone: "Asia/Ho_Chi_Minh",
+  unsubscribedAt: null,
+};
+
+const normalizeNotificationPreferences = (prefs = {}) => ({
+  ...DEFAULT_NOTIFICATION_PREFERENCES,
+  ...(prefs || {}),
+});
+
 const profileViewModel = {
   async getProfile(userId) {
     if (!userId) {
@@ -679,13 +692,7 @@ const profileViewModel = {
       throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
     }
 
-    const prefs = user.notificationPreferences || {
-      emailOverdue: true,
-      emailDigest: true,
-      digestHour: 8,
-      timezone: "Asia/Ho_Chi_Minh",
-      unsubscribedAt: null,
-    };
+    const prefs = normalizeNotificationPreferences(user.notificationPreferences);
 
     return {
       statusCode: 200,
@@ -699,29 +706,30 @@ const profileViewModel = {
       throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
     }
 
+    if (!payload || typeof payload !== "object") {
+      throw new ProfileViewModelError(
+        400,
+        "INVALID_PAYLOAD",
+        "Dữ liệu cấu hình thông báo không hợp lệ",
+      );
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
     }
 
     const { emailOverdue, emailDigest, digestHour, timezone } = payload;
-    const oldPreferences = JSON.parse(JSON.stringify(user.notificationPreferences || {}));
-
-    if (user.notificationPreferences === undefined || user.notificationPreferences === null) {
-      user.notificationPreferences = {
-        emailOverdue: true,
-        emailDigest: true,
-        digestHour: 8,
-        timezone: "Asia/Ho_Chi_Minh",
-        unsubscribedAt: null,
-      };
-    }
+    const oldPreferences = normalizeNotificationPreferences(
+      JSON.parse(JSON.stringify(user.notificationPreferences || {})),
+    );
+    const nextPreferences = { ...oldPreferences };
 
     if (emailOverdue !== undefined) {
-      user.notificationPreferences.emailOverdue = !!emailOverdue;
+      nextPreferences.emailOverdue = !!emailOverdue;
     }
     if (emailDigest !== undefined) {
-      user.notificationPreferences.emailDigest = !!emailDigest;
+      nextPreferences.emailDigest = !!emailDigest;
     }
 
     if (digestHour !== undefined) {
@@ -729,13 +737,13 @@ const profileViewModel = {
       if (Number.isNaN(parsedHour) || parsedHour < 0 || parsedHour > 23 || !Number.isInteger(parsedHour)) {
         throw new ProfileViewModelError(400, "INVALID_DIGEST_HOUR", "Giờ gộp thư phải là số nguyên từ 0 đến 23");
       }
-      user.notificationPreferences.digestHour = parsedHour;
+      nextPreferences.digestHour = parsedHour;
     }
 
     if (timezone !== undefined) {
       try {
         Intl.DateTimeFormat(undefined, { timeZone: timezone });
-        user.notificationPreferences.timezone = timezone;
+        nextPreferences.timezone = timezone;
       } catch (e) {
         throw new ProfileViewModelError(400, "INVALID_TIMEZONE", "Múi giờ IANA gửi lên không hợp lệ");
       }
@@ -743,30 +751,42 @@ const profileViewModel = {
 
     // Capture unsubscribe timestamp if either email preference toggles to false
     const wasReceiving = (oldPreferences.emailOverdue !== false || oldPreferences.emailDigest !== false);
-    const isReceiving = (user.notificationPreferences.emailOverdue !== false || user.notificationPreferences.emailDigest !== false);
+    const isReceiving = (nextPreferences.emailOverdue !== false || nextPreferences.emailDigest !== false);
     
     if (wasReceiving && !isReceiving) {
-      user.notificationPreferences.unsubscribedAt = new Date();
+      nextPreferences.unsubscribedAt = new Date();
     } else if (isReceiving) {
-      user.notificationPreferences.unsubscribedAt = null;
+      nextPreferences.unsubscribedAt = null;
     }
 
-    await user.save();
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { notificationPreferences: nextPreferences } },
+      { new: true, runValidators: true },
+    );
 
-    // Log to AuditLog
-    await AuditLog.create({
-      actorId: userId,
-      action: "profile.notification_preferences_updated",
-      entityType: "user",
-      entityId: userId,
-      summaryBefore: oldPreferences,
-      summaryAfter: user.notificationPreferences,
-    });
+    if (!updatedUser) {
+      throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    try {
+      // Logging không nên làm hỏng luồng cập nhật cấu hình của người dùng.
+      await AuditLog.create({
+        actorId: userId,
+        action: "profile.notification_preferences_updated",
+        entityType: "user",
+        entityId: userId,
+        summaryBefore: oldPreferences,
+        summaryAfter: nextPreferences,
+      });
+    } catch (error) {
+      console.warn("Unable to write notification preferences audit log:", error.message);
+    }
 
     return {
       statusCode: 200,
       success: true,
-      data: user.notificationPreferences,
+      data: normalizeNotificationPreferences(updatedUser.notificationPreferences),
     };
   },
 
@@ -785,23 +805,21 @@ const profileViewModel = {
       throw new ProfileViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
     }
 
-    const oldPreferences = JSON.parse(JSON.stringify(user.notificationPreferences || {}));
+    const oldPreferences = normalizeNotificationPreferences(
+      JSON.parse(JSON.stringify(user.notificationPreferences || {})),
+    );
+    const nextPreferences = {
+      ...oldPreferences,
+      emailOverdue: false,
+      emailDigest: false,
+      unsubscribedAt: new Date(),
+    };
 
-    if (user.notificationPreferences === undefined || user.notificationPreferences === null) {
-      user.notificationPreferences = {
-        emailOverdue: true,
-        emailDigest: true,
-        digestHour: 8,
-        timezone: "Asia/Ho_Chi_Minh",
-        unsubscribedAt: null,
-      };
-    }
-
-    user.notificationPreferences.emailOverdue = false;
-    user.notificationPreferences.emailDigest = false;
-    user.notificationPreferences.unsubscribedAt = new Date();
-
-    await user.save();
+    await User.findByIdAndUpdate(
+      userId,
+      { $set: { notificationPreferences: nextPreferences } },
+      { new: true, runValidators: true },
+    );
 
     // Log to AuditLog
     await AuditLog.create({
@@ -810,7 +828,7 @@ const profileViewModel = {
       entityType: "user",
       entityId: userId,
       summaryBefore: oldPreferences,
-      summaryAfter: user.notificationPreferences,
+      summaryAfter: nextPreferences,
     });
 
     return {
