@@ -1,3 +1,9 @@
+/**
+ * @deprecated
+ * This module is NOT used in the production voice-task pipeline.
+ * The single source of truth for AI output validation is outputRecovery.js (TaskDraftSchema).
+ * This file is kept for reference only and may be removed in a future cleanup.
+ */
 import { z } from "zod";
 
 // ─── Zod schema — mirrors the Task Mongoose model fields exactly ──────────────

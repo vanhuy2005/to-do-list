@@ -24,10 +24,10 @@ export async function transcribeAudio({ audioBuffer, mimeType, requestId }) {
         model: 'whisper-large-v3',
         response_format: 'verbose_json', // trả về language + duration
         language: undefined,             // auto-detect: tiếng Việt & Anh đều ok
-        prompt: "nhắc tôi, tạo công việc, ngày mai, tám giờ, hôm nay, meeting, deadline, task, schedule, ASAP",
+        prompt: "hạn chót, trước, sau, sáng mai, chiều mai, tối nay, sáng nay, trưa nay, thứ hai, thứ ba, thứ tư, thứ năm, thứ sáu, thứ bảy, chủ nhật, tuần sau, cuối tuần, cuối tháng, ngày mai, hôm nay, gấp, quan trọng, nhắc tôi, tạo task, tạo công việc, deadline, meeting, urgent, ASAP",
       }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new STTError('Groq timeout', 'GROQ_TIMEOUT')), 15_000)
+        setTimeout(() => reject(new STTError('Groq timeout', 'GROQ_TIMEOUT')), 22_000)
       ),
     ]);
   } catch (err) {

@@ -39,6 +39,19 @@ router.post("/", voiceRateLimit, async (req, res) => {
       });
     }
 
+    // Enterprise Observability Logging
+    console.info(JSON.stringify({
+      event: "voice_task_request",
+      request_id: requestId,
+      provider: enrichedTask.provider,
+      latency_ms: enrichedTask.latency_ms,
+      intent: enrichedTask.intent,
+      confidence: enrichedTask.confidence,
+      parse_success: enrichedTask.provider !== 'fallback',
+      fallback_used: enrichedTask.provider === 'fallback',
+      missing_fields: enrichedTask.missingFields
+    }));
+
     return res.status(200).json({
       success: true,
       data: {
