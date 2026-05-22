@@ -22,6 +22,8 @@ import { getBetterAuth } from "./services/betterAuthService.js";
 import { toBetterAuthHeaders } from "./services/betterAuthService.js";
 import { toNodeHandler } from "better-auth/node";
 import authViewModel, { AuthViewModelError } from "./viewmodels/authViewModel.js";
+import projectViewModel from "./viewmodels/projectViewModel.js";
+import taskViewModel from "./viewmodels/taskViewModel.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -186,6 +188,36 @@ app.use(
   authMiddleware,
   requireRole("user"),
   projectsRouters,
+);
+
+app.get(
+  "/api/v1/invitations/me",
+  authMiddleware,
+  requireRole("user"),
+  async (req, res) => {
+    try {
+      const [projectsResult, tasksResult] = await Promise.all([
+        projectViewModel.getMyProjectInvitations(req.userId),
+        taskViewModel.getMyTaskInvitations(req.userId)
+      ]);
+      res.status(200).json({
+        success: true,
+        data: {
+          projects: projectsResult.data || [],
+          tasks: tasksResult.data || []
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching aggregated invitations:", error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Lỗi hệ thống khi tải danh sách lời mời"
+        }
+      });
+    }
+  }
 );
 
 app.get("*", (req, res, next) => {

@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BrushIcon,
   RocketIcon,
   SearchIcon,
   SlidersHorizontalIcon,
   XIcon,
+  MailIcon,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import api from "@/lib/axios";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,84 @@ const getActiveFilters = (search) => {
 export default function AppBar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [invitations, setInvitations] = useState({ projects: [], tasks: [] });
+  const [activeTab, setActiveTab] = useState("projects");
+
+  const fetchInvitations = async () => {
+    try {
+      const res = await api.get("/invitations/me");
+      if (res && res.success) {
+        setInvitations(res.data || { projects: [], tasks: [] });
+      }
+    } catch (err) {
+      console.error("Error fetching invitations:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvitations();
+    const interval = setInterval(fetchInvitations, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcceptProject = async (idOrToken) => {
+    try {
+      const res = await api.post(`/projects/invitations/${idOrToken}/accept`);
+      if (res && res.success) {
+        setInvitations((prev) => ({
+          ...prev,
+          projects: prev.projects.filter((p) => p._id !== idOrToken),
+        }));
+        window.dispatchEvent(new CustomEvent("project_joined"));
+      }
+    } catch (err) {
+      alert("Chấp nhận lời mời thất bại: " + (err.response?.data?.error?.message || err.message));
+    }
+  };
+
+  const handleDeclineProject = async (idOrToken) => {
+    try {
+      const res = await api.post(`/projects/invitations/${idOrToken}/decline`);
+      if (res && res.success) {
+        setInvitations((prev) => ({
+          ...prev,
+          projects: prev.projects.filter((p) => p._id !== idOrToken),
+        }));
+      }
+    } catch (err) {
+      alert("Từ chối lời mời thất bại: " + (err.response?.data?.error?.message || err.message));
+    }
+  };
+
+  const handleAcceptTask = async (idOrToken) => {
+    try {
+      const res = await api.post(`/tasks/invitations/${idOrToken}/accept`);
+      if (res && res.success) {
+        setInvitations((prev) => ({
+          ...prev,
+          tasks: prev.tasks.filter((t) => t._id !== idOrToken),
+        }));
+        window.dispatchEvent(new CustomEvent("task_joined"));
+      }
+    } catch (err) {
+      alert("Chấp nhận lời mời thất bại: " + (err.response?.data?.error?.message || err.message));
+    }
+  };
+
+  const handleDeclineTask = async (idOrToken) => {
+    try {
+      const res = await api.post(`/tasks/invitations/${idOrToken}/decline`);
+      if (res && res.success) {
+        setInvitations((prev) => ({
+          ...prev,
+          tasks: prev.tasks.filter((t) => t._id !== idOrToken),
+        }));
+      }
+    } catch (err) {
+      alert("Từ chối lời mời thất bại: " + (err.response?.data?.error?.message || err.message));
+    }
+  };
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const currentSearch = useMemo(
     () => new URLSearchParams(location.search).get("search") || "",
@@ -252,6 +332,143 @@ export default function AppBar() {
                 <SearchIcon className="size-4" />
               </Button>
             )}
+
+            {/* Popover Mail/Inbox for Invitations */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="secondary"
+                  aria-label="Invitations"
+                  onClick={fetchInvitations}
+                  className="relative bg-[#ff5c5c] transition-all duration-200 lg:hover:scale-110 lg:hover:shadow-[3px_3px_0_#111111]"
+                >
+                  <MailIcon className="size-4 text-white" />
+                  {(invitations.projects.length + invitations.tasks.length) > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-border bg-[#ff3b57] px-1 text-[9px] font-black text-white">
+                      {invitations.projects.length + invitations.tasks.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] p-0 border-[3px] border-border bg-card comic-shadow rounded-xl">
+                <div className="flex border-b-[3px] border-border">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("projects")}
+                    className={cn(
+                      "flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all duration-150 border-r-[3px] border-border",
+                      activeTab === "projects" ? "bg-primary text-primary-foreground font-black" : "bg-card hover:bg-muted"
+                    )}
+                  >
+                    Dự án ({invitations.projects.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("tasks")}
+                    className={cn(
+                      "flex-1 py-2 text-center text-xs font-black uppercase tracking-wider transition-all duration-150",
+                      activeTab === "tasks" ? "bg-primary text-primary-foreground font-black" : "bg-card hover:bg-muted"
+                    )}
+                  >
+                    Nhiệm vụ ({invitations.tasks.length})
+                  </button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto p-2">
+                  {activeTab === "projects" ? (
+                    invitations.projects.length === 0 ? (
+                      <p className="text-center py-4 text-xs font-bold text-muted-foreground">Không có lời mời dự án nào</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {invitations.projects.map((invite) => (
+                          <div key={invite._id} className="p-2 border-[3px] border-border bg-[#fafafa] rounded-lg flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-lg">{invite.projectId?.emoji || "📁"}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-black truncate">{invite.projectId?.name || "Dự án hợp tác"}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">Mời bởi: {invite.invitedBy?.displayName || invite.invitedBy?.email}</p>
+                              </div>
+                            </div>
+                            {invite.projectId?.description && (
+                              <p className="text-[10px] text-muted-foreground bg-white p-1 border border-border rounded italic">{invite.projectId.description}</p>
+                            )}
+                            <div className="flex items-center justify-end gap-1.5 mt-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px] font-black border-2 border-border bg-white"
+                                onClick={() => handleDeclineProject(invite._id)}
+                              >
+                                Từ chối
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 text-[10px] font-black border-2 border-border bg-primary text-primary-foreground"
+                                onClick={() => handleAcceptProject(invite._id)}
+                              >
+                                Đồng ý
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    invitations.tasks.length === 0 ? (
+                      <p className="text-center py-4 text-xs font-bold text-muted-foreground">Không có lời mời chia sẻ nhiệm vụ nào</p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {invitations.tasks.map((invite) => (
+                          <div key={invite._id} className="p-2 border-[3px] border-border bg-[#fafafa] rounded-lg flex flex-col gap-1.5">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 justify-between">
+                                <span className={cn(
+                                  "text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-border uppercase",
+                                  invite.taskId?.priority === "high" ? "bg-red-100 text-red-700" :
+                                  invite.taskId?.priority === "medium" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"
+                                )}>
+                                  Ưu tiên: {invite.taskId?.priority === "high" ? "Cao" : invite.taskId?.priority === "medium" ? "Vừa" : "Thấp"}
+                                </span>
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-border bg-purple-100 text-purple-700 uppercase">
+                                  Quyền: {invite.permission === "editor" ? "Chỉnh sửa" : invite.permission === "comment" ? "Nhận xét" : "Xem"}
+                                </span>
+                              </div>
+                              <p className="text-xs font-black truncate mt-1">{invite.taskId?.title || "Nhiệm vụ hợp tác"}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">Chia sẻ bởi: {invite.invitedBy?.displayName || invite.invitedBy?.email}</p>
+                            </div>
+                            {invite.taskId?.description && (
+                              <p className="text-[10px] text-muted-foreground bg-white p-1 border border-border rounded italic">{invite.taskId.description}</p>
+                            )}
+                            <div className="flex items-center justify-end gap-1.5 mt-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px] font-black border-2 border-border bg-white"
+                                onClick={() => handleDeclineTask(invite._id)}
+                              >
+                                Từ chối
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 text-[10px] font-black border-2 border-border bg-primary text-primary-foreground"
+                                onClick={() => handleAcceptTask(invite._id)}
+                              >
+                                Đồng ý
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <Button
               asChild

@@ -151,6 +151,13 @@ export default function EditTaskPage() {
     try {
       const payload = await taskService.getTaskById(id);
       const t = payload?.data || payload;
+
+      const canEdit = t.accessLevel === "owner" || t.accessLevel === "edit";
+      if (!canEdit) {
+        setLoadError("Bạn không có quyền chỉnh sửa nhiệm vụ này.");
+        return;
+      }
+
       reset({
         title: t.title || "",
         description: t.description || "",

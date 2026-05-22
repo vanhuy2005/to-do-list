@@ -82,18 +82,18 @@ export default function TaskCommentsModal({ open, onOpenChange, taskId, taskTitl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={true} className="sm:max-w-md border-4 border-border bg-card p-6 rounded-[2rem] comic-shadow">
-        <DialogHeader className="border-b border-border/10 pb-3">
-          <DialogTitle className="text-xl font-black uppercase text-foreground flex items-center gap-2">
+      <DialogContent showCloseButton={true} className="sm:max-w-md border-4 border-border bg-card !p-0 !gap-0 rounded-[2rem] comic-shadow flex flex-col h-[500px] md:h-[550px] max-h-[90vh]">
+        <DialogHeader className="!m-0 border-b-[3px] border-border bg-[#ff3b57] px-6 py-4 text-white shrink-0 flex flex-col gap-1">
+          <DialogTitle className="text-xl font-black uppercase text-white flex items-center gap-2">
             <span>💬 Nhận xét nhiệm vụ</span>
           </DialogTitle>
-          <div className="text-xs font-black uppercase text-muted-foreground mt-1 truncate">
-            {actualTaskTitle}
+          <div className="text-xs font-bold uppercase text-white/90 mt-0.5 truncate">
+            Nhiệm vụ: {actualTaskTitle}
           </div>
         </DialogHeader>
 
         {/* Comment list container */}
-        <div className="min-h-[200px] max-h-[300px] overflow-y-auto pr-1 py-3 space-y-3 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-3 scrollbar-hide">
           {isLoading ? (
             <div className="text-center py-8 text-xs font-bold text-muted-foreground">Đang tải bình luận...</div>
           ) : comments.length === 0 ? (
@@ -115,7 +115,7 @@ export default function TaskCommentsModal({ open, onOpenChange, taskId, taskTitl
                     sizeClassName="size-8"
                     textClassName="text-xs font-black"
                   />
-
+ 
                   {/* Speech Bubble */}
                   <div className="max-w-[75%] space-y-1">
                     <div className={cn("text-[9px] font-black uppercase text-muted-foreground px-1", isMe && "text-right")}>
@@ -136,35 +136,37 @@ export default function TaskCommentsModal({ open, onOpenChange, taskId, taskTitl
             })
           )}
         </div>
-
+ 
         {/* Comment input form / restricted view */}
-        {accessLevel === "view" ? (
-          <div className="border-t border-border/10 pt-4 text-center py-3 bg-[#ffe4ec] border-2 border-dashed border-[#ff3b57] rounded-xl">
-            <p className="text-[10px] font-black uppercase text-[#ff3b57]">
-              Bạn chỉ có quyền xem, không thể nhận xét.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmitComment} className="border-t border-border/10 pt-3 space-y-3">
-            <div className="relative">
-              <Textarea
-                placeholder="Nhập nhận xét của bạn tại đây..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                className="min-h-16 text-xs font-bold border-2 border-border rounded-xl resize-none pr-12 focus-visible:ring-0 focus-visible:ring-offset-0 bg-white"
-                rows={2}
-              />
-              <Button
-                type="submit"
-                disabled={isSubmitting || !newComment.trim()}
-                size="icon"
-                className="absolute right-2 bottom-2 size-8 bg-[#00c2ff] hover:bg-[#00afe6] border-2 border-border text-foreground rounded-lg comic-shadow active:translate-y-0.5"
-              >
-                <SendIcon className="size-3.5 text-foreground" />
-              </Button>
+        <div className="shrink-0 border-t border-border/10 p-6 pt-3">
+          {accessLevel === "view" ? (
+            <div className="text-center py-3 bg-[#ffe4ec] border-2 border-dashed border-[#ff3b57] rounded-xl">
+              <p className="text-[10px] font-black uppercase text-[#ff3b57]">
+                Bạn chỉ có quyền xem, không thể nhận xét.
+              </p>
             </div>
-          </form>
-        )}
+          ) : (
+            <form onSubmit={handleSubmitComment} className="space-y-3">
+              <div className="relative">
+                <Textarea
+                  placeholder="Nhập nhận xét của bạn tại đây..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="min-h-16 text-xs font-bold border-2 border-border rounded-xl resize-none pr-12 focus-visible:ring-0 focus-visible:ring-offset-0 bg-white"
+                  rows={2}
+                />
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !newComment.trim()}
+                  size="icon"
+                  className="absolute right-2 bottom-2 size-8 bg-[#00c2ff] hover:bg-[#00afe6] border-2 border-border text-foreground rounded-lg comic-shadow active:translate-y-0.5"
+                >
+                  <SendIcon className="size-3.5 text-foreground" />
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

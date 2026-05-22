@@ -38,6 +38,7 @@ export default function KanbanColumn({
   status,
   tasks,
   isExpanded,
+  canEdit,
   onToggleExpand,
   onOpenTask,
   onOpenComments,
@@ -98,6 +99,7 @@ export default function KanbanColumn({
                 <KanbanCard
                   key={task._id}
                   task={task}
+                  canEdit={canEdit}
                   onOpenTask={onOpenTask}
                   onOpenComments={onOpenComments}
                 />
@@ -110,6 +112,7 @@ export default function KanbanColumn({
                 <KanbanCard
                   key={task._id}
                   task={task}
+                  canEdit={canEdit}
                   onOpenTask={onOpenTask}
                   onOpenComments={onOpenComments}
                 />

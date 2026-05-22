@@ -80,6 +80,7 @@ const authService = {
   setUser: (user) => {
     if (user) {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      window.dispatchEvent(new Event("auth_user_changed"));
     }
   },
 

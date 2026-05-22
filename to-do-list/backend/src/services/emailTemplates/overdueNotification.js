@@ -64,52 +64,52 @@ export const getOverdueNotificationTemplate = (user, task, formattedDueDate, uns
   const appUrl = process.env.APP_URL || "http://localhost:5173";
 
   const contentHtml = `
-    <h2 style="font-size: 22px; font-weight: 800; text-align: center; color: #000000; margin: 10px 0 20px 0; text-transform: uppercase;">
+    <h2 style="font-size: 22px; font-weight: 800; text-align: center; color: #000000; margin: 10px 0 20px 0; text-transform: uppercase; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       ${title}
     </h2>
 
-    <p style="font-size: 15px; line-height: 1.6; font-weight: 500; color: #333333; margin-bottom: 25px;">
+    <p style="font-size: 15px; line-height: 1.6; font-weight: 500; color: #333333; margin-bottom: 25px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       ${text.greeting}<br><br>
       ${text.intro}
     </p>
 
     <!-- Task details box in Pop Art style -->
-    <div style="border: 3px solid #000000; box-shadow: 4px 4px 0px #000000; background-color: #FFFFFF; padding: 25px; margin-bottom: 30px;">
-      <h3 style="font-size: 18px; font-weight: 800; color: #000000; margin: 0 0 15px 0; border-bottom: 2px solid #000000; padding-bottom: 8px; text-transform: uppercase;">
+    <div style="border: 3px solid #000000; box-shadow: 4px 4px 0px #000000; background-color: #FFFFFF; padding: 25px; margin-bottom: 30px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <h3 style="font-size: 18px; font-weight: 800; color: #000000; margin: 0 0 15px 0; border-bottom: 2px solid #000000; padding-bottom: 8px; text-transform: uppercase; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         📌 ${escapeHtml(task.title)}
       </h3>
       
       ${task.description ? `
-        <div style="margin-bottom: 15px;">
-          <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block; margin-bottom: 3px;">
+        <div style="margin-bottom: 15px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block; margin-bottom: 3px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             ${text.taskDesc}
           </strong>
-          <p style="font-size: 14px; color: #333333; margin: 0; line-height: 1.5; font-weight: 500;">
+          <p style="font-size: 14px; color: #333333; margin: 0; line-height: 1.5; font-weight: 500; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             ${escapeHtml(task.description)}
           </p>
         </div>
       ` : ""}
 
-      <table style="width: 100%; border-collapse: collapse;">
+      <table style="width: 100%; border-collapse: collapse; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <tr>
-          <td style="padding: 6px 0; vertical-align: middle; width: 45%;">
-            <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block;">
+          <td style="padding: 6px 0; vertical-align: middle; width: 45%; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.taskPriority}
             </strong>
           </td>
-          <td style="padding: 6px 0; vertical-align: middle;">
-            <span style="display: inline-block; background-color: ${badgeColor}; border: 1.5px solid #000000; color: ${textColor}; font-size: 12px; font-weight: 800; padding: 3px 8px; box-shadow: 2px 2px 0px #000000; text-transform: uppercase;">
+          <td style="padding: 6px 0; vertical-align: middle; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <span style="display: inline-block; background-color: ${badgeColor}; border: 1.5px solid #000000; color: ${textColor}; font-size: 12px; font-weight: 800; padding: 3px 8px; box-shadow: 2px 2px 0px #000000; text-transform: uppercase; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${priorityLabel}
             </span>
           </td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; vertical-align: middle;">
-            <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block;">
+          <td style="padding: 6px 0; vertical-align: middle; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <strong style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #666666; display: block; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.taskDueDate}
             </strong>
           </td>
-          <td style="padding: 6px 0; vertical-align: middle; font-size: 14px; font-weight: 700; color: #000000;">
+          <td style="padding: 6px 0; vertical-align: middle; font-size: 14px; font-weight: 700; color: #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             📅 ${escapeHtml(formattedDueDate)}
           </td>
         </tr>
@@ -117,8 +117,8 @@ export const getOverdueNotificationTemplate = (user, task, formattedDueDate, uns
     </div>
 
     <!-- CTA Button -->
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${appUrl}/" style="display: inline-block; background-color: #FF5A5F; border: 3px solid #000000; color: #FFFFFF; font-size: 16px; font-weight: 900; text-decoration: none; padding: 14px 28px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 1px;">
+    <div style="text-align: center; margin: 30px 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <a href="${appUrl}/" style="display: inline-block; background-color: #FF5A5F; border: 3px solid #000000; color: #FFFFFF; font-size: 16px; font-weight: 900; text-decoration: none; padding: 14px 28px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 1px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         🚀 ${text.ctaButton} 🚀
       </a>
     </div>

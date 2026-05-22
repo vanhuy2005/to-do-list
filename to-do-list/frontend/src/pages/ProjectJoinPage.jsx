@@ -19,6 +19,9 @@ export default function ProjectJoinPage() {
         const res = await projectService.joinByLink(token);
         const payload = res?.data || res;
         const joinedProject = payload?.project || payload?.data?.project || payload?.data || payload;
+        if (joinedProject && !joinedProject._id && payload?.projectId) {
+          joinedProject._id = payload.projectId;
+        }
         setProject(joinedProject);
         setStatus("success");
         toast.success("Tham gia dự án thành công!");
