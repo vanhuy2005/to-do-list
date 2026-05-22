@@ -11,10 +11,12 @@ import {
   KeyIcon, 
   Loader2Icon, 
   ArrowRightIcon, 
-  BookOpenIcon 
+  BookOpenIcon,
+  InboxIcon
 } from "lucide-react";
 import projectService from "@/services/projectService";
 import authService from "@/services/authService";
+import ProjectIcon from "@/components/ProjectIcon";
 
 const EMOJIS = ["📁", "🚀", "🎯", "💻", "🎨", "🔥", "🌈", "💡", "🧠", "💼", "📅", "🔒"];
 const BORDER_COLORS = [
@@ -157,13 +159,13 @@ export default function ProjectsPage() {
                       key={emoji}
                       type="button"
                       onClick={() => setSelectedEmoji(emoji)}
-                      className={`text-2xl size-10 flex items-center justify-center rounded-xl border-[3px] border-border transition-all comic-shadow ${
+                      className={`size-10 flex items-center justify-center rounded-xl border-[3px] border-border transition-all comic-shadow ${
                         selectedEmoji === emoji 
                           ? "bg-[#00C2FF] scale-110 -rotate-3" 
                           : "bg-white hover:bg-muted"
                       }`}
                     >
-                      {emoji}
+                      <ProjectIcon emoji={emoji} className="size-5" />
                     </button>
                   ))}
                 </div>
@@ -290,8 +292,8 @@ export default function ProjectsPage() {
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <div className="rounded-2xl border-4 border-dashed border-border bg-muted/20 py-12 text-center">
-            <span className="text-4xl">🏜️</span>
+          <div className="rounded-2xl border-4 border-dashed border-border bg-muted/20 py-12 text-center flex flex-col items-center justify-center">
+            <InboxIcon className="size-12 text-muted-foreground stroke-[2.5]" />
             <h3 className="mt-3 text-lg font-black uppercase text-foreground">Chưa có dự án nào</h3>
             <p className="text-xs font-bold text-muted-foreground uppercase mt-1">
               Tạo hoặc tham gia một dự án để bắt đầu làm việc nhóm!
@@ -310,8 +312,8 @@ export default function ProjectsPage() {
                   className={`group relative block rounded-2xl border-[3px] border-border ${borderAccent} border-t-[8px] bg-card p-4 cursor-pointer comic-shadow hover:scale-[1.02] active:translate-y-0.5 transition-all duration-200`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-3xl size-12 flex items-center justify-center rounded-xl border-[3px] border-border bg-white comic-shadow">
-                      {p.emoji || "📁"}
+                    <div className="size-12 flex items-center justify-center rounded-xl border-[3px] border-border bg-white comic-shadow">
+                      <ProjectIcon emoji={p.emoji || "📁"} className="size-6" />
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       {p.status === "archived" && (

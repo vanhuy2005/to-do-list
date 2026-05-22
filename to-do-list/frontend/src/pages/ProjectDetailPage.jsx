@@ -18,6 +18,7 @@ import ablyService from "@/services/ablyService";
 import ProjectMembersModal from "@/components/ProjectMembersModal";
 import TaskCommentsModal from "@/components/TaskCommentsModal";
 import { toast } from "sonner";
+import ProjectIcon from "@/components/ProjectIcon";
 import { 
   UsersIcon, 
   PlusIcon, 
@@ -431,8 +432,8 @@ export default function ProjectDetailPage() {
           <div className="space-y-3 min-w-0">
             {/* Title & Emoji */}
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-4xl shrink-0 size-14 flex items-center justify-center rounded-2xl border-[3px] border-border bg-white comic-shadow rotate-[-3deg]">
-                {project.emoji || "📁"}
+              <span className="shrink-0 size-14 flex items-center justify-center rounded-2xl border-[3px] border-border bg-white comic-shadow rotate-[-3deg]">
+                <ProjectIcon emoji={project.emoji || "📁"} className="size-8" />
               </span>
               <div className="min-w-0">
                 <h1 className="text-[2.2rem] sm:text-[2.6rem] leading-none font-black uppercase text-foreground truncate">

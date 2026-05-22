@@ -23,6 +23,7 @@ import {
   CrownIcon,
   UserMinusIcon,
   AlertTriangleIcon,
+  FolderIcon,
 } from "lucide-react";
 
 export default function ProjectMembersModal({
@@ -199,7 +200,7 @@ export default function ProjectMembersModal({
       <DialogContent showCloseButton={true} className="sm:max-w-2xl border-4 border-border bg-card p-6 rounded-[2rem] comic-shadow">
         <DialogHeader className="border-b border-border/10 pb-4">
           <DialogTitle className="text-2xl font-black uppercase text-foreground flex items-center gap-2">
-            <span>📁 Thiết Lập Không Gian</span>
+            <span className="flex items-center gap-1.5"><FolderIcon className="size-6 text-foreground fill-[#FFD400]/25 stroke-[2.5]" /> Thiết Lập Không Gian</span>
             <Badge className="border-[2px] border-border bg-[#ffd400] text-foreground text-xs uppercase px-2 font-black">
               {project?.name}
             </Badge>
