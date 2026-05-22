@@ -295,7 +295,9 @@ class EmailService {
 
     const originalRecipient = inviteeEmail;
     const actualRecipient = this.getTargetRecipient(originalRecipient);
-    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+    const fromEmail = process.env.NODE_ENV === "production"
+      ? (process.env.EMAIL_FROM || "Tasket <notifications@tasket.io.vn>")
+      : (process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev");
 
     const mailOptions = {
       from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
@@ -304,11 +306,47 @@ class EmailService {
       html: htmlContent
     };
 
-    const result = await this.resend.emails.send(mailOptions);
-    if (result.error) {
-      throw new Error(`Resend Error: ${result.error.message}`);
+    if (!process.env.RESEND_API_KEY) {
+      console.log("[email] SKIP sending email invitation (RESEND_API_KEY missing):", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "task_invitation",
+        providerMessageId: null,
+        status: "skipped",
+      });
+      return { skipped: true, emailSkippedReason: "MISSING_RESEND_API_KEY" };
     }
-    return result.data;
+
+    try {
+      const result = await this.resend.emails.send(mailOptions);
+      if (result.error) {
+        console.error("[email] Safe invitation log error:", {
+          to: actualRecipient,
+          from: mailOptions.from,
+          templateType: "task_invitation",
+          providerMessageId: null,
+          status: "failed",
+        });
+        throw new Error(`Resend Error: ${result.error.message}`);
+      }
+      console.log("[email] Safe invitation log:", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "task_invitation",
+        providerMessageId: result.data?.id || null,
+        status: "sent",
+      });
+      return result.data;
+    } catch (err) {
+      console.error("[email] Safe invitation log error:", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "task_invitation",
+        providerMessageId: null,
+        status: "failed",
+      });
+      throw err;
+    }
   }
 
   /**
@@ -352,7 +390,9 @@ class EmailService {
 
     const originalRecipient = inviteeEmail;
     const actualRecipient = this.getTargetRecipient(originalRecipient);
-    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+    const fromEmail = process.env.NODE_ENV === "production"
+      ? (process.env.EMAIL_FROM || "Tasket <notifications@tasket.io.vn>")
+      : (process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev");
 
     const mailOptions = {
       from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
@@ -361,11 +401,47 @@ class EmailService {
       html: htmlContent
     };
 
-    const result = await this.resend.emails.send(mailOptions);
-    if (result.error) {
-      throw new Error(`Resend Error: ${result.error.message}`);
+    if (!process.env.RESEND_API_KEY) {
+      console.log("[email] SKIP sending email invitation (RESEND_API_KEY missing):", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "project_invitation",
+        providerMessageId: null,
+        status: "skipped",
+      });
+      return { skipped: true, emailSkippedReason: "MISSING_RESEND_API_KEY" };
     }
-    return result.data;
+
+    try {
+      const result = await this.resend.emails.send(mailOptions);
+      if (result.error) {
+        console.error("[email] Safe invitation log error:", {
+          to: actualRecipient,
+          from: mailOptions.from,
+          templateType: "project_invitation",
+          providerMessageId: null,
+          status: "failed",
+        });
+        throw new Error(`Resend Error: ${result.error.message}`);
+      }
+      console.log("[email] Safe invitation log:", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "project_invitation",
+        providerMessageId: result.data?.id || null,
+        status: "sent",
+      });
+      return result.data;
+    } catch (err) {
+      console.error("[email] Safe invitation log error:", {
+        to: actualRecipient,
+        from: mailOptions.from,
+        templateType: "project_invitation",
+        providerMessageId: null,
+        status: "failed",
+      });
+      throw err;
+    }
   }
 }
 

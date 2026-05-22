@@ -72,7 +72,9 @@ const emailViewModel = {
       }
 
       for (const userIdStr of recipientIds) {
-        const userId = new mongoose.Types.ObjectId(userIdStr);
+        const userId = mongoose.Types.ObjectId.isValid(userIdStr)
+          ? new mongoose.Types.ObjectId(userIdStr)
+          : userIdStr;
         // Find user and verify notification preferences
         const user = await User.findById(userId);
         if (!user || user.status !== "active") continue;
