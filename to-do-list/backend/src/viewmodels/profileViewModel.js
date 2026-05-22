@@ -585,12 +585,38 @@ const profileViewModel = {
     };
   },
 
-  async uploadAvatar(userId, fileBuffer) {
+  async uploadAvatar(userId, file) {
     if (!userId) {
       throw new ProfileViewModelError(400, "MISSING_USER_ID", "User ID là bắt buộc");
     }
+
+    let fileBuffer;
+    let mimetype = "image/png"; // default fallback
+    let size = 0;
+
+    if (file && Buffer.isBuffer(file)) {
+      fileBuffer = file;
+      size = file.length;
+    } else if (file && file.buffer) {
+      fileBuffer = file.buffer;
+      mimetype = file.mimetype || "image/png";
+      size = file.size || file.buffer.length;
+    }
+
     if (!fileBuffer) {
       throw new ProfileViewModelError(400, "AVATAR_FILE_REQUIRED", "Không có tệp ảnh nào được gửi lên");
+    }
+
+    // Validate size (5MB limit)
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (size > maxSizeBytes) {
+      throw new ProfileViewModelError(400, "AVATAR_FILE_TOO_LARGE", "Dung lượng ảnh đại diện không được vượt quá 5MB.");
+    }
+
+    // Validate file type
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedMimeTypes.includes(mimetype)) {
+      throw new ProfileViewModelError(400, "AVATAR_INVALID_TYPE", "Định dạng ảnh không hợp lệ. Chỉ chấp nhận ảnh JPEG, PNG, WebP hoặc GIF.");
     }
 
     const user = await User.findById(userId);
@@ -602,14 +628,16 @@ const profileViewModel = {
     const oldAvatarUrl = user.avatarUrl;
 
     try {
+      // 1. Upload new avatar first
       const uploadResult = await cloudinaryService.uploadAvatar(fileBuffer, userId);
 
+      // 2. Save only after upload succeeds
       user.avatarUrl = uploadResult.secureUrl;
       user.avatarPublicId = uploadResult.publicId;
       await user.save();
 
-      // Clean up old avatar assets on Cloudinary in the background
-      if (oldAvatarPublicId) {
+      // 3. Delete old avatar after saving new avatar (if it exists and differs)
+      if (oldAvatarPublicId && oldAvatarPublicId !== uploadResult.publicId) {
         cloudinaryService.deleteAvatar(oldAvatarPublicId).catch((err) => {
           console.error("Failed to delete old avatar on Cloudinary:", err);
         });
@@ -630,13 +658,19 @@ const profileViewModel = {
         success: true,
         data: {
           avatarUrl: uploadResult.secureUrl,
+          avatarPublicId: uploadResult.publicId,
+          user: formatUserResponse(user),
           thumbnails: uploadResult.thumbnails,
         },
         message: "Ảnh đại diện đã được tải lên thành công",
       };
     } catch (error) {
       console.error("Avatar upload VM error:", error);
-      throw new ProfileViewModelError(500, "AVATAR_UPLOAD_FAILED", "Tải ảnh đại diện lên thất bại: " + error.message);
+      throw new ProfileViewModelError(
+        error.statusCode || 500,
+        error.errorCode || "AVATAR_UPLOAD_FAILED",
+        "Tải ảnh đại diện lên thất bại: " + error.message
+      );
     }
   },
 

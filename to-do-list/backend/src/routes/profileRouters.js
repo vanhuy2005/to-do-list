@@ -128,7 +128,7 @@ router.post(
   errorHandler(async (req, res) => {
     const result = await profileViewModel.uploadAvatar(
       req.user?.id || req.userId,
-      req.file.buffer
+      req.file
     );
     res.status(result.statusCode).json({
       success: result.success,
