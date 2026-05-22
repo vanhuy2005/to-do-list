@@ -210,6 +210,8 @@ export default function EditTaskPage() {
         tags: data.tags?.length > 0 ? data.tags : undefined,
       };
 
+      console.log("EditTaskPage submitting payload:", payload);
+
       await taskService.updateTask(id, payload);
       toast.success("Cập nhật thành công!", {
         description: `Nhiệm vụ "${data.title}" đã được cập nhật.`,

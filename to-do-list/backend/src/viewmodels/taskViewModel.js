@@ -92,7 +92,10 @@ const validateCreatePayload = (payload) => {
 };
 
 const normalizeDueDate = (value) => {
-  if (value === null || value === undefined || value === "") {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || value === "") {
     return null;
   }
   const date = new Date(value);
@@ -120,9 +123,11 @@ const normalizeCreateTaskPayload = (payload) => {
           .filter(Boolean)
       : source?.tags,
     dueDate:
-      source?.dueDate === "" || source?.dueDate === undefined
-        ? null
-        : source?.dueDate,
+      source?.dueDate === undefined
+        ? undefined
+        : source?.dueDate === ""
+          ? null
+          : source?.dueDate,
     projectId: source?.projectId,
   };
 
@@ -316,7 +321,7 @@ const formatShareMembers = async (task) => {
     return [];
   }
 
-  return taskWithUsers.shares.map((share) => ({
+  const activeShares = taskWithUsers.shares.map((share) => ({
     userId: share.userId?._id || share.userId,
     email: share.userId?.email || null,
     displayName: share.userId?.displayName || null,
@@ -327,7 +332,31 @@ const formatShareMembers = async (task) => {
       email: share.sharedBy?.email || null,
       displayName: share.sharedBy?.displayName || null,
     },
+    isPending: false,
   }));
+
+  const pendingInvites = await TaskInvitation.find({
+    taskId: task._id,
+    status: "pending",
+    expiresAt: { $gt: new Date() },
+  }).populate("invitedBy", "email displayName");
+
+  const formattedPending = pendingInvites.map((invite) => ({
+    userId: invite._id,
+    email: invite.email,
+    displayName: null,
+    permission: invite.permission,
+    sharedAt: invite.createdAt,
+    sharedBy: {
+      userId: invite.invitedBy?._id || invite.invitedBy,
+      email: invite.invitedBy?.email || null,
+      displayName: invite.invitedBy?.displayName || null,
+    },
+    isPending: true,
+  }));
+
+  return [...activeShares, ...formattedPending];
+};
 };
 
 const buildTaskSummary = (task) => {
@@ -655,14 +684,20 @@ const taskViewModel = {
     }
 
     if (taskData.dueDate !== undefined) {
+      console.log("createTask - Received dueDate payload:", taskData.dueDate);
       taskData.dueDate = normalizeDueDate(taskData.dueDate);
-      if (taskData.dueDate && taskData.dueDate > new Date()) {
+      if (taskData.dueDate === null || taskData.dueDate > new Date()) {
         taskData.isOverdue = false;
         taskData.overdueAt = null;
       }
+      console.log("createTask - Normalized dueDate:", taskData.dueDate);
+    } else {
+      taskData.dueDate = null;
+      taskData.isOverdue = false;
+      taskData.overdueAt = null;
     }
 
-    // Support optional projectId: ensure project exists and user is member/owner
+    // Support optional projectId: ensure project exists and user has owner/editor role
     if (normalizedPayload.projectId) {
       const proj = await Project.findById(normalizedPayload.projectId);
       if (!proj) {
@@ -673,14 +708,23 @@ const taskViewModel = {
         );
       }
 
-      const isMember =
-        String(proj.ownerId) === String(ownerId) ||
-        (proj.members || []).some((m) => String(m.userId) === String(ownerId));
-      if (!isMember) {
+      const isOwner = String(proj.ownerId) === String(ownerId);
+      const member = (proj.members || []).find((m) => String(m.userId) === String(ownerId));
+      const role = isOwner ? "owner" : (member ? member.role : null);
+
+      if (!role) {
         throw new ViewModelError(
           403,
           "FORBIDDEN_PROJECT",
-          "Bạn không có quyền tạo task trong project này",
+          "Bạn không có quyền tạo công việc trong dự án này",
+        );
+      }
+
+      if (role !== "owner" && role !== "editor") {
+        throw new ViewModelError(
+          403,
+          "FORBIDDEN_PROJECT_TASK_CREATE",
+          "Bạn không có quyền tạo công việc trong dự án này",
         );
       }
 
@@ -691,6 +735,8 @@ const taskViewModel = {
       ...taskData,
       ownerId,
     });
+
+    console.log("createTask - Saved to DB dueDate:", task.dueDate);
 
     await writeTaskAuditLog({
       actorId: ownerId,
@@ -761,11 +807,13 @@ const taskViewModel = {
     }
 
     if (updateData.dueDate !== undefined) {
+      console.log("updateTask - Received dueDate payload:", payload.dueDate);
       updateData.dueDate = normalizeDueDate(updateData.dueDate);
-      if (!updateData.dueDate || updateData.dueDate > new Date()) {
+      if (updateData.dueDate === null || updateData.dueDate > new Date()) {
         updateData.isOverdue = false;
         updateData.overdueAt = null;
       }
+      console.log("updateTask - Normalized dueDate:", updateData.dueDate);
     }
 
     const updatedTask = await Task.findOneAndUpdate(
@@ -773,6 +821,8 @@ const taskViewModel = {
       updateData,
       { new: true },
     );
+
+    console.log("updateTask - Saved to DB dueDate:", updatedTask.dueDate);
 
     await writeTaskAuditLog({
       actorId,
@@ -1040,10 +1090,15 @@ const taskViewModel = {
     });
 
     const inviterUser = await User.findById(ownerId);
+    let emailSkippedReason = null;
     try {
-      await emailService.sendTaskInvitation(collaborator.email, inviterUser, task, plainToken);
+      const emailResult = await emailService.sendTaskInvitation(collaborator.email, inviterUser, task, plainToken);
+      if (emailResult && emailResult.skipped) {
+        emailSkippedReason = emailResult.emailSkippedReason;
+      }
     } catch (err) {
       console.error("Lỗi gửi email lời mời task:", err.message);
+      emailSkippedReason = err.message;
     }
 
     await writeTaskAuditLog({
@@ -1066,6 +1121,7 @@ const taskViewModel = {
       data: {
         taskId,
         shares,
+        emailSkippedReason,
       },
       message: "Đã gửi lời mời cộng tác nhiệm vụ qua email thành công",
     };
@@ -1121,14 +1177,21 @@ const taskViewModel = {
     );
 
     if (task.shares.length === beforeCount) {
-      throw new ViewModelError(
-        404,
-        "TASK_SHARE_NOT_FOUND",
-        "Không tìm thấy người dùng trong danh sách chia sẻ",
-      );
+      const inviteDeleted = await TaskInvitation.findOneAndDelete({
+        _id: collaboratorId,
+        taskId: task._id,
+        status: "pending",
+      });
+      if (!inviteDeleted) {
+        throw new ViewModelError(
+          404,
+          "TASK_SHARE_NOT_FOUND",
+          "Không tìm thấy người dùng hoặc lời mời trong danh sách chia sẻ",
+        );
+      }
+    } else {
+      await task.save();
     }
-
-    await task.save();
 
     const shares = await formatShareMembers(task);
     return {
@@ -1138,7 +1201,7 @@ const taskViewModel = {
         taskId,
         shares,
       },
-      message: "Đã thu hồi quyền truy cập task",
+      message: "Đã thu hồi quyền truy cập hoặc lời mời task",
     };
   },
 
