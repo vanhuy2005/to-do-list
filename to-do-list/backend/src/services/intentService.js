@@ -3,6 +3,19 @@ import { governor } from './concurrencyGovernor.js';
 import { recoverAndValidate } from './outputRecovery.js';
 import { parseDateFromText, extractPriority } from './nlpService.js';
 
+
+const withTimeout = (fn, ms, label) => async () => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([fn(), timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 // --- Constants & Config ---
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -12,8 +25,8 @@ const parseKeyList = (raw) =>
     .map((k) => k.trim())
     .filter(Boolean);
 
-const OPENROUTER_KEYS = parseKeyList(process.env.OPENROUTER_API_KEY);
-const GEMINI_KEYS = parseKeyList(process.env.GEMINI_API_KEY);
+const getOpenRouterKeys = () => parseKeyList(process.env.OPENROUTER_API_KEY);
+const getGeminiKeys = () => parseKeyList(process.env.GEMINI_API_KEY);
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:1.5b';
@@ -23,13 +36,15 @@ let openRouterKeyIndex = 0;
 let geminiKeyIndex = 0;
 
 const getNextOpenRouterKey = () => {
-  if (OPENROUTER_KEYS.length === 0) return null;
-  return OPENROUTER_KEYS[openRouterKeyIndex++ % OPENROUTER_KEYS.length];
+  const keys = getOpenRouterKeys();
+  if (keys.length === 0) return null;
+  return keys[openRouterKeyIndex++ % keys.length];
 };
 
 const getNextGeminiKey = () => {
-  if (GEMINI_KEYS.length === 0) return null;
-  return GEMINI_KEYS[geminiKeyIndex++ % GEMINI_KEYS.length];
+  const keys = getGeminiKeys();
+  if (keys.length === 0) return null;
+  return keys[geminiKeyIndex++ % keys.length];
 };
 
 const openRouterClientPool = new Map();
@@ -48,58 +63,162 @@ const getOpenRouterClientForKey = (apiKey) => {
   return openRouterClientPool.get(apiKey);
 };
 
-const SYSTEM_PROMPT = `You are a smart task extraction assistant embedded in a Vietnamese to-do app.
-Your job: analyze a voice transcript and extract a structured task.
+const SYSTEM_PROMPT = `You are a smart, enterprise-grade Task Voice Agent embedded in a Vietnamese to-do app.
+Your job: Analyze a voice transcript and extract a highly structured task intent in valid JSON.
 
-OUTPUT: Return ONLY a valid JSON object. No markdown, no explanation, no text before or after the JSON.
-
-JSON schema (follow exactly):
+JSON Schema to follow strictly:
 {
-  "title": string,       // The SHORT core action. Max 60 chars. What is the main thing to DO?
-  "description": string | null,  // Supporting details, sub-items, or context. Max 300 chars. Null if nothing extra.
-  "datePhrase": string | null,   // COPY the exact time expression from the transcript. Do NOT convert to a date. Null if none.
-  "tags": string[],     // 1-4 short category tags (lowercase). Infer from context.
-  "priority": "low" | "medium" | "high" | "urgent",
-  "confidence": number  // 0.0 to 1.0. How certain are you about this extraction?
+  "intent": "create" | "update" | "complete" | "search",
+  "confidence": number, // 0.0 to 1.0
+  "isClarificationRequired": boolean, // Set to true if crucial info is missing (e.g., missing time for recurring tasks)
+  "clarificationQuestion": string | null, // Vietnamese polite question asking for missing info, or null
+  "missingFields": string[], // e.g. ["time"] or []
+  
+  "task": {
+    "title": string | null, // Core action, 2-60 chars. Strip fillers like "nhắc tôi", "hãy", "giúp". Null if not create.
+    "description": string | null, // Supporting details, sub-items, or context like reasons introduced by "vì", "để", "nhớ"
+    "datePhrase": string | null, // Exact Vietnamese date/time phrase copied from transcript, e.g. "sáng mai", "1 giờ đêm", "thứ sáu tuần sau"
+    "dueDate": null, // Always null
+    "isRecurring": boolean,
+    "recurrence": "daily" | "weekly" | "monthly" | null,
+    "time": string | null, // Format "HH:mm" (24h) if a specific time is mentioned, e.g., "06:00" for "6 giờ sáng"
+    "priority": "low" | "medium" | "high", // Only allow "low", "medium", or "high" (urgent maps to high)
+    "tags": string[] // 1-3 short lowercase category tags
+  } | null,
+  
+  "updateData": {
+    "taskQuery": string | null, // The search query/title of the task to be updated
+    "updates": {
+      "title": string | optional,
+      "description": string | optional,
+      "dueDate": string | optional,
+      "priority": "low" | "medium" | "high" | optional,
+      "tags": string[] | optional
+    } | null
+  } | null,
+  
+  "completeData": {
+    "taskQuery": string | null // The search query/title of the task to complete
+  } | null,
+  
+  "searchData": {
+    "searchQuery": string | null // The query to search tasks
+  } | null
 }
 
 CRITICAL RULES:
-- title = the ACTION (verb + core object). Short. Think "what is the task name in a task manager?"
-- description = details, items, sub-tasks, people involved, context. NOT a repeat of the title.
-- datePhrase = copy EXACT words ("sáng mai", "thứ 6 tuần sau", "Friday morning"). NEVER calculate the date yourself.
-- tags = category hints like ["shopping", "work", "meeting", "personal", "urgent"]. Use Vietnamese or English matching the transcript language.
-- priority = infer intent (e.g. "gấp", "quan trọng", "urgent" -> high/urgent; "rảnh", "khi nào cũng được" -> low; otherwise medium).
-- If the transcript is a reminder/notification ("nhắc tôi...", "remind me to..."), strip the reminder phrase — extract what to DO.
+1. Intent Mapping:
+   - "Nhắc tôi...", "Tạo task...", "Đi tập...", "Mua sữa..." -> "create"
+   - "Cập nhật...", "Đổi deadline...", "Thay đổi..." -> "update"
+   - "Hoàn thành...", "Đánh dấu xong...", "Xong task..." -> "complete"
+   - "Tìm kiếm...", "Liệt kê...", "Xem các task..." -> "search"
+2. Recurring Tasks:
+   - "mỗi ngày", "hàng ngày" -> isRecurring: true, recurrence: "daily"
+   - "mỗi tuần", "hàng tuần", "thứ hai hàng tuần" -> isRecurring: true, recurrence: "weekly"
+   - "mỗi tháng", "hàng tháng" -> isRecurring: true, recurrence: "monthly"
+   - If user asks for a recurring task (e.g., "mỗi ngày đi tập gym") but does not specify a time, set isClarificationRequired: true, add "time" to missingFields, and write a polite Vietnamese clarificationQuestion: "Bạn muốn tôi nhắc đi tập gym vào mấy giờ mỗi ngày?"
+3. Priority Mapping:
+   - Only allow "low", "medium", or "high". "urgent" maps to "high". DO NOT add "urgent" to tags.
+4. Description:
+   - DO NOT merge or swallow descriptions into titles. Keep title very short (e.g. "Mua sữa"). Keep description for extra details (e.g. "Vì con hết sữa").
 
 ---
-FEW-SHOT EXAMPLES (learn the pattern from these):
+FEW-SHOT EXAMPLES:
 
-Input: "Nhắc tôi đi siêu thị mua trứng và sữa vào sáng mai"
-Output: {"title":"Đi siêu thị","description":"Mua trứng và sữa","datePhrase":"sáng mai","tags":["mua sắm","thực phẩm"],"priority":"medium","confidence":0.95}
+Input: "Nhắc tôi mỗi ngày đi tập gym lúc 6 giờ sáng"
+Output: {
+  "intent": "create",
+  "confidence": 0.98,
+  "isClarificationRequired": false,
+  "clarificationQuestion": null,
+  "missingFields": [],
+  "task": {
+    "title": "Đi tập gym",
+    "description": null,
+    "datePhrase": "mỗi ngày lúc 6 giờ sáng",
+    "dueDate": null,
+    "isRecurring": true,
+    "recurrence": "daily",
+    "time": "06:00",
+    "priority": "medium",
+    "tags": ["sức khỏe", "thể thao"]
+  },
+  "updateData": null,
+  "completeData": null,
+  "searchData": null
+}
 
-Input: "Call meeting with the marketing team on Friday to discuss Q3 campaign"
-Output: {"title":"Meeting với marketing team","description":"Thảo luận chiến dịch Q3","datePhrase":"Friday","tags":["meeting","marketing","work"],"priority":"medium","confidence":0.92}
+Input: "Nhắc tôi mỗi ngày đi tập gym"
+Output: {
+  "intent": "create",
+  "confidence": 0.95,
+  "isClarificationRequired": true,
+  "clarificationQuestion": "Bạn muốn tôi nhắc đi tập gym vào mấy giờ mỗi ngày?",
+  "missingFields": ["time"],
+  "task": {
+    "title": "Đi tập gym",
+    "description": null,
+    "datePhrase": "mỗi ngày",
+    "dueDate": null,
+    "isRecurring": true,
+    "recurrence": "daily",
+    "time": null,
+    "priority": "medium",
+    "tags": ["sức khỏe", "thể thao"]
+  },
+  "updateData": null,
+  "completeData": null,
+  "searchData": null
+}
 
-Input: "Gửi báo cáo tháng 5 cho anh Nam trước 5 giờ chiều hôm nay"
-Output: {"title":"Gửi báo cáo tháng 5 cho anh Nam","description":null,"datePhrase":"5 giờ chiều hôm nay","tags":["công việc","báo cáo"],"priority":"medium","confidence":0.93}
+Input: "Hoàn thành task mua sữa"
+Output: {
+  "intent": "complete",
+  "confidence": 0.97,
+  "isClarificationRequired": false,
+  "clarificationQuestion": null,
+  "missingFields": [],
+  "task": null,
+  "updateData": null,
+  "completeData": {
+    "taskQuery": "mua sữa"
+  },
+  "searchData": null
+}
 
-Input: "Đặt lịch khám răng tuần sau, nhớ mang theo bảo hiểm y tế"
-Output: {"title":"Đặt lịch khám răng","description":"Mang theo bảo hiểm y tế","datePhrase":"tuần sau","tags":["sức khỏe","khám bệnh"],"priority":"medium","confidence":0.91}
+Input: "Cập nhật task chạy bộ thành lúc 7 giờ tối"
+Output: {
+  "intent": "update",
+  "confidence": 0.95,
+  "isClarificationRequired": false,
+  "clarificationQuestion": null,
+  "missingFields": [],
+  "task": null,
+  "updateData": {
+    "taskQuery": "chạy bộ",
+    "updates": {
+      "dueDate": "7 giờ tối"
+    }
+  },
+  "completeData": null,
+  "searchData": null
+}
 
-Input: "Remind me to buy a birthday gift for mom, something related to cooking"
-Output: {"title":"Mua quà sinh nhật cho mẹ","description":"Liên quan đến nấu ăn","datePhrase":null,"tags":["mua sắm","gia đình"],"priority":"medium","confidence":0.88}
-
-Input: "Họp standup hàng ngày lúc 9 giờ sáng với team backend"
-Output: {"title":"Họp standup với team backend","description":null,"datePhrase":"9 giờ sáng","tags":["meeting","work","backend"],"priority":"medium","confidence":0.94}
-
-Input: "Fix bug đăng nhập bị lỗi 401 khi dùng token hết hạn, ảnh hưởng production gấp"
-Output: {"title":"Fix bug lỗi 401 đăng nhập","description":"Token hết hạn gây lỗi trên production","datePhrase":null,"tags":["bug","backend","production"],"priority":"urgent","confidence":0.97}
-
-Input: "Ôn thi cuối kỳ môn toán, tập trung phần tích phân và đạo hàm"
-Output: {"title":"Ôn thi cuối kỳ môn toán","description":"Tập trung phần tích phân và đạo hàm","datePhrase":null,"tags":["học tập","thi cử"],"priority":"medium","confidence":0.90}
----
-
-Now extract the task from the user's transcript. Return ONLY the JSON.`;
+Input: "Tìm các task về học tập"
+Output: {
+  "intent": "search",
+  "confidence": 0.96,
+  "isClarificationRequired": false,
+  "clarificationQuestion": null,
+  "missingFields": [],
+  "task": null,
+  "updateData": null,
+  "completeData": null,
+  "searchData": {
+    "searchQuery": "học tập"
+  }
+}
+`;
 
 /**
  * Correct Vietnamese phonetic tone/vowel confusion errors safely.
@@ -127,25 +246,44 @@ export async function extractIntent({ transcript, requestId }) {
   const startAt = Date.now();
   const correctedTranscript = phoneticCorrect(transcript);
 
-  let aiDraft = null;
-  const providers = ['openrouter', 'gemini', 'ollama'];
+  // 1. Dynamic Provider Chain based on key availability
+  const openRouterKeys = getOpenRouterKeys();
+  const geminiKeys = getGeminiKeys();
+
+  const providers = [];
+  const hasAnyKey = openRouterKeys.length > 0 || geminiKeys.length > 0;
+  if (openRouterKeys.length > 0 || (!hasAnyKey && process.env.NODE_ENV === 'test')) {
+    providers.push('openrouter');
+  }
+  if (geminiKeys.length > 0 || (!hasAnyKey && process.env.NODE_ENV === 'test')) {
+    providers.push('gemini');
+  }
+  if (process.env.OLLAMA_ENABLED === 'true') {
+    providers.push('ollama');
+  }
+
   const requestFns = {
-    openrouter: () => requestOpenRouter(correctedTranscript),
-    gemini: () => requestGemini(correctedTranscript),
-    ollama: () => requestOllama(correctedTranscript),
+    openrouter: withTimeout(() => requestOpenRouter(correctedTranscript), 15000, 'OpenRouter'),
+    gemini: withTimeout(() => requestGemini(correctedTranscript), 15000, 'Gemini'),
+    ollama: withTimeout(() => requestOllama(correctedTranscript), 8000, 'Ollama'),
   };
 
+  let aiDraft = null;
+  let chosenProvider = null;
+
   for (const provider of providers) {
+    const providerStart = Date.now();
     try {
       const rawOutput = await governor.run(provider, correctedTranscript, requestFns[provider]);
       aiDraft = recoverAndValidate(rawOutput, correctedTranscript);
+      chosenProvider = provider;
 
       console.info({
         event: 'intent.provider_success',
         provider,
         request_id: requestId,
         confidence: aiDraft.confidence,
-        has_description: !!aiDraft.description,
+        latency_ms: Date.now() - providerStart,
       });
       break; 
     } catch (err) {
@@ -155,6 +293,7 @@ export async function extractIntent({ transcript, requestId }) {
         error: err.message,
         code: err.code ?? 'UNKNOWN',
         request_id: requestId,
+        latency_ms: Date.now() - providerStart,
       });
     }
   }
@@ -162,38 +301,151 @@ export async function extractIntent({ transcript, requestId }) {
   if (!aiDraft) {
     console.warn({ event: 'intent.fallback', request_id: requestId, reason: 'All AI providers failed' });
     aiDraft = {
-      title: correctedTranscript.slice(0, 100).trim() || '[Task từ giọng nói]',
-      description: null,
-      datePhrase: null,
-      tags: [],
-      priority: 'medium',
+      intent: 'create',
       confidence: 0.3,
+      isClarificationRequired: false,
+      clarificationQuestion: null,
+      missingFields: [],
+      task: {
+        title: correctedTranscript.slice(0, 100).trim() || '[Task từ giọng nói]',
+        description: null,
+        datePhrase: null,
+        dueDate: null,
+        isRecurring: false,
+        recurrence: null,
+        time: null,
+        priority: 'medium',
+        tags: []
+      }
     };
   }
 
-  const dueDate = parseDateFromText(aiDraft.datePhrase ?? correctedTranscript);
-  const priority = extractPriority(correctedTranscript);
-  const finalPriority = (priority && priority !== 'medium') ? priority : (aiDraft.priority || 'medium');
+  // 2. Normalize and check fields based on old/new schema
+  const isNewSchema = 'intent' in aiDraft;
+  
+  let intent = isNewSchema ? aiDraft.intent : 'create';
+  let confidence = aiDraft.confidence ?? 0.8;
+  let isClarificationRequired = isNewSchema ? (aiDraft.isClarificationRequired ?? false) : false;
+  let clarificationQuestion = isNewSchema ? (aiDraft.clarificationQuestion ?? null) : null;
+  let missingFields = isNewSchema ? (aiDraft.missingFields ?? []) : [];
 
+  let task = null;
+  let updateData = isNewSchema ? aiDraft.updateData : null;
+  let completeData = isNewSchema ? aiDraft.completeData : null;
+  let searchData = isNewSchema ? aiDraft.searchData : null;
+
+  // Resolve priority
+  const priority = extractPriority(correctedTranscript);
+
+  // Reconstruct unified response fields
+  let title = '[Task từ giọng nói]';
+  let description = null;
+  let datePhrase = null;
+  let dueDate = null;
+  let tags = [];
+  let finalPriority = 'medium';
+
+  if (isNewSchema) {
+    if (aiDraft.task) {
+      task = { ...aiDraft.task };
+      
+      // Resolve dueDate
+      if (task.datePhrase) {
+        task.dueDate = parseDateFromText(task.datePhrase);
+      } else {
+        task.dueDate = parseDateFromText(correctedTranscript);
+      }
+
+      // Map priority: only allow "low", "medium", "high"
+      let p = task.priority || 'medium';
+      
+      // Determine finalPriority (root-level, maintains 'urgent')
+      let rootPriority = p;
+      if (priority && priority !== 'medium') {
+        rootPriority = priority;
+      }
+      
+      // task.priority maps 'urgent' to 'high'
+      if (rootPriority === 'urgent') {
+        p = 'high';
+      } else {
+        p = rootPriority;
+      }
+      
+      task.priority = p;
+
+      // Extract details
+      title = task.title?.trim() || title;
+      description = task.description || null;
+      datePhrase = task.datePhrase || null;
+      dueDate = task.dueDate || null;
+      tags = task.tags || [];
+      // Support clean mapped priority (low/medium/high) for the new schema
+      finalPriority = rootPriority;
+    }
+  } else {
+    // Legacy schema fallback/mock support
+    let p = aiDraft.priority || 'medium';
+    if (priority && priority !== 'medium') p = priority;
+    
+    datePhrase = aiDraft.datePhrase || null;
+    dueDate = parseDateFromText(datePhrase ?? correctedTranscript);
+    title = aiDraft.title?.trim() || title;
+    description = aiDraft.description || null;
+    tags = aiDraft.tags || [];
+    finalPriority = p;
+
+    let taskPriority = finalPriority;
+    if (taskPriority === 'urgent') taskPriority = 'high';
+
+    task = {
+      title,
+      description,
+      datePhrase,
+      dueDate,
+      isRecurring: false,
+      recurrence: null,
+      time: null,
+      priority: taskPriority,
+      tags
+    };
+  }
+
+  // 3. Structured log metrics for observability
   const latency = Date.now() - startAt;
   console.info({
     event: 'intent.complete',
     request_id: requestId,
+    provider: chosenProvider || 'fallback',
     latency_ms: latency,
-    has_due_date: !!dueDate,
-    has_description: !!aiDraft.description,
-    priority: finalPriority,
-    confidence: aiDraft.confidence,
+    intent,
+    confidence,
+    parse_success: !!chosenProvider,
+    fallback_used: !chosenProvider,
+    missing_fields: missingFields,
   });
 
   return {
-    title: aiDraft.title?.trim() || '[Task từ giọng nói]',
-    description: aiDraft.description,
-    datePhrase: aiDraft.datePhrase,
+    // Backward compatibility fields
+    title,
+    description,
+    datePhrase,
     dueDate,
     priority: finalPriority,
-    tags: aiDraft.tags,
-    confidence: aiDraft.confidence,
+    tags,
+    confidence,
+
+    // Rich Voice Agent fields
+    intent,
+    isClarificationRequired,
+    clarificationQuestion,
+    missingFields,
+    task,
+    updateData,
+    completeData,
+    searchData,
+    provider: chosenProvider || 'fallback',
+    latency_ms: latency
   };
 }
 
