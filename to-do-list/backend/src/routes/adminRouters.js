@@ -34,6 +34,20 @@ const errorHandler = (fn) => async (req, res, next) => {
   }
 };
 
+// GET /admin/dashboard - dashboard tổng quan
+router.get(
+  "/dashboard",
+  requireRole("admin"),
+  requirePermission("analytics:read"),
+  errorHandler(async (req, res) => {
+    const result = await adminViewModel.getDashboard(req.query);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  }),
+);
+
 // GET /admin/users - danh sách users
 router.get(
   "/users",
@@ -62,13 +76,62 @@ router.put(
   }),
 );
 
-// DELETE /admin/users/:id - xóa user
+// DELETE /admin/users/:id - xóa user (soft delete)
 router.delete(
   "/users/:id",
   requireRole("admin"),
   requirePermission("users:delete"),
   errorHandler(async (req, res) => {
-    const result = await adminViewModel.deleteUserOffline(req.params.id);
+    const adminId = req.user?.id || req.userId;
+    const result = await adminViewModel.softDeleteUser(req.params.id, adminId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+// POST /admin/users/:id/restore - khôi phục user từ thùng rác
+router.post(
+  "/users/:id/restore",
+  requireRole("admin"),
+  requirePermission("users:update"),
+  errorHandler(async (req, res) => {
+    const adminId = req.user?.id || req.userId;
+    const result = await adminViewModel.restoreUser(req.params.id, adminId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+// POST /admin/users/:id/disable - vô hiệu hóa user
+router.post(
+  "/users/:id/disable",
+  requireRole("admin"),
+  requirePermission("users:disable"),
+  errorHandler(async (req, res) => {
+    const adminId = req.user?.id || req.userId;
+    const result = await adminViewModel.disableUser(req.params.id, adminId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  }),
+);
+
+// POST /admin/users/:id/enable - kích hoạt lại user
+router.post(
+  "/users/:id/enable",
+  requireRole("admin"),
+  requirePermission("users:enable"),
+  errorHandler(async (req, res) => {
+    const adminId = req.user?.id || req.userId;
+    const result = await adminViewModel.enableUser(req.params.id, adminId);
     res.status(result.statusCode).json({
       success: result.success,
       data: result.data,
@@ -140,7 +203,7 @@ router.get(
   requireRole("admin"),
   requirePermission("analytics:read"),
   errorHandler(async (req, res) => {
-    const result = await adminViewModel.getAnalytics();
+    const result = await adminViewModel.getAnalytics(req.query);
     res.status(result.statusCode).json({
       success: result.success,
       data: result.data,

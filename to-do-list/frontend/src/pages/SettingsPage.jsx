@@ -369,78 +369,57 @@ export default function SettingsPage({ setActiveTab }) {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
               <LockKeyholeIcon className="size-6 text-primary" />
-              Tài khoản
+              Tài khoản liên kết
             </div>
 
-            <div className="space-y-3 text-sm font-bold text-foreground">
-              <AvatarUpload
-                avatarUrl={profile?.avatarUrl}
-                displayName={profile?.displayName}
-                onAvatarChange={(newUrl) => {
-                  setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
-                }}
-              />
-
-
-
-              <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <span className="text-base uppercase font-black">Email</span>
-                <span className="max-w-[55%] truncate text-right font-bold text-muted-foreground lowercase">
-                  {profile?.email || "---"}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <span className="text-base uppercase font-black">
-                  Tài khoản liên kết
-                </span>
-                <div className="flex items-center justify-between border-t-2 border-border/10 pt-3">
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex size-10 items-center justify-center rounded-xl border-[2.5px] border-border bg-white">
-                      <svg className="size-5" viewBox="0 0 24 24">
-                        <path
-                          fill="#EA4335"
-                          d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3A11.97 11.97 0 0 0 12 .909a11.966 11.966 0 0 0-8.91 4.148l2.176 4.708z"
-                        />
-                        <path
-                          fill="#4285F4"
-                          d="M23.455 12.273c0-.818-.073-1.609-.209-2.373H12v4.582h6.418a5.55 5.55 0 0 1-2.4 3.645l2.173 4.71a11.983 11.983 0 0 0 7.264-10.564z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M3.09 5.057L5.266 9.765a7.062 7.062 0 0 1 6.734-4.856c1.69 0 3.218.6 4.418 1.582L19.91 3A11.97 11.97 0 0 0 12 .909c-3.236 0-6.19 1.282-8.91 4.148z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 23.091a11.758 11.758 0 0 0 8.018-2.927l-2.173-4.71A7.018 7.018 0 0 1 12 19.091c-3.864 0-7.073-2.618-8.245-6.136L1.582 17.68A11.96 11.96 0 0 0 12 23.091z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-black">Google</p>
-                      <p className="text-xs font-bold text-muted-foreground">
-                        {hasGoogleLinked ? "Đã liên kết" : "Chưa liên kết"}
-                      </p>
-                    </div>
+            <div className="flex flex-col gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex size-10 items-center justify-center rounded-xl border-[2.5px] border-border bg-white shrink-0">
+                    <svg className="size-5" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3A11.97 11.97 0 0 0 12 .909a11.966 11.966 0 0 0-8.91 4.148l2.176 4.708z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M23.455 12.273c0-.818-.073-1.609-.209-2.373H12v4.582h6.418a5.55 5.55 0 0 1-2.4 3.645l2.173 4.71a11.983 11.983 0 0 0 7.264-10.564z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M3.09 5.057L5.266 9.765a7.062 7.062 0 0 1 6.734-4.856c1.69 0 3.218.6 4.418 1.582L19.91 3A11.97 11.97 0 0 0 12 .909c-3.236 0-6.19 1.282-8.91 4.148z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23.091a11.758 11.758 0 0 0 8.018-2.927l-2.173-4.71A7.018 7.018 0 0 1 12 19.091c-3.864 0-7.073-2.618-8.245-6.136L1.582 17.68A11.96 11.96 0 0 0 12 23.091z"
+                      />
+                    </svg>
                   </div>
-                  {hasGoogleLinked ? (
-                    <span className="rounded-lg border-[2px] border-border bg-[#34A853]/10 px-3 py-1.5 text-xs font-black uppercase text-[#34A853]">
-                      Đã liên kết
-                    </span>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleLinkGoogle}
-                      className="border-[2px] bg-white text-foreground comic-shadow-sm hover:bg-[#fff6d6]"
-                    >
-                      Liên kết
-                    </Button>
-                  )}
+                  <div>
+                    <p className="text-sm font-black">Google</p>
+                    <p className="text-xs font-bold text-muted-foreground">
+                      {hasGoogleLinked ? "Đã liên kết" : "Chưa liên kết"}
+                    </p>
+                  </div>
                 </div>
+                {hasGoogleLinked ? (
+                  <span className="rounded-lg border-[2px] border-border bg-[#34A853]/10 px-3 py-1.5 text-xs font-black uppercase text-[#34A853]">
+                    Đã liên kết
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleLinkGoogle}
+                    className="border-[2px] bg-white text-foreground comic-shadow-sm hover:bg-[#fff6d6]"
+                  >
+                    Liên kết
+                  </Button>
+                )}
               </div>
             </div>
           </div>
+
         </div>
       </div>
 

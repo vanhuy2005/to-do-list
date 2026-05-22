@@ -4,6 +4,7 @@ import api from "@/lib/axios";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import AdminSidebarNav from "./AdminSidebarNav";
+import UserAvatar from "@/components/UserAvatar";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Header Component
@@ -51,58 +52,30 @@ const AnalyticsHeader = () => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Filter Bar Component
+// Export Buttons Component (Simple clean floating buttons, no container section)
 // ─────────────────────────────────────────────────────────────────────────────
-const FilterBar = ({ timeRange, setTimeRange, onExportCSV, onExportPDF }) => (
-  <div
-    className="w-full px-4 md:px-8 py-3 bg-[#FFFDF7] border-b-4 md:border-b-5 border-[#111111] flex gap-2 md:gap-3 overflow-x-auto shrink-0"
-    style={{ boxShadow: "0 4px 0 #111111" }}
-  >
-    <button
-      onClick={() => setTimeRange("7days")}
-      className={`h-10 px-4 border-4 border-[#111111] rounded font-bold uppercase text-sm flex items-center gap-2 shrink-0 transition ${
-        timeRange === "7days"
-          ? "bg-[#FF2D55] text-white"
-          : "bg-white text-[#0F172A]"
-      }`}
-      style={{
-        fontFamily: "Plus Jakarta Sans",
-        letterSpacing: "1px",
-        boxShadow:
-          timeRange === "7days" ? "4px 4px 0 #111111" : "2px 2px 0 #111111",
-      }}
-    >
-      <CalendarDays width={16} height={16} />
-      <span>7 NGÀY QUA</span>
-    </button>
+const ExportButtons = ({ onExportCSV, onExportPDF }) => {
+  if (!onExportCSV || !onExportPDF) return null;
+  return (
+    <div className="flex items-center justify-end gap-3 mb-6">
+      <button
+        onClick={onExportCSV}
+        className="h-10 px-5 border-3 border-[#111111] bg-white hover:bg-gray-50 rounded-2xl font-black uppercase text-[11px] md:text-xs flex items-center gap-2 text-[#0F172A] shadow-[2px_2px_0px_#111111] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+      >
+        <FileText width={14} height={14} />
+        <span>Xuất CSV</span>
+      </button>
 
-    <button
-      onClick={onExportCSV}
-      className="h-10 px-4 border-4 border-[#111111] bg-white rounded font-bold uppercase text-sm flex items-center gap-2 shrink-0 text-[#0F172A] transition hover:bg-gray-50"
-      style={{
-        fontFamily: "Plus Jakarta Sans",
-        letterSpacing: "1px",
-        boxShadow: "4px 4px 0 #111111",
-      }}
-    >
-      <FileText width={16} height={16} />
-      <span>XUẤT CSV</span>
-    </button>
-
-    <button
-      onClick={onExportPDF}
-      className="h-10 px-4 border-4 border-[#111111] bg-[#FF2E54] rounded font-bold uppercase text-sm flex items-center gap-2 shrink-0 text-white transition hover:bg-[#FF1D45]"
-      style={{
-        fontFamily: "Plus Jakarta Sans",
-        letterSpacing: "1px",
-        boxShadow: "4px 4px 0 #111111",
-      }}
-    >
-      <FileDown width={16} height={16} />
-      <span>XUẤT PDF</span>
-    </button>
-  </div>
-);
+      <button
+        onClick={onExportPDF}
+        className="h-10 px-5 border-3 border-[#111111] bg-[#FF2E54] hover:bg-[#FF1D45] rounded-2xl font-black uppercase text-[11px] md:text-xs flex items-center gap-2 text-white shadow-[2px_2px_0px_#111111] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+      >
+        <FileDown width={14} height={14} />
+        <span>Xuất PDF</span>
+      </button>
+    </div>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mobile Bottom Navigation Component
@@ -142,28 +115,30 @@ const AnalyticsBottomNav = ({ activeTab, setActiveTab }) => {
 };
 
 // User Growth Bar Chart Card
-const UserGrowthCard = ({ data = [] }) => {
-  const days = ["TH2", "TH3", "TH4", "TH5", "TH6", "TH7", "CN"];
-  const maxValue = Math.max(...(data || [1]), 1);
+const UserGrowthCard = ({ data = [], timeRange, setTimeRange }) => {
+  const values = (data || []).map((item) =>
+    typeof item === "object" ? item.value : item
+  );
+  const maxValue = Math.max(...values, 1);
 
   // Create chart data with proper heights (scale to 180px max)
-  const chartData = (data || []).map((count, idx) => {
-    const height = Math.max(20, (count / maxValue) * 180);
-    let color = "rgba(255, 46, 84, 0.2)";
-    if (idx === 4)
-      color = "#FF2E54"; // TH6 - red
-    else if (idx === 5)
-      color = "#FFD60A"; // TH7 - yellow
-    else if (idx === 6)
-      color = "#000000"; // CN - black
-    else if (idx === 3)
-      color = "rgba(255, 46, 84, 0.8)"; // TH5
-    else if (idx === 2)
-      color = "rgba(255, 46, 84, 0.6)"; // TH4
-    else if (idx === 1) color = "rgba(255, 46, 84, 0.4)"; // TH3
+  const chartData = (data || []).map((item, idx) => {
+    const count = typeof item === "object" ? item.value : item;
+    const label = typeof item === "object" ? item.label : `N${idx + 1}`;
+    const height = Math.max(10, (count / maxValue) * 180);
 
-    return { label: days[idx], height, color };
+    let color = "rgba(255, 46, 84, 0.2)";
+    if (idx % 7 === 4) color = "#FF2D55"; // Pink
+    else if (idx % 7 === 5) color = "#FFD60A"; // Yellow
+    else if (idx % 7 === 6) color = "#00C2FF"; // Sky Blue
+    else if (idx % 7 === 3) color = "#10B981"; // Green
+    else color = "rgba(255, 46, 84, 0.5)";
+
+    return { label, height, color, count };
   });
+
+  const barWidth = chartData.length > 30 ? "6px" : chartData.length > 7 ? "16px" : "40px";
+  const gapClass = chartData.length > 30 ? "gap-1" : chartData.length > 7 ? "gap-2" : "gap-4";
 
   return (
     <div
@@ -171,63 +146,82 @@ const UserGrowthCard = ({ data = [] }) => {
       style={{ boxShadow: "4px 4px 0 #111111" }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 md:mb-8">
-        <h3
-          className="text-lg md:text-xl font-black text-[#0F172A] uppercase"
-          style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
-        >
-          Tăng Trưởng Người Dùng
-        </h3>
-        <div
-          className="bg-[#FF2E54] border-4 border-[#111111] px-3 py-1 rounded text-white font-bold text-xs uppercase"
-          style={{ fontFamily: "Plus Jakarta Sans", letterSpacing: "1px" }}
-        >
-          LIVE
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
+        <div className="flex items-center gap-3">
+          <h3
+            className="text-lg md:text-xl font-black text-[#0F172A] uppercase"
+            style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
+          >
+            Tăng Trưởng Người Dùng
+          </h3>
+          <div
+            className="bg-[#FF2E54] border-4 border-[#111111] px-3 py-1 rounded text-white font-bold text-xs uppercase"
+            style={{ fontFamily: "Plus Jakarta Sans", letterSpacing: "1px" }}
+          >
+            LIVE
+          </div>
         </div>
+
+        {/* Segmented Time Range Toggles inside card header */}
+        {timeRange && setTimeRange && (
+          <div className="flex items-center gap-1.5 bg-[#FFFDF7] border-3 border-black rounded-2xl p-1 shadow-[2px_2px_0px_#000] w-fit shrink-0">
+            {[
+              { id: "7days", label: "7 ngày" },
+              { id: "30days", label: "30 ngày" },
+              { id: "90days", label: "90 ngày" },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setTimeRange(item.id)}
+                className={`h-8 px-3 rounded-xl font-black uppercase text-[10px] transition-all duration-200 cursor-pointer ${
+                  timeRange === item.id
+                    ? "bg-[#FF2D55] text-white shadow-[1px_1px_0px_#000]"
+                    : "bg-transparent text-gray-700 hover:bg-black/5"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Chart Area */}
-      <div className="bg-[#F8FAFC] border-2 md:border-3 border-dashed border-[#CBD5E1] p-3 md:p-4 rounded-xl">
-        {/* Bars Container - using grid for perfect alignment */}
+      <div className="bg-[#F8FAFC] border-2 md:border-3 border-dashed border-[#CBD5E1] p-3 md:p-4 rounded-xl overflow-x-auto">
+        {/* Bars Container - using flex for perfect layout */}
         <div
-          className="grid gap-3 md:gap-4 h-48 md:h-56 mb-4 items-end justify-center"
-          style={{
-            gridTemplateColumns: `repeat(${chartData.length}, 40px)`,
-            justifyContent: "center",
-          }}
+          className={`flex h-48 md:h-56 mb-4 items-end justify-center ${gapClass}`}
         >
           {chartData.map((item, idx) => (
             <div
               key={idx}
+              title={`${item.label}: ${item.count} người dùng`}
+              className="transition-all hover:opacity-80"
               style={{
                 height: `${item.height}px`,
-                width: "40px",
+                width: barWidth,
                 backgroundColor: item.color,
-                border: "3px solid #111111",
+                border: "2px solid #111111",
                 borderRadius: "2px",
               }}
             />
           ))}
         </div>
 
-        {/* X-axis Labels - same grid layout */}
+        {/* X-axis Labels */}
         <div
-          className="grid gap-3 md:gap-4 justify-center"
-          style={{
-            gridTemplateColumns: `repeat(${chartData.length}, 40px)`,
-            justifyContent: "center",
-          }}
+          className={`flex justify-center ${gapClass}`}
         >
           {chartData.map((item, idx) => (
             <div
               key={idx}
-              className="text-xs font-bold text-[#94A3B8] uppercase text-center"
+              className="text-[9px] md:text-xs font-bold text-[#94A3B8] uppercase text-center truncate shrink-0"
               style={{
                 fontFamily: "Plus Jakarta Sans",
-                width: "40px",
+                width: barWidth,
               }}
             >
-              {item.label}
+              {chartData.length <= 7 || idx % Math.ceil(chartData.length / 7) === 0 ? item.label : ""}
             </div>
           ))}
         </div>
@@ -350,9 +344,11 @@ const TopUsersCard = ({ users = [] }) => {
             {/* Left side - Avatar + Name */}
             <div className="flex items-center gap-3 md:gap-4 flex-1">
               {/* Avatar */}
-              <div
-                className="w-8 md:w-10 h-8 md:h-10 border-3 border-[#111111] rounded-full shrink-0"
-                style={{ backgroundColor: user.color || "#CBD5E1" }}
+              <UserAvatar
+                avatarUrl={user.avatarUrl}
+                displayName={user.displayName}
+                sizeClassName="size-8 md:size-10"
+                textClassName="text-xs font-black uppercase tracking-tight"
               />
               {/* Name */}
               <div className="flex flex-col gap-1 flex-1">
@@ -478,7 +474,7 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        const result = await api.get("/admin/analytics");
+        const result = await api.get(`/admin/analytics?range=${timeRange}`);
         if (result.success && result.data) {
           setAnalyticsData(result.data);
         }
@@ -492,35 +488,33 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
     };
 
     fetchAnalytics();
-  }, []);
+  }, [timeRange]);
 
   if (error) {
     return (
-      <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col lg:flex-row">
-        {/* Header - Mobile only */}
-        <div className="lg:hidden w-full order-first">
-          <AnalyticsHeader />
-        </div>
+      <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col">
+        {/* Top Header - spans 100% width */}
+        <AnalyticsHeader />
 
-        {/* Sidebar - Desktop only, narrow */}
-        <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Main container underneath header */}
+        <div className="flex-1 flex flex-row min-h-0 relative">
+          {/* Sidebar - Desktop only */}
+          <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
-          {/* Header - Desktop only */}
-          <div className="hidden lg:block">
-            <AnalyticsHeader />
+          {/* Right Column: Error Message */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+            <main className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8 flex items-center justify-center h-96">
+              <div className="text-center">
+                <p className="text-red-600 font-bold text-lg mb-4">Lỗi: {error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-2 border-3 border-black bg-primary text-white font-black uppercase text-xs rounded-xl shadow-[2px_2px_0px_#000] cursor-pointer"
+                >
+                  Thử lại
+                </button>
+              </div>
+            </main>
           </div>
-
-          {/* Filter Bar */}
-          <FilterBar timeRange={timeRange} setTimeRange={setTimeRange} />
-
-          {/* Error Message */}
-          <main className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8 overflow-y-auto flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-red-600 font-bold">Lỗi: {error}</p>
-            </div>
-          </main>
         </div>
 
         {/* Mobile Bottom Nav */}
@@ -530,66 +524,67 @@ export default function AnalyticsDashboard({ activeTab, setActiveTab }) {
   }
 
   return (
-    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col lg:flex-row">
-      {/* Header - Mobile only */}
-      <div className="lg:hidden w-full order-first">
-        <AnalyticsHeader />
-      </div>
+    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col">
+      {/* Top Header - spans 100% width */}
+      <AnalyticsHeader />
 
-      {/* Sidebar - Desktop only, narrow */}
-      <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Main container underneath header */}
+      <div className="flex-1 flex flex-row min-h-0 relative">
+        {/* Sidebar - Desktop only */}
+        <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
-        {/* Header - Desktop only */}
-        <div className="hidden lg:block">
-          <AnalyticsHeader />
-        </div>
-
-        {/* Filter Bar */}
-        <FilterBar
-          timeRange={timeRange}
-          setTimeRange={setTimeRange}
-          onExportCSV={handleExportCSV}
-          onExportPDF={handleExportPDF}
-        />
-
-        {/* Main Content */}
-        <main
-          ref={contentRef}
-          className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8 overflow-y-auto"
-        >
-          {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <p className="text-lg font-bold text-[#0F172A]">
-                Đang tải dữ liệu...
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Mobile: Single column */}
-              <div className="lg:hidden space-y-6">
-                <UserGrowthCard data={analyticsData.userGrowthTrend || []} />
-                <TaskStatusCard data={analyticsData.taskDistribution || {}} />
-                <TopUsersCard users={analyticsData.topUsers || []} />
+        {/* Main Content Area Column */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          {/* Main Content */}
+          <main
+            ref={contentRef}
+            className="flex-1 px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-8"
+          >
+            {/* Simple Floating Export Buttons (Integrated directly without a section box) */}
+            <ExportButtons
+              onExportCSV={handleExportCSV}
+              onExportPDF={handleExportPDF}
+            />
+            {loading ? (
+              <div className="flex items-center justify-center h-96">
+                <p className="text-lg font-bold text-[#0F172A]">
+                  Đang tải dữ liệu...
+                </p>
               </div>
-
-              {/* Desktop: 3-column grid */}
-              <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6">
-                {/* Left Column - 2 columns wide */}
-                <div className="lg:col-span-2 flex flex-col gap-6">
-                  <UserGrowthCard data={analyticsData.userGrowthTrend || []} />
+            ) : (
+              <>
+                {/* Mobile: Single column */}
+                <div className="lg:hidden space-y-6">
+                  <UserGrowthCard
+                    data={analyticsData.userGrowthTrend || []}
+                    timeRange={timeRange}
+                    setTimeRange={setTimeRange}
+                  />
                   <TaskStatusCard data={analyticsData.taskDistribution || {}} />
-                </div>
-
-                {/* Right Column - 1 column */}
-                <div>
                   <TopUsersCard users={analyticsData.topUsers || []} />
                 </div>
-              </div>
-            </>
-          )}
-        </main>
+
+                {/* Desktop: 3-column grid */}
+                <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6">
+                  {/* Left Column - 2 columns wide */}
+                  <div className="lg:col-span-2 flex flex-col gap-6">
+                    <UserGrowthCard
+                      data={analyticsData.userGrowthTrend || []}
+                      timeRange={timeRange}
+                      setTimeRange={setTimeRange}
+                    />
+                    <TaskStatusCard data={analyticsData.taskDistribution || {}} />
+                  </div>
+
+                  {/* Right Column - 1 column */}
+                  <div>
+                    <TopUsersCard users={analyticsData.topUsers || []} />
+                  </div>
+                </div>
+              </>
+            )}
+          </main>
+        </div>
       </div>
 
       {/* Mobile Bottom Nav */}

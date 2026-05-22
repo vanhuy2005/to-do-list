@@ -1,5 +1,6 @@
 import React from "react";
 import { CheckCircle2 } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
 
 /**
  * Gets a random pastel color based on the user's name (deterministic)
@@ -52,6 +53,7 @@ export const UserCard = ({
   isOnline,
   isSelected = false,
   onClick,
+  actions,
 }) => {
   const initials = getInitials(name);
   const avatarColor = getAvatarColor(name);
@@ -85,32 +87,12 @@ export const UserCard = ({
       {/* Avatar Section */}
       <div className="flex items-center gap-4 mb-4">
         <div className="relative flex-shrink-0">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={name}
-              className="w-16 h-16 rounded-full object-cover border-2 border-black"
-            />
-          ) : (
-            <div
-              className={`
-                w-16
-                h-16
-                rounded-full
-                ${avatarColor}
-                border-2
-                border-black
-                flex
-                items-center
-                justify-center
-                font-bold
-                text-lg
-                text-gray-700
-              `}
-            >
-              {initials}
-            </div>
-          )}
+          <UserAvatar
+            avatarUrl={avatarUrl}
+            displayName={name}
+            sizeClassName="size-16"
+            textClassName="text-lg font-black uppercase tracking-tight"
+          />
 
           {/* Online Indicator Dot */}
           <div
@@ -156,6 +138,16 @@ export const UserCard = ({
           {completedTasks} tác vụ hoàn thành
         </span>
       </div>
+
+      {/* Custom actions slot */}
+      {actions && (
+        <div
+          className="mt-4 pt-4 border-t-2 border-dashed border-[#111111] flex gap-2 justify-end"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actions}
+        </div>
+      )}
     </div>
   );
 };

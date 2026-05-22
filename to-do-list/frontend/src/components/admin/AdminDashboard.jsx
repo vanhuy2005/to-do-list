@@ -3,9 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { Rocket, FileText, Settings, Trash2 } from "lucide-react";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import AdminSidebarNav from "./AdminSidebarNav";
+import AuditLogPage from "./AuditLogPage";
 import { UsersList } from "./UsersList";
+import { UserCard } from "./UserCard";
 import ProfilePage from "@/pages/ProfilePage";
 import SettingsPage from "@/pages/SettingsPage";
+import api from "@/lib/axios";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Header Component
@@ -120,96 +123,216 @@ const SystemCard = ({
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Content Component
 // ─────────────────────────────────────────────────────────────────────────────
-const HomeContent = ({ setActiveTab }) => (
-  <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-12 pb-32 md:pb-12 bg-[#FFFDF7] overflow-y-auto">
-    <div className="space-y-8 md:space-y-12 w-full md:max-w-4xl mx-auto">
-      {/* CHỈ SỐ QUAN TRỌNG Section */}
-      <section>
-        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
-          <div className="w-2 h-8 md:h-10 bg-[#FF2D55] border-2 md:border-3 border-[#111111]"></div>
-          <h2
-            className="text-xl md:text-2xl font-black text-[#111111] uppercase"
-            style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
-          >
-            Chỉ Số Quan Trọng
-          </h2>
-        </div>
+const HomeContent = ({ setActiveTab, metrics, loading, error }) => {
+  if (loading) {
+    return (
+      <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-12 pb-32 md:pb-12 bg-[#FFFDF7] overflow-y-auto flex items-center justify-center">
+        <p className="text-lg font-bold text-[#111111]">Đang tải dữ liệu...</p>
+      </main>
+    );
+  }
 
-        <div className="grid grid-cols-2 gap-3 md:gap-5">
-          <StatCard
-            label="NGƯỜI DÙNG MỚI"
-            value="1,250"
-            badge="+12%"
-            rotateDir="left"
-          />
-          <StatCard
-            label="LƯỢT TRUY CẬP"
-            value="45.8K"
-            badge="+5%"
-            rotateDir="right"
-          />
-        </div>
-      </section>
+  if (error) {
+    return (
+      <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-12 pb-32 md:pb-12 bg-[#FFFDF7] overflow-y-auto flex items-center justify-center">
+        <p className="text-lg font-bold text-red-600">Lỗi: {error}</p>
+      </main>
+    );
+  }
 
-      {/* QUẢN LÝ HỆ THỐNG Section */}
-      <section>
-        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
-          <div className="w-2 h-8 md:h-10 bg-[#00C2FF] border-2 md:border-3 border-[#111111]"></div>
-          <h2
-            className="text-xl md:text-2xl font-black text-[#111111] uppercase"
-            style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
-          >
-            Quản Lý Hệ Thống
-          </h2>
-        </div>
+  const newUsersVal = metrics?.newUsers?.value ?? 0;
+  const newUsersChange = metrics?.newUsers?.changePercent ?? 0;
+  const newUsersBadge = newUsersChange >= 0 ? `+${newUsersChange}%` : `${newUsersChange}%`;
 
-        {/* Audit Log - Full Width */}
-        <div
-          className="w-full bg-[#00C2FF] border-4 md:border-5 border-[#111111] rounded-3xl py-4 md:py-6 px-4 md:px-6 flex flex-col md:flex-row items-center justify-center md:justify-start gap-4 md:gap-5 mb-4 md:mb-6"
-          style={{
-            boxShadow: "4px 4px 0 #111111",
-            minHeight: "140px",
-          }}
-        >
-          <div className="w-16 md:w-20 h-16 md:h-20 bg-[#FFFDF7] border-4 md:border-5 border-[#111111] rounded-full flex items-center justify-center shrink-0">
-            <FileText
-              width={28}
-              height={28}
-              className="text-[#111111] md:scale-125"
+  const visitsVal = metrics?.visits?.value ?? 0;
+  const visitsChange = metrics?.visits?.changePercent ?? 0;
+  const visitsBadge = visitsChange >= 0 ? `+${visitsChange}%` : `${visitsChange}%`;
+
+  return (
+    <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-12 pb-32 md:pb-12 bg-[#FFFDF7] overflow-y-auto">
+      <div className="space-y-8 md:space-y-12 w-full mx-auto">
+        {/* CHỈ SỐ QUAN TRỌNG Section */}
+        <section>
+          <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
+            <div className="w-2 h-8 md:h-10 bg-[#FF2D55] border-2 md:border-3 border-[#111111]"></div>
+            <h2
+              className="text-xl md:text-2xl font-black text-[#111111] uppercase"
+              style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
+            >
+              Chỉ Số Quan Trọng
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:gap-5">
+            <StatCard
+              label="NGƯỜI DÙNG MỚI"
+              value={newUsersVal.toLocaleString()}
+              badge={newUsersBadge}
+              rotateDir="left"
+            />
+            <StatCard
+              label="LƯỢT TRUY CẬP"
+              value={visitsVal.toLocaleString()}
+              badge={visitsBadge}
+              rotateDir="right"
             />
           </div>
-          <div
-            className="text-sm md:text-base font-bold text-white uppercase text-center md:text-left"
-            style={{ fontFamily: "Plus Jakarta Sans", letterSpacing: "1px" }}
-          >
-            AUDIT LOG
+        </section>
+
+        {/* QUẢN LÝ HỆ THỐNG Section */}
+        <section>
+          <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
+            <div className="w-2 h-8 md:h-10 bg-[#00C2FF] border-2 md:border-3 border-[#111111]"></div>
+            <h2
+              className="text-xl md:text-2xl font-black text-[#111111] uppercase"
+              style={{ letterSpacing: "2px", fontFamily: "Segoe UI" }}
+            >
+              Quản Lý Hệ Thống
+            </h2>
           </div>
+
+          {/* Audit Log - Full Width */}
+          <div
+            onClick={() => setActiveTab("audit")}
+            className="w-full bg-[#00C2FF] border-4 md:border-5 border-[#111111] rounded-3xl py-4 md:py-6 px-4 md:px-6 flex flex-col md:flex-row items-center justify-center md:justify-start gap-4 md:gap-5 mb-4 md:mb-6 cursor-pointer hover:opacity-90 transition-opacity"
+            style={{
+              boxShadow: "4px 4px 0 #111111",
+              minHeight: "140px",
+            }}
+          >
+            <div className="w-16 md:w-20 h-16 md:h-20 bg-[#FFFDF7] border-4 md:border-5 border-[#111111] rounded-full flex items-center justify-center shrink-0">
+              <FileText
+                width={28}
+                height={28}
+                className="text-[#111111] md:scale-125"
+              />
+            </div>
+            <div
+              className="text-sm md:text-base font-bold text-white uppercase text-center md:text-left"
+              style={{ fontFamily: "Plus Jakarta Sans", letterSpacing: "1px" }}
+            >
+              AUDIT LOG
+            </div>
+          </div>
+
+          {/* System Cards Grid */}
+          <div className="grid grid-cols-2 gap-3 md:gap-5">
+            <SystemCard
+              label="CÀI ĐẶT"
+              icon={Settings}
+              bgColor="bg-[#FFD60A]"
+              textColor="text-[#111111]"
+              iconBgColor="bg-[#FFFDF7]"
+              iconColor="text-[#111111]"
+              onClick={() => setActiveTab("settings")}
+            />
+            <SystemCard
+              label="THÙNG RÁC"
+              icon={Trash2}
+              bgColor="bg-[#FFFDF7]"
+              textColor="text-[#111111]"
+              iconBgColor="bg-[#111111]"
+              iconColor="text-[#FFFDF7]"
+              onClick={() => setActiveTab("trash")}
+            />
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trash Users Content Component
+// ─────────────────────────────────────────────────────────────────────────────
+const TrashUsersContent = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchTrash = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/admin/trash");
+      if (response?.success && response?.data) {
+        setUsers(response.data.users || []);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message || "Không thể tải danh sách thùng rác");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrash();
+  }, []);
+
+  const handleRestore = async (userId) => {
+    if (window.confirm("Bạn có chắc chắn muốn phục hồi tài khoản này?")) {
+      try {
+        await api.post(`/admin/users/${userId}/restore`);
+        fetchTrash();
+      } catch (err) {
+        alert(err.response?.data?.error?.message || err.message || "Không thể phục hồi tài khoản");
+      }
+    }
+  };
+
+  return (
+    <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-5 pb-32 md:pb-5 bg-[#FFFDF7] overflow-y-auto">
+      <div className="w-full mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Thùng rác tài khoản</h1>
+          <p className="text-gray-600">Khôi phục các tài khoản đã bị vô hiệu hóa hoặc xóa mềm</p>
         </div>
 
-        {/* System Cards Grid */}
-        <div className="grid grid-cols-2 gap-3 md:gap-5">
-          <SystemCard
-            label="CÀI ĐẶT"
-            icon={Settings}
-            bgColor="bg-[#FFD60A]"
-            textColor="text-[#111111]"
-            iconBgColor="bg-[#FFFDF7]"
-            iconColor="text-[#111111]"
-            onClick={() => setActiveTab("settings")}
-          />
-          <SystemCard
-            label="THÙNG RÁC"
-            icon={Trash2}
-            bgColor="bg-[#FFFDF7]"
-            textColor="text-[#111111]"
-            iconBgColor="bg-[#111111]"
-            iconColor="text-[#FFFDF7]"
-          />
-        </div>
-      </section>
-    </div>
-  </main>
-);
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-red-500 border-t-transparent mb-4" />
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700 font-semibold">Lỗi: {error}</p>
+          </div>
+        )}
+
+        {!loading && !error && users.length === 0 && (
+          <div className="text-center py-12 bg-white border-2 border-gray-200 rounded-lg">
+            <p className="text-gray-600 font-semibold">Thùng rác trống</p>
+          </div>
+        )}
+
+        {!loading && users.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {users.map((user) => (
+              <UserCard
+                key={user._id}
+                id={user._id}
+                name={user.displayName}
+                avatarUrl={user.avatarUrl}
+                role={user.role === "admin" ? "ADMIN" : "USER"}
+                completedTasks={0}
+                isOnline={false}
+                actions={
+                  <button
+                    onClick={() => handleRestore(user._id)}
+                    className="px-4 py-1.5 bg-[#4ADE80] border-2 border-black rounded font-black text-xs uppercase shadow-[1px_1px_0px_#000] hover:translate-y-[1px] hover:shadow-none transition-all"
+                  >
+                    Phục hồi
+                  </button>
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mobile Bottom Navigation
@@ -267,7 +390,7 @@ const ProfileContent = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 const UsersContent = () => (
   <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-5 pb-32 md:pb-5 bg-[#FFFDF7] overflow-y-auto">
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Quản lý người dùng
@@ -285,8 +408,8 @@ const UsersContent = () => (
 // Settings Content Component
 // ─────────────────────────────────────────────────────────────────────────────
 const SettingsContent = ({ setActiveTab }) => (
-  <main className="flex-1 w-full bg-[#FFFDF7] overflow-y-auto">
-    <div className="w-full">
+  <main className="flex-1 w-full px-4 md:px-8 pt-8 md:pt-5 pb-32 md:pb-5 bg-[#FFFDF7] overflow-y-auto">
+    <div className="w-full mx-auto">
       <SettingsPage setActiveTab={setActiveTab} />
     </div>
   </main>
@@ -296,6 +419,10 @@ export default function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab") || "home";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
+  
+  const [metrics, setMetrics] = useState(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [metricsError, setMetricsError] = useState(null);
 
   // Sync state with URL params
   useEffect(() => {
@@ -307,6 +434,28 @@ export default function AdminDashboard() {
     const tab = searchParams.get("tab") || "home";
     setActiveTab(tab);
   }, [searchParams]);
+
+  // Fetch Dashboard metrics from database
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoadingMetrics(true);
+        const response = await api.get("/admin/dashboard?range=7days");
+        if (response?.success && response?.data) {
+          setMetrics(response.data.metrics);
+        }
+        setMetricsError(null);
+      } catch (err) {
+        setMetricsError(err.message || "Không thể tải số liệu");
+      } finally {
+        setLoadingMetrics(false);
+      }
+    };
+    
+    if (activeTab === "home") {
+      fetchMetrics();
+    }
+  }, [activeTab]);
 
   // Show Analytics Dashboard when analytics tab is active
   if (activeTab === "analytics") {
@@ -326,28 +475,36 @@ export default function AdminDashboard() {
     if (activeTab === "settings") {
       return <SettingsContent setActiveTab={setActiveTab} />;
     }
-    return <HomeContent setActiveTab={setActiveTab} />;
+    if (activeTab === "trash") {
+      return <TrashUsersContent />;
+    }
+    if (activeTab === "audit") {
+      return <AuditLogPage setActiveTab={setActiveTab} />;
+    }
+    return (
+      <HomeContent
+        setActiveTab={setActiveTab}
+        metrics={metrics}
+        loading={loadingMetrics}
+        error={metricsError}
+      />
+    );
   };
 
   return (
-    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col lg:flex-row">
-      {/* Sidebar - Desktop only, narrow */}
-      <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="w-screen min-h-screen bg-[#FFFDF7] flex flex-col">
+      {/* Top Header - spans 100% width across the screen */}
+      <AdminHeader />
 
-      {/* Header - Mobile only */}
-      <div className="lg:hidden w-full order-first">
-        <AdminHeader />
-      </div>
+      {/* Main Container underneath header */}
+      <div className="flex-1 flex flex-row min-h-0 relative">
+        {/* Sidebar - Desktop only */}
+        <AdminSidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Column Container */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
-        {/* Header - Desktop only */}
-        <div className="hidden lg:block">
-          <AdminHeader />
+        {/* Main Content Column */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          {getMainContent()}
         </div>
-
-        {/* Main Content */}
-        {getMainContent()}
       </div>
 
       {/* Mobile Bottom Nav - Mobile only */}

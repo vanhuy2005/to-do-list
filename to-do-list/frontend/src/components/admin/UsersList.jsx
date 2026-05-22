@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { UserCard } from "./UserCard";
 import { useUsers } from "@/hooks/useUsers";
+import { useQueryClient } from "@tanstack/react-query";
+import { disableUser, softDeleteUser } from "../../services/users.api";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 /**
  * Debounce hook to delay function execution
@@ -28,6 +39,7 @@ export const UsersList = () => {
   const [page, setPage] = useState(1);
   const [rawSearch, setRawSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
+  const queryClient = useQueryClient();
 
   // Debounce search input
   const debouncedSearch = useDebouncedValue(rawSearch, 400);
@@ -56,6 +68,28 @@ export const UsersList = () => {
   const meta = response.meta || {};
   const totalPages = meta.totalPages || 1;
 
+  const handleDisable = async (userId) => {
+    if (window.confirm("Bạn có chắc chắn muốn vô hiệu hóa tài khoản này?")) {
+      try {
+        await disableUser(userId);
+        queryClient.invalidateQueries(["users"]);
+      } catch (err) {
+        alert(err.response?.data?.error?.message || err.message || "Không thể vô hiệu hóa tài khoản");
+      }
+    }
+  };
+
+  const handleSoftDelete = async (userId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này và đưa vào thùng rác?")) {
+      try {
+        await softDeleteUser(userId);
+        queryClient.invalidateQueries(["users"]);
+      } catch (err) {
+        alert(err.response?.data?.error?.message || err.message || "Không thể xóa tài khoản");
+      }
+    }
+  };
+
   // Handle role filter change
   const handleRoleChange = (role) => {
     setSelectedRole(role);
@@ -74,34 +108,20 @@ export const UsersList = () => {
     <div className="space-y-6">
       {/* Search Bar */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-          <input
+        <div className="relative flex items-center">
+          <Search className="absolute left-3.5 z-10 text-gray-400 size-5" />
+          <Input
             type="text"
             placeholder="Tìm kiếm siêu anh hùng..."
             value={rawSearch}
             onChange={(e) => setRawSearch(e.target.value)}
-            className="
-              w-full
-              pl-10
-              pr-4
-              py-3
-              border-2
-              border-gray-300
-              rounded-lg
-              font-semibold
-              focus:outline-none
-              focus:border-red-500
-              focus:ring-2
-              focus:ring-red-200
-              transition-colors
-            "
+            className="pl-11"
           />
         </div>
       </div>
 
       {/* Role Filter Tabs */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap mb-4">
         {[
           { label: "Tất cả", value: "" },
           { label: "Admin", value: "ADMIN" },
@@ -110,21 +130,16 @@ export const UsersList = () => {
           <button
             key={value}
             onClick={() => handleRoleChange(value)}
-            className={`
-              px-6
-              py-2
-              rounded-full
-              font-bold
-              text-sm
-              transition-all
-              duration-200
-              border-2
-              ${
-                selectedRole === value
-                  ? "bg-red-500 text-white border-red-500"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-              }
-            `}
+            className={`h-10 px-6 border-[3px] border-black rounded-lg font-bold uppercase text-xs flex items-center justify-center shrink-0 transition-all ${
+              selectedRole === value
+                ? "bg-[#FF2D55] text-white"
+                : "bg-white text-[#0F172A] hover:bg-gray-50"
+            }`}
+            style={{
+              fontFamily: "Plus Jakarta Sans",
+              letterSpacing: "1px",
+              boxShadow: selectedRole === value ? "3px 3px 0 #111" : "1.5px 1.5px 0 #111",
+            }}
           >
             {label}
           </button>
@@ -175,6 +190,24 @@ export const UsersList = () => {
                 onClick={() => {
                   console.log("Selected user:", user.id);
                 }}
+                actions={
+                  user.role !== "ADMIN" && (
+                    <>
+                      <button
+                        onClick={() => handleDisable(user.id)}
+                        className="px-3 py-1 bg-[#FFD60A] border-2 border-black rounded font-black text-xs uppercase shadow-[1px_1px_0px_#000] hover:translate-y-[1px] hover:shadow-none transition-all"
+                      >
+                        Vô hiệu hóa
+                      </button>
+                      <button
+                        onClick={() => handleSoftDelete(user.id)}
+                        className="px-3 py-1 bg-[#FF2D55] text-white border-2 border-black rounded font-black text-xs uppercase shadow-[1px_1px_0px_#000] hover:translate-y-[1px] hover:shadow-none transition-all"
+                      >
+                        Xóa
+                      </button>
+                    </>
+                  )
+                }
               />
             ))}
           </div>
@@ -183,75 +216,36 @@ export const UsersList = () => {
 
       {/* Pagination */}
       {!isLoading && totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-8">
-          {/* Previous Button */}
-          <button
-            onClick={handlePreviousPage}
-            disabled={page === 1}
-            className={`
-              p-2
-              rounded-lg
-              border-2
-              transition-all
-              duration-200
-              ${
-                page === 1
-                  ? "border-gray-300 text-gray-400 cursor-not-allowed"
-                  : "border-red-500 text-red-500 hover:bg-red-50"
-              }
-            `}
-          >
-            <ChevronLeft size={20} />
-          </button>
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={handlePreviousPage}
+                disabled={page === 1}
+                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
 
-          {/* Page Numbers */}
-          <div className="flex gap-2">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (pageNum) => (
-                <button
-                  key={pageNum}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <PaginationItem key={pageNum}>
+                <PaginationLink
+                  isActive={pageNum === page}
                   onClick={() => setPage(pageNum)}
-                  className={`
-                  w-10
-                  h-10
-                  rounded-lg
-                  font-bold
-                  transition-all
-                  duration-200
-                  border-2
-                  ${
-                    pageNum === page
-                      ? "bg-red-500 text-white border-red-500"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                  }
-                `}
                 >
                   {pageNum}
-                </button>
-              ),
-            )}
-          </div>
+                </PaginationLink>
+              </PaginationItem>
+            ))}
 
-          {/* Next Button */}
-          <button
-            onClick={handleNextPage}
-            disabled={page === totalPages}
-            className={`
-              p-2
-              rounded-lg
-              border-2
-              transition-all
-              duration-200
-              ${
-                page === totalPages
-                  ? "border-gray-300 text-gray-400 cursor-not-allowed"
-                  : "border-red-500 text-red-500 hover:bg-red-50"
-              }
-            `}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+            <PaginationItem>
+              <PaginationNext
+                onClick={handleNextPage}
+                disabled={page === totalPages}
+                className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
 
       {/* Results Info */}
