@@ -540,63 +540,74 @@ export default function TaskDetailPage() {
                       Task này chưa chia sẻ cho ai.
                     </p>
                   ) : (
-                    shares.map((share) => {
-                      const collaboratorId = share?.userId;
-                      const isUpdating =
-                        pendingPermissionUserId ===
-                        String(collaboratorId || "");
-                      const isRemoving =
-                        pendingRemoveUserId === String(collaboratorId || "");
+                     shares.map((share) => {
+                       const collaboratorId = share?.userId;
+                       const isUpdating =
+                         pendingPermissionUserId ===
+                         String(collaboratorId || "");
+                       const isRemoving =
+                         pendingRemoveUserId === String(collaboratorId || "");
 
-                      return (
-                        <div
-                          key={String(collaboratorId)}
-                          className="grid gap-2 rounded-lg border-[3px] border-border bg-background p-2.5 md:grid-cols-[1fr_140px_auto] md:items-center"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-black">
-                              {share.displayName || share.email || "Người dùng"}
-                            </p>
-                            <p className="truncate text-xs font-medium text-muted-foreground">
-                              {share.email || "Không có email"}
-                            </p>
-                          </div>
+                       return (
+                         <div
+                           key={share.isPending ? `pending-${share.email}` : String(collaboratorId)}
+                           className="grid gap-2 rounded-lg border-[3px] border-border bg-background p-2.5 md:grid-cols-[1fr_140px_auto] md:items-center"
+                         >
+                           {share.isPending ? (
+                             <div className="min-w-0">
+                               <span className="inline-flex items-center rounded-md bg-[#fff1f2] border border-[#ffcdcf] px-1.5 py-0.5 text-[10px] font-black uppercase text-[#ff3b57] mb-1">
+                                 Lời mời đang chờ
+                               </span>
+                               <p className="truncate text-xs font-bold text-foreground">
+                                 Đã gửi lời mời tới <span className="font-extrabold">{share.email}</span>. Đang chờ chấp nhận.
+                               </p>
+                             </div>
+                           ) : (
+                             <div className="min-w-0">
+                               <p className="truncate text-sm font-black">
+                                 {share.displayName || "Người dùng"}
+                               </p>
+                               <p className="truncate text-xs font-medium text-muted-foreground">
+                                 {share.email || "Không có email"}
+                               </p>
+                             </div>
+                           )}
 
-                          <select
-                            value={share.permission}
-                            onChange={(event) =>
-                              handleUpdatePermission(
-                                collaboratorId,
-                                event.target.value,
-                              )
-                            }
-                            disabled={isUpdating || isRemoving}
-                            className="h-9 rounded-lg border-[3px] border-border bg-card px-2 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#00C2FF]"
-                          >
-                            <option value="view">Chỉ xem</option>
-                            <option value="comment">Nhận xét</option>
-                            <option value="edit">Chỉnh sửa</option>
-                          </select>
+                           <select
+                             value={share.permission}
+                             onChange={(event) =>
+                               handleUpdatePermission(
+                                 collaboratorId,
+                                 event.target.value,
+                               )
+                             }
+                             disabled={isUpdating || isRemoving || share.isPending}
+                             className="h-9 rounded-lg border-[3px] border-border bg-card px-2 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-[#00C2FF]"
+                           >
+                             <option value="view">Chỉ xem</option>
+                             <option value="comment">Nhận xét</option>
+                             <option value="edit">Chỉnh sửa</option>
+                           </select>
 
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="gap-1.5 font-bold uppercase"
-                            onClick={() => handleRemoveShare(collaboratorId)}
-                            disabled={isRemoving || isUpdating}
-                          >
-                            {isRemoving ? (
-                              "Đang thu hồi..."
-                            ) : (
-                              <>
-                                <UserXIcon className="size-4" />
-                                Thu hồi
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      );
-                    })
+                           <Button
+                             type="button"
+                             variant="secondary"
+                             className="gap-1.5 font-bold uppercase"
+                             onClick={() => handleRemoveShare(collaboratorId)}
+                             disabled={isRemoving || isUpdating}
+                           >
+                             {isRemoving ? (
+                               "Đang thu hồi..."
+                             ) : (
+                               <>
+                                 <UserXIcon className="size-4" />
+                                 Thu hồi
+                               </>
+                             )}
+                           </Button>
+                         </div>
+                       );
+                     })
                   )}
                 </div>
               </>
