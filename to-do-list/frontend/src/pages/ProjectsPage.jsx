@@ -5,18 +5,32 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { 
-  UsersIcon, 
-  FolderPlusIcon, 
-  KeyIcon, 
-  Loader2Icon, 
-  ArrowRightIcon, 
-  InboxIcon
+import {
+  UsersIcon,
+  FolderPlusIcon,
+  KeyIcon,
+  Loader2Icon,
+  ArrowRightIcon,
+  InboxIcon,
+  BookOpenIcon,
 } from "lucide-react";
 import projectService from "@/services/projectService";
 import ProjectIcon from "@/components/ProjectIcon";
 
-const EMOJIS = ["📁", "🚀", "🎯", "💻", "🎨", "🔥", "🌈", "💡", "🧠", "💼", "📅", "🔒"];
+const EMOJIS = [
+  "📁",
+  "🚀",
+  "🎯",
+  "💻",
+  "🎨",
+  "🔥",
+  "🌈",
+  "💡",
+  "🧠",
+  "💼",
+  "📅",
+  "🔒",
+];
 const BORDER_COLORS = [
   "border-t-[#FF2D55]", // Pink
   "border-t-[#00C2FF]", // Cyan
@@ -29,7 +43,7 @@ export default function ProjectsPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Creation state
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -101,8 +115,8 @@ export default function ProjectsPage() {
       navigate(`/projects/${proj._id || proj.id}`);
     } catch (err) {
       toast.error(
-        err?.response?.data?.error?.message || 
-        "Mã mời không đúng hoặc đã hết hạn."
+        err?.response?.data?.error?.message ||
+          "Mã mời không đúng hoặc đã hết hạn.",
       );
     } finally {
       setIsJoining(false);
@@ -115,7 +129,7 @@ export default function ProjectsPage() {
       <header className="relative overflow-hidden rounded-[2rem] border-4 border-border bg-[#FFD400] p-6 sm:p-8 comic-shadow">
         {/* Absolute decorative pattern */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:12px_12px]" />
-        
+
         <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-[2.6rem] font-black leading-none uppercase tracking-tight text-foreground">
@@ -147,10 +161,12 @@ export default function ProjectsPage() {
                 Tạo Dự Án Mới
               </h2>
             </div>
-            
+
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-xs font-black uppercase text-muted-foreground">Biểu tượng</label>
+                <label className="text-xs font-black uppercase text-muted-foreground">
+                  Biểu tượng
+                </label>
                 <div className="flex flex-wrap gap-2 pt-1.5">
                   {EMOJIS.map((emoji) => (
                     <button
@@ -158,8 +174,8 @@ export default function ProjectsPage() {
                       type="button"
                       onClick={() => setSelectedEmoji(emoji)}
                       className={`size-10 flex items-center justify-center rounded-xl border-[3px] border-border transition-all comic-shadow ${
-                        selectedEmoji === emoji 
-                          ? "bg-[#00C2FF] scale-110 -rotate-3" 
+                        selectedEmoji === emoji
+                          ? "bg-[#00C2FF] scale-110 -rotate-3"
                           : "bg-white hover:bg-muted"
                       }`}
                     >
@@ -170,7 +186,9 @@ export default function ProjectsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-black uppercase text-muted-foreground">Tên dự án</label>
+                <label className="text-xs font-black uppercase text-muted-foreground">
+                  Tên dự án
+                </label>
                 <Input
                   placeholder="Ví dụ: Thiết kế Website, Kế hoạch ra mắt..."
                   value={newName}
@@ -180,7 +198,9 @@ export default function ProjectsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-black uppercase text-muted-foreground">Mô tả dự án (Tùy chọn)</label>
+                <label className="text-xs font-black uppercase text-muted-foreground">
+                  Mô tả dự án (Tùy chọn)
+                </label>
                 <Input
                   placeholder="Ghi chú ngắn về mục tiêu của nhóm bạn..."
                   value={newDesc}
@@ -189,9 +209,9 @@ export default function ProjectsPage() {
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                disabled={isCreating} 
+              <Button
+                type="submit"
+                disabled={isCreating}
                 className="w-full h-12 rounded-xl uppercase font-black tracking-wider comic-shadow active:translate-y-1"
               >
                 {isCreating ? (
@@ -218,14 +238,17 @@ export default function ProjectsPage() {
                 Tham Gia Bằng Mã
               </h2>
             </div>
-            
+
             <p className="text-sm font-bold text-muted-foreground">
-              Được đồng nghiệp chia sẻ mã mời dự án? Hãy nhập mã 6 ký tự để tham gia tức thì làm thành viên.
+              Được đồng nghiệp chia sẻ mã mời dự án? Hãy nhập mã 6 ký tự để tham
+              gia tức thì làm thành viên.
             </p>
 
             <form onSubmit={handleJoinByCode} className="space-y-4 pt-2">
               <div className="space-y-1">
-                <label className="text-xs font-black uppercase text-muted-foreground">Mã mời 6 ký tự</label>
+                <label className="text-xs font-black uppercase text-muted-foreground">
+                  Mã mời 6 ký tự
+                </label>
                 <Input
                   maxLength={6}
                   placeholder="Ví dụ: A1B2C3"
@@ -235,8 +258,8 @@ export default function ProjectsPage() {
                 />
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isJoining}
                 variant="secondary"
                 className="w-full h-12 rounded-xl uppercase font-black tracking-wider comic-shadow active:translate-y-1"
@@ -258,7 +281,8 @@ export default function ProjectsPage() {
                 Mẹo bảo mật
               </p>
               <p className="text-[0.7rem] font-bold text-[#008dbb] mt-1">
-                Để tham gia bằng Link Mời, vui lòng nhấp trực tiếp vào liên kết được chia sẻ từ chủ sở hữu dự án.
+                Để tham gia bằng Link Mời, vui lòng nhấp trực tiếp vào liên kết
+                được chia sẻ từ chủ sở hữu dự án.
               </p>
             </div>
           </CardContent>
@@ -274,9 +298,9 @@ export default function ProjectsPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {[1, 2, 3].map((n) => (
-              <div 
-                key={n} 
-                className="h-36 rounded-2xl border-[3px] border-border bg-card p-4 comic-shadow flex flex-col justify-between" 
+              <div
+                key={n}
+                className="h-36 rounded-2xl border-[3px] border-border bg-card p-4 comic-shadow flex flex-col justify-between"
               >
                 <div className="flex justify-between items-start">
                   <Skeleton className="size-12 rounded-xl" />
@@ -292,7 +316,9 @@ export default function ProjectsPage() {
         ) : projects.length === 0 ? (
           <div className="rounded-2xl border-4 border-dashed border-border bg-muted/20 py-12 text-center flex flex-col items-center justify-center">
             <InboxIcon className="size-12 text-muted-foreground stroke-[2.5]" />
-            <h3 className="mt-3 text-lg font-black uppercase text-foreground">Chưa có dự án nào</h3>
+            <h3 className="mt-3 text-lg font-black uppercase text-foreground">
+              Chưa có dự án nào
+            </h3>
             <p className="text-xs font-bold text-muted-foreground uppercase mt-1">
               Tạo hoặc tham gia một dự án để bắt đầu làm việc nhóm!
             </p>
@@ -301,7 +327,7 @@ export default function ProjectsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {projects.map((p, idx) => {
               const borderAccent = BORDER_COLORS[idx % BORDER_COLORS.length];
-              
+
               return (
                 <Link
                   key={p._id}
@@ -340,7 +366,7 @@ export default function ProjectsPage() {
                       <UsersIcon className="size-3.5 text-foreground" />
                       <span>{(p.members || []).length} thành viên</span>
                     </div>
-                    
+
                     <span className="inline-flex items-center gap-0.5 text-primary group-hover:translate-x-1 transition-transform">
                       Mở <ArrowRightIcon className="size-3" />
                     </span>
