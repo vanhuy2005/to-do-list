@@ -65,6 +65,80 @@ router.post(
   })
 );
 
+// Preview secure join link metadata
+router.get(
+  "/join/link/:token/preview",
+  errorHandler(async (req, res) => {
+    const result = await projectViewModel.previewProjectJoinLink(req.params.token);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+// Preview secure invite code metadata
+router.post(
+  "/join/code/preview",
+  errorHandler(async (req, res) => {
+    const { code } = req.body;
+    const result = await projectViewModel.previewProjectJoinCode(code);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+// Project invitations list for current user
+router.get(
+  "/invitations/me",
+  errorHandler(async (req, res) => {
+    const result = await projectViewModel.getMyProjectInvitations(req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+// Preview secure project invitation metadata
+router.get(
+  "/invitations/:token/preview",
+  errorHandler(async (req, res) => {
+    const result = await projectViewModel.previewProjectInvitation(req.params.token);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+    });
+  })
+);
+
+// Accept secure project invitation
+router.post(
+  "/invitations/:token/accept",
+  errorHandler(async (req, res) => {
+    const result = await projectViewModel.acceptProjectInvitation(req.params.token, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      data: result.data,
+      message: result.message,
+    });
+  })
+);
+
+// Decline secure project invitation
+router.post(
+  "/invitations/:token/decline",
+  errorHandler(async (req, res) => {
+    const result = await projectViewModel.declineProjectInvitation(req.params.token, req.userId);
+    res.status(result.statusCode).json({
+      success: result.success,
+      message: result.message,
+    });
+  })
+);
+
 // Get specific project workspace details (members only)
 router.get(
   "/:id",
