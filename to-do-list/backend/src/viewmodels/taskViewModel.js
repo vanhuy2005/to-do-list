@@ -3,8 +3,11 @@ import Project from "../models/Project.js";
 import AuditLog from "../models/AuditLog.js";
 import User from "../models/User.js";
 import Comment from "../models/Comment.js";
+import TaskInvitation from "../models/TaskInvitation.js";
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { realtimeService } from "../services/realtimeService.js";
+import emailService from "../services/emailService.js";
 
 const REQUIRED_CREATE_FIELDS = ["title", "status"];
 const ALLOWED_SORT_FIELDS = [
@@ -86,6 +89,17 @@ const validateCreatePayload = (payload) => {
   if (payload.status && !ALLOWED_STATUS.includes(payload.status)) {
     throw new ViewModelError(400, "INVALID_STATUS", "Status không hợp lệ");
   }
+};
+
+const normalizeDueDate = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new ViewModelError(400, "INVALID_DUE_DATE", "Hạn chót không hợp lệ");
+  }
+  return date;
 };
 
 const normalizeCreateTaskPayload = (payload) => {
@@ -640,6 +654,14 @@ const taskViewModel = {
       }
     }
 
+    if (taskData.dueDate !== undefined) {
+      taskData.dueDate = normalizeDueDate(taskData.dueDate);
+      if (taskData.dueDate && taskData.dueDate > new Date()) {
+        taskData.isOverdue = false;
+        taskData.overdueAt = null;
+      }
+    }
+
     // Support optional projectId: ensure project exists and user is member/owner
     if (normalizedPayload.projectId) {
       const proj = await Project.findById(normalizedPayload.projectId);
@@ -738,10 +760,9 @@ const taskViewModel = {
       updateData.completedAt = null;
     }
 
-    // Reset overdue khi user đổi dueDate sang tương lai
-    if (updateData.dueDate) {
-      const newDueDate = new Date(updateData.dueDate);
-      if (!Number.isNaN(newDueDate.getTime()) && newDueDate > new Date()) {
+    if (updateData.dueDate !== undefined) {
+      updateData.dueDate = normalizeDueDate(updateData.dueDate);
+      if (!updateData.dueDate || updateData.dueDate > new Date()) {
         updateData.isOverdue = false;
         updateData.overdueAt = null;
       }
@@ -999,31 +1020,41 @@ const taskViewModel = {
       );
     }
 
-    const existingShare = findShareEntry(task, collaborator._id);
-    if (existingShare) {
-      existingShare.permission = permission;
-      existingShare.sharedBy = ownerId;
-      existingShare.sharedAt = new Date();
-    } else {
-      task.shares.push({
-        userId: collaborator._id,
-        permission,
-        sharedBy: ownerId,
-        sharedAt: new Date(),
-      });
-    }
+    // Clean up any existing pending invitations for this collaborator and task
+    await TaskInvitation.deleteMany({
+      taskId: task._id,
+      email: collaborator.email,
+      status: "pending"
+    });
 
-    await task.save();
+    // Create secure token and hash
+    const plainToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(plainToken).digest("hex");
+
+    await TaskInvitation.create({
+      taskId: task._id,
+      email: collaborator.email,
+      permission,
+      tokenHash,
+      invitedBy: ownerId,
+    });
+
+    const inviterUser = await User.findById(ownerId);
+    try {
+      await emailService.sendTaskInvitation(collaborator.email, inviterUser, task, plainToken);
+    } catch (err) {
+      console.error("Lỗi gửi email lời mời task:", err.message);
+    }
 
     await writeTaskAuditLog({
       actorId: ownerId,
-      action: "task.shared",
+      action: "task.invited",
       entityId: task._id,
       summaryBefore: {},
       summaryAfter: {
         title: task.title,
         permission,
-        sharedWith: collaborator.email,
+        invitedEmail: collaborator.email,
       },
     });
 
@@ -1036,7 +1067,7 @@ const taskViewModel = {
         taskId,
         shares,
       },
-      message: "Chia sẻ task thành công",
+      message: "Đã gửi lời mời cộng tác nhiệm vụ qua email thành công",
     };
   },
 
@@ -1176,6 +1207,138 @@ const taskViewModel = {
       success: true,
       data: populated,
       message: "Đã thêm nhận xét thành công",
+    };
+  },
+
+  async getMyTaskInvitations(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+    const invitations = await TaskInvitation.find({
+      email: user.email.toLowerCase(),
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    })
+    .populate("taskId", "title priority dueDate description")
+    .populate("invitedBy", "email displayName avatarUrl");
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: invitations,
+    };
+  },
+
+  async previewTaskInvitation(token) {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const invitation = await TaskInvitation.findOne({
+      tokenHash,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    })
+    .populate("taskId", "title priority dueDate description")
+    .populate("invitedBy", "email displayName avatarUrl");
+
+    if (!invitation || !invitation.taskId) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    return {
+      statusCode: 200,
+      success: true,
+      data: {
+        title: invitation.taskId.title,
+        priority: invitation.taskId.priority,
+        dueDate: invitation.taskId.dueDate,
+        description: invitation.taskId.description,
+        invitedBy: {
+          email: invitation.invitedBy?.email,
+          displayName: invitation.invitedBy?.displayName,
+          avatarUrl: invitation.invitedBy?.avatarUrl,
+        },
+        permission: invitation.permission,
+      }
+    };
+  },
+
+  async acceptTaskInvitation(token, userId) {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const invitation = await TaskInvitation.findOne({
+      tokenHash,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!invitation) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ViewModelError(403, "FORBIDDEN", "Email của bạn không khớp với email được mời");
+    }
+
+    const task = await Task.findOne({ _id: invitation.taskId, deletedAt: null });
+    if (!task) {
+      throw new ViewModelError(404, "TASK_NOT_FOUND", "Nhiệm vụ không còn tồn tại");
+    }
+
+    // Check if already shared
+    const alreadyShared = task.shares.some(s => s.userId.toString() === userId.toString());
+    if (!alreadyShared) {
+      task.shares.push({
+        userId: user._id,
+        permission: invitation.permission,
+        sharedBy: invitation.invitedBy,
+        sharedAt: new Date(),
+      });
+      await task.save();
+    }
+
+    invitation.status = "accepted";
+    await invitation.save();
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Chấp nhận lời mời chia sẻ nhiệm vụ thành công",
+      data: task,
+    };
+  },
+
+  async declineTaskInvitation(token, userId) {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const invitation = await TaskInvitation.findOne({
+      tokenHash,
+      status: "pending",
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!invitation) {
+      throw new ViewModelError(404, "INVITATION_NOT_FOUND", "Lời mời không tồn tại hoặc đã hết hạn");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ViewModelError(404, "USER_NOT_FOUND", "Người dùng không tồn tại");
+    }
+
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      throw new ViewModelError(403, "FORBIDDEN", "Email của bạn không khớp với email được mời");
+    }
+
+    invitation.status = "declined";
+    await invitation.save();
+
+    return {
+      statusCode: 200,
+      success: true,
+      message: "Từ chối lời mời thành công",
     };
   },
 };

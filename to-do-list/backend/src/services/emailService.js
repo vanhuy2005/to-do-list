@@ -250,6 +250,123 @@ class EmailService {
       throw err;
     }
   }
+
+  /**
+   * Send pending Task invitation email
+   */
+  async sendTaskInvitation(inviteeEmail, inviterUser, task, plainToken) {
+    const inviterName = inviterUser.displayName || inviterUser.email;
+    const appUrl = process.env.APP_URL || "http://localhost:5173";
+    const acceptUrl = `${appUrl}/tasks/invitations/${plainToken}`;
+
+    const subject = `[TaskDo] 📬 Lời mời cộng tác nhiệm vụ: "${task.title}"`;
+    const htmlContent = `
+      <div style="font-family: sans-serif; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; background-color: #FFFFFF; padding: 25px; max-width: 600px; margin: 20px auto;">
+        <h2 style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #00c2ff; margin-bottom: 20px; border-bottom: 3px solid #000000; padding-bottom: 10px;">
+          📬 LỜI MỜI CỘNG TÁC NHIỆM VỤ
+        </h2>
+        <p style="font-size: 15px; font-weight: 700; color: #333333; line-height: 1.6;">
+          Chào bạn,<br/><br/>
+          <strong>${inviterName}</strong> đã gửi cho bạn lời mời cùng thực hiện nhiệm vụ:
+        </p>
+        <div style="border: 2px solid #000000; padding: 15px; margin: 20px 0; background-color: #FFFDF0; box-shadow: 3px 3px 0px #000000;">
+          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #000000;">
+            📌 ${task.title}
+          </h3>
+          ${task.description ? `<p style="margin: 0 0 10px 0; font-size: 14px; color: #555555;">${task.description}</p>` : ""}
+          <p style="margin: 0; font-size: 12px; font-weight: bold; color: #777777;">
+            Độ ưu tiên: <span style="text-transform: uppercase; color: #FF5A5F;">${task.priority}</span>
+          </p>
+        </div>
+        <p style="font-size: 14px; font-weight: bold; color: #333333; margin-bottom: 20px;">
+          Để xem chi tiết và tham gia cùng thực hiện nhiệm vụ này, vui lòng click nút bên dưới:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${acceptUrl}" style="display: inline-block; background-color: #FF5A5F; border: 3px solid #000000; color: #FFFFFF; font-size: 15px; font-weight: 900; text-decoration: none; padding: 12px 24px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 0.5px;">
+            👉 CHẤP NHẬN LỜI MỜI 👈
+          </a>
+        </div>
+        <p style="font-size: 11px; color: #777777; line-height: 1.5; border-top: 2px dashed #EEEEEE; pt: 15px; margin-top: 20px;">
+          Nếu nút trên không hoạt động, copy link sau dán vào trình duyệt:<br/>
+          <a href="${acceptUrl}" style="color: #00c2ff;">${acceptUrl}</a>
+        </p>
+      </div>
+    `;
+
+    const originalRecipient = inviteeEmail;
+    const actualRecipient = this.getTargetRecipient(originalRecipient);
+    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+
+    const mailOptions = {
+      from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
+      to: actualRecipient,
+      subject,
+      html: htmlContent
+    };
+
+    const result = await this.resend.emails.send(mailOptions);
+    if (result.error) {
+      throw new Error(`Resend Error: ${result.error.message}`);
+    }
+    return result.data;
+  }
+
+  /**
+   * Send pending Project invitation email
+   */
+  async sendProjectInvitation(inviteeEmail, inviterUser, project, plainToken) {
+    const inviterName = inviterUser.displayName || inviterUser.email;
+    const appUrl = process.env.APP_URL || "http://localhost:5173";
+    const acceptUrl = `${appUrl}/projects/invitations/${plainToken}`;
+
+    const subject = `[TaskDo] 🚀 Lời mời tham gia dự án: "${project.name}"`;
+    const htmlContent = `
+      <div style="font-family: sans-serif; border: 3px solid #000000; box-shadow: 6px 6px 0px #000000; background-color: #FFFFFF; padding: 25px; max-width: 600px; margin: 20px auto;">
+        <h2 style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #34A853; margin-bottom: 20px; border-bottom: 3px solid #000000; padding-bottom: 10px;">
+          🚀 LỜI MỜI THAM GIA DỰ ÁN
+        </h2>
+        <p style="font-size: 15px; font-weight: 700; color: #333333; line-height: 1.6;">
+          Chào bạn,<br/><br/>
+          <strong>${inviterName}</strong> đã gửi cho bạn lời mời tham gia dự án:
+        </p>
+        <div style="border: 2px solid #000000; padding: 15px; margin: 20px 0; background-color: #F0FFF4; box-shadow: 3px 3px 0px #000000;">
+          <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #000000;">
+            📁 ${project.emoji || "📝"} ${project.name}
+          </h3>
+          ${project.description ? `<p style="margin: 0; font-size: 14px; color: #555555;">${project.description}</p>` : ""}
+        </div>
+        <p style="font-size: 14px; font-weight: bold; color: #333333; margin-bottom: 20px;">
+          Để xem chi tiết và đồng ý tham gia dự án, vui lòng click nút bên dưới:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${acceptUrl}" style="display: inline-block; background-color: #34A853; border: 3px solid #000000; color: #FFFFFF; font-size: 15px; font-weight: 900; text-decoration: none; padding: 12px 24px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 0.5px;">
+            👉 CHẤP NHẬN LỜI MỜI 👈
+          </a>
+        </div>
+        <p style="font-size: 11px; color: #777777; line-height: 1.5; border-top: 2px dashed #EEEEEE; pt: 15px; margin-top: 20px;">
+          Nếu nút trên không hoạt động, copy link sau dán vào trình duyệt:<br/>
+          <a href="${acceptUrl}" style="color: #34A853;">${acceptUrl}</a>
+        </p>
+      </div>
+    `;
+
+    const originalRecipient = inviteeEmail;
+    const actualRecipient = this.getTargetRecipient(originalRecipient);
+    const fromEmail = process.env.EMAIL_FROM || this.fromEmail || "onboarding@resend.dev";
+
+    const mailOptions = {
+      from: fromEmail.includes("<") ? fromEmail : `TaskDo <${fromEmail}>`,
+      to: actualRecipient,
+      subject,
+      html: htmlContent
+    };
+
+    const result = await this.resend.emails.send(mailOptions);
+    if (result.error) {
+      throw new Error(`Resend Error: ${result.error.message}`);
+    }
+    return result.data;
+  }
 }
 
 export default new EmailService();
