@@ -11,7 +11,6 @@ import {
   KeyIcon, 
   Loader2Icon, 
   ArrowRightIcon, 
-  BookOpenIcon,
   InboxIcon
 } from "lucide-react";
 import projectService from "@/services/projectService";

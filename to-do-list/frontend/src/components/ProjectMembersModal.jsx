@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import projectService from "@/services/projectService";
 import authService from "@/services/authService";
+import UserAvatar from "@/components/UserAvatar";
 import { toast } from "sonner";
 import {
   UsersIcon,
@@ -267,13 +268,13 @@ export default function ProjectMembersModal({
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <div className="size-10 rounded-full border-2 border-border bg-[#dbf5ff] flex items-center justify-center font-black uppercase text-secondary-foreground text-sm overflow-hidden">
-                          {memberUser?.avatarUrl ? (
-                            <img src={memberUser.avatarUrl} alt="Avatar" className="size-full object-cover" />
-                          ) : (
-                            String(memberUser?.displayName || memberUser?.email || "U")[0].toUpperCase()
-                          )}
-                        </div>
+                        <UserAvatar
+                          avatarUrl={memberUser?.avatarUrl}
+                          displayName={memberUser?.displayName}
+                          email={memberUser?.email}
+                          sizeClassName="size-10"
+                          textClassName="text-sm font-black"
+                        />
                         {isMemberOwner && (
                           <div className="absolute -top-1.5 -right-1.5 bg-[#ffd400] border-2 border-border rounded-full p-0.5">
                             <CrownIcon className="size-3 text-foreground" />
@@ -282,7 +283,7 @@ export default function ProjectMembersModal({
                       </div>
                       <div className="min-w-0">
                         <div className="font-black text-sm uppercase text-foreground truncate">
-                          {memberUser?.displayName || "Người dùng ẩn danh"}{" "}
+                          {memberUser?.displayName || (m.isPending ? "Đang chờ chấp nhận" : "Người dùng ẩn danh")}{" "}
                           {isMe && <span className="text-[10px] bg-[#ffd400] text-foreground border border-border px-1 rounded font-black uppercase">Bạn</span>}
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground truncate">
@@ -293,7 +294,16 @@ export default function ProjectMembersModal({
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
                       {/* Role selection / Badge */}
-                      {isOwner && !isMe ? (
+                      {m.isPending ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge className="border-2 border-border bg-[#ffd400] text-foreground uppercase font-black text-[10px] px-2 py-0.5 animate-pulse">
+                            Đang chờ
+                          </Badge>
+                          <Badge className="border-2 border-border bg-[#f1f5f9] text-muted-foreground uppercase font-black text-[10px] px-2 py-0.5">
+                            {m.role}
+                          </Badge>
+                        </div>
+                      ) : isOwner && !isMe ? (
                         <select
                           value={m.role}
                           onChange={(e) => handleRoleChange(memberId, e.target.value)}
@@ -318,19 +328,21 @@ export default function ProjectMembersModal({
                       {/* Owner actions (Transfer & Remove) */}
                       {isOwner && !isMe && (
                         <div className="flex gap-1.5">
-                          <Button
-                            size="icon-xs"
-                            variant="secondary"
-                            onClick={() => handleTransferOwnership(memberId)}
-                            title="Chuyển quyền sở hữu"
-                            className="bg-[#ffd400] hover:bg-[#ffd400]/95"
-                          >
-                            <CrownIcon className="size-3 text-foreground" />
-                          </Button>
+                          {!m.isPending && (
+                            <Button
+                              size="icon-xs"
+                              variant="secondary"
+                              onClick={() => handleTransferOwnership(memberId)}
+                              title="Chuyển quyền sở hữu"
+                              className="bg-[#ffd400] hover:bg-[#ffd400]/95"
+                            >
+                              <CrownIcon className="size-3 text-foreground" />
+                            </Button>
+                          )}
                           <Button
                             size="icon-xs"
                             onClick={() => handleRemoveMember(memberId)}
-                            title="Xóa khỏi dự án"
+                            title={m.isPending ? "Thu hồi lời mời" : "Xóa khỏi dự án"}
                             className="bg-[#ff3b57] hover:bg-[#ff3b57]/90"
                           >
                             <UserMinusIcon className="size-3 text-white" />

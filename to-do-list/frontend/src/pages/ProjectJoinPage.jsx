@@ -17,7 +17,9 @@ export default function ProjectJoinPage() {
     async function joinProject() {
       try {
         const res = await projectService.joinByLink(token);
-        setProject(res?.data || res);
+        const payload = res?.data || res;
+        const joinedProject = payload?.project || payload?.data?.project || payload?.data || payload;
+        setProject(joinedProject);
         setStatus("success");
         toast.success("Tham gia dự án thành công!");
       } catch (err) {
@@ -85,7 +87,14 @@ export default function ProjectJoinPage() {
                 Bạn đã được thêm vào dự án này làm thành viên chính thức. Hãy bắt đầu cộng tác ngay bây giờ!
               </p>
               <Button
-                onClick={() => navigate(`/projects/${project?._id || project?.id}`)}
+                onClick={() => {
+                  const projectId = project?._id || project?.id || project?.projectId;
+                  if (!projectId) {
+                    toast.error("Không tìm thấy ID dự án.");
+                    return;
+                  }
+                  navigate(`/projects/${projectId}`);
+                }}
                 className="w-full h-14 rounded-2xl text-lg uppercase comic-shadow hover:scale-[1.02] active:translate-y-1"
               >
                 Đến ban công việc
