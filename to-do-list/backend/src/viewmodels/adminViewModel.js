@@ -233,32 +233,88 @@ const adminViewModel = {
     const totalUsers = await User.countDocuments();
     const totalTasks = await Task.countDocuments();
 
-    const taskDistribution = await Task.aggregate([
+    // User growth trend - last 7 days
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const userGrowthData = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: sevenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Create 7-day trend array
+    const trendMap = {};
+    const days = ["TH2", "TH3", "TH4", "TH5", "TH6", "TH7", "CN"];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0];
+      trendMap[dateStr] = 0;
+    }
+
+    userGrowthData.forEach((item) => {
+      trendMap[item._id] = item.count;
+    });
+
+    const userGrowthTrend = Object.values(trendMap);
+
+    // Task status distribution
+    const taskStatusDistribution = await Task.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
-    const providerUsage = await User.aggregate([
-      { $unwind: "$providers" },
-      { $group: { _id: "$providers", count: { $sum: 1 } } },
+    const taskDistribution = {};
+    taskStatusDistribution.forEach((item) => {
+      if (item._id === "todo") taskDistribution.todo = item.count;
+      if (item._id === "doing") taskDistribution.doing = item.count;
+      if (item._id === "done") taskDistribution.done = item.count;
+    });
+
+    // Top users by task count
+    const topUsersData = await Task.aggregate([
+      {
+        $group: {
+          _id: "$ownerId",
+          taskCount: { $sum: 1 },
+        },
+      },
+      { $sort: { taskCount: -1 } },
+      { $limit: 3 },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
     ]);
 
-    const distribution = {};
-    taskDistribution.forEach((item) => {
-      distribution[item._id] = item.count;
-    });
-
-    const providers = {};
-    providerUsage.forEach((item) => {
-      providers[item._id] = item.count;
-    });
+    const topUsers = topUsersData.map((item) => ({
+      userId: item._id,
+      displayName: item.user.displayName,
+      taskCount: item.taskCount,
+    }));
 
     return {
       statusCode: 200,
       success: true,
       data: {
-        userGrowthTrend: [],
-        taskDistribution: distribution,
-        providerUsage: providers,
+        userGrowthTrend,
+        taskDistribution,
+        topUsers,
         totalUsers,
         totalTasks,
       },
@@ -288,7 +344,8 @@ const adminViewModel = {
         "Người dùng vẫn còn hoạt động",
       );
     }
-    const deletedUser = await User.findByIdAndDelete(userId).select("-passwordHash");
+    const deletedUser =
+      await User.findByIdAndDelete(userId).select("-passwordHash");
     if (!deletedUser) {
       throw new AdminViewModelError(
         404,
@@ -299,16 +356,24 @@ const adminViewModel = {
 
     // Cascade delete user avatar assets on Cloudinary
     if (deletedUser.avatarPublicId) {
-      cloudinaryService.deleteAvatar(deletedUser.avatarPublicId).catch((err) => {
-        console.error(`Cascade delete avatar failed for user ${userId}:`, err);
-      });
+      cloudinaryService
+        .deleteAvatar(deletedUser.avatarPublicId)
+        .catch((err) => {
+          console.error(
+            `Cascade delete avatar failed for user ${userId}:`,
+            err,
+          );
+        });
     }
 
     // Cascade delete database notification logs
     try {
       await NotificationLog.deleteMany({ userId });
     } catch (err) {
-      console.error(`Cascade delete notification logs failed for user ${userId}:`, err);
+      console.error(
+        `Cascade delete notification logs failed for user ${userId}:`,
+        err,
+      );
     }
 
     return {
