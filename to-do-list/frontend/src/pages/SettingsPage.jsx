@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import AvatarUpload from "@/components/settings/AvatarUpload";
 import NotificationSection from "@/components/settings/NotificationSection";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/axios";
 import authService from "@/services/authService";
@@ -355,27 +354,6 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-3 text-sm font-bold text-foreground">
-              <AvatarUpload
-                avatarUrl={profile?.avatarUrl}
-                displayName={profile?.displayName}
-                onAvatarChange={(newUrl) => {
-                  setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
-                  const currentUser = authService.getUser();
-                  if (currentUser) {
-                    currentUser.avatarUrl = newUrl;
-                    authService.setUser(currentUser);
-                  }
-                }}
-              />
-
-
-              <div className="flex items-center justify-between gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
-                <span className="text-base uppercase font-black">Email</span>
-                <span className="max-w-[55%] truncate text-right font-bold text-muted-foreground lowercase">
-                  {profile?.email || "---"}
-                </span>
-              </div>
-
               <div className="flex flex-col gap-3 rounded-[1.2rem] border-[3px] border-border bg-card px-4 py-4 comic-shadow">
                 <span className="text-base uppercase font-black">
                   Tài khoản liên kết
@@ -433,5 +411,4 @@ export default function SettingsPage() {
       <NotificationSection />
     </section>
   );
-}
 }
