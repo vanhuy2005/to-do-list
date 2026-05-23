@@ -11,7 +11,6 @@ import {
   UserRoundIcon,
   Settings,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +72,7 @@ const formatLanguage = (language) =>
 
 const formatTheme = (theme) => (theme === "dark" ? "Dark" : "Light");
 
-export default function ProfilePage() {
+export default function ProfilePage({ isAdmin = false }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [taskStats, setTaskStats] = useState({ todo: 0, doing: 0, done: 0 });
@@ -93,40 +92,46 @@ export default function ProfilePage() {
       setErrorMessage("");
 
       try {
-        const [profileResponse, todoResponse, doingResponse, doneResponse] =
-          await Promise.all([
-            api.get("/profile"),
-            taskService.getTasks({ page: 1, limit: 1, status: "todo" }),
-            taskService.getTasks({ page: 1, limit: 1, status: "doing" }),
-            taskService.getTasks({ page: 1, limit: 1, status: "done" }),
-          ]);
+        const profileResponse = await api.get("/profile");
 
         if (!isMounted) {
           return;
         }
 
-        setProfile(profileResponse?.data || null);
-        setTaskStats({
-          todo: todoResponse?.data?.pagination?.total || 0,
-          doing: doingResponse?.data?.pagination?.total || 0,
-          done: doneResponse?.data?.pagination?.total || 0,
-        });
+        if (profileResponse.success && profileResponse.data) {
+          setProfile(profileResponse.data);
+        }
+
+        // Only fetch task stats if not admin
+        if (!isAdmin) {
+          try {
+            const [todoResponse, doingResponse, doneResponse] =
+              await Promise.all([
+                taskService.getTasks({ page: 1, limit: 1, status: "todo" }),
+                taskService.getTasks({ page: 1, limit: 1, status: "doing" }),
+                taskService.getTasks({ page: 1, limit: 1, status: "done" }),
+              ]);
+
+            if (isMounted) {
+              setTaskStats({
+                todo: todoResponse?.data?.totalCount || 0,
+                doing: doingResponse?.data?.totalCount || 0,
+                done: doneResponse?.data?.totalCount || 0,
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching task stats:", error);
+          }
+        }
+
+        setErrorMessage("");
       } catch (error) {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setErrorMessage(
+            error?.response?.data?.message ||
+              "Không thể tải thông tin hồ sơ. Vui lòng thử lại.",
+          );
         }
-
-        if (error?.response?.status === 401) {
-          return;
-        }
-
-        const nextMessage =
-          error?.response?.data?.error?.message ||
-          "Không thể tải dữ liệu hồ sơ từ cơ sở dữ liệu.";
-        setErrorMessage(nextMessage);
-        setProfile(null);
-        setTaskStats({ todo: 0, doing: 0, done: 0 });
-        toast.error("Không tải được hồ sơ", { description: nextMessage });
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -139,7 +144,7 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -202,9 +207,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <section className="relative space-y-4 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">
+    <section
+      className={`relative space-y-4 ${isAdmin ? "pb-8" : "pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8"}`}
+    >
       {/* Mobile cover */}
-      <div className="-mx-3 -mt-3 relative z-0 border-b-[3px] border-border bg-[#ff3b57] px-4 pb-14 pt-6 text-center lg:hidden">
+      <div
+        className={`${isAdmin ? "" : "-mx-3 -mt-3"} relative z-0 border-b-[3px] border-border bg-[#ff3b57] px-4 pb-14 pt-6 text-center lg:hidden`}
+      >
         <div className="absolute top-4 right-4 z-10">
           <Link
             to="/settings"
@@ -305,25 +314,34 @@ export default function ProfilePage() {
           >
             <Link to="/profile/edit">Chỉnh sửa hồ sơ</Link>
           </Button>
+
+          <Button
+            asChild
+            className="mt-4 h-12 w-full rounded-2xl border-[3px] border-border border-b-[6px] bg-[#00c2ff] text-base uppercase text-white comic-shadow active:border-b-[3px] active:translate-y-[3px]"
+          >
+            <Link to="/settings">Cài đặt</Link>
+          </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5 lg:gap-3">
-          {profileStats.map((item) => (
-            <Card
-              key={item.label}
-              className={`rounded-2xl border-[3px] border-border border-b-[5px] comic-shadow desktop-hover-scale ${item.tone}`}
-            >
-              <CardContent className="px-1 py-3 text-center">
-                <p className="text-[0.6rem] sm:text-xs font-black uppercase tracking-wide opacity-90">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-[2rem] lg:text-[2.2rem] leading-none font-black">
-                  {item.value}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {!isAdmin && (
+          <div className="grid grid-cols-3 gap-2.5 lg:gap-3">
+            {profileStats.map((item) => (
+              <Card
+                key={item.label}
+                className={`rounded-2xl border-[3px] border-border border-b-[5px] comic-shadow desktop-hover-scale ${item.tone}`}
+              >
+                <CardContent className="px-1 py-3 text-center">
+                  <p className="text-[0.6rem] sm:text-xs font-black uppercase tracking-wide opacity-90">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-[2rem] lg:text-[2.2rem] leading-none font-black">
+                    {item.value}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-4 lg:grid lg:grid-cols-3 lg:gap-4 lg:space-y-0">
           <Card className="rounded-[1.6rem] border-[3px] border-border bg-[#fffaf0] comic-shadow desktop-hover-lift lg:col-span-2">
@@ -360,16 +378,19 @@ export default function ProfilePage() {
                   );
                 })}
 
-                <div className="desktop-hover-scale flex items-center gap-3 rounded-xl px-1 py-1 transition-transform duration-200">
-                  <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-[3px] border-border bg-[#e6f7ff] comic-shadow">
-                    <ClipboardListIcon className="size-5 text-foreground" />
-                  </div>
+                {!isAdmin && (
+                  <div className="desktop-hover-scale flex items-center gap-3 rounded-xl px-1 py-1 transition-transform duration-200">
+                    <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-[3px] border-border bg-[#e6f7ff] comic-shadow">
+                      <ClipboardListIcon className="size-5 text-foreground" />
+                    </div>
 
-                  <p className="text-[13px] sm:text-base font-black uppercase tracking-tight text-foreground line-clamp-1">
-                    Quản lý {taskStats.todo + taskStats.doing + taskStats.done}{" "}
-                    nhiệm vụ
-                  </p>
-                </div>
+                    <p className="text-[13px] sm:text-base font-black uppercase tracking-tight text-foreground line-clamp-1">
+                      Quản lý{" "}
+                      {taskStats.todo + taskStats.doing + taskStats.done} nhiệm
+                      vụ
+                    </p>
+                  </div>
+                )}
 
                 <div className="desktop-hover-scale flex items-center gap-3 rounded-xl px-1 py-1 transition-transform duration-200">
                   <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border-[3px] border-border bg-[#f1f5f9] comic-shadow">

@@ -12,6 +12,7 @@ import ProjectJoinPage from "@/pages/ProjectJoinPage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProfilePage from "@/pages/ProfilePage";
+import UsersPage from "@/pages/UsersPage";
 import EditProfilePage from "@/pages/EditProfilePage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -23,6 +24,7 @@ import AuthRoute from "@/components/AuthRoute";
 import RoleRoute from "@/components/RoleRoute";
 
 export const router = createBrowserRouter([
+  // ─── Dashboard (admin only) ───────────────────────────────────────────────
   {
     path: "/dashboard",
     element: (
@@ -33,6 +35,39 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  {
+    path: "/dashboard/users",
+    element: (
+      <ProtectedRoute>
+        <RoleRoute allowRoles={["admin"]} fallbackPath="/">
+          <UsersPage />
+        </RoleRoute>
+      </ProtectedRoute>
+    ),
+  },
+
+  // ─── Shared routes (all authenticated users) ─────────────────────────────
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: "settings", element: <SettingsPage /> },
+      {
+        path: "profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "profile/edit",
+        element: <EditProfilePage />,
+      },
+    ],
+  },
+
+  // ─── User-only routes ─────────────────────────────────────────────────────
   {
     path: "/",
     element: (
@@ -55,12 +90,11 @@ export const router = createBrowserRouter([
       { path: "view-all", element: <ViewAllPage /> },
       { path: "filter", element: <FilterPage /> },
       { path: "activities", element: <ActivitiesPage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: "profile", element: <ProfilePage /> },
-      { path: "profile/edit", element: <EditProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
+
+  // ─── Auth routes ──────────────────────────────────────────────────────────
   {
     path: "/login",
     element: (

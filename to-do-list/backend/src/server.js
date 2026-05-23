@@ -5,6 +5,9 @@ import { fileURLToPath } from "url";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import VisitLog from "./models/VisitLog.js";
 import tasksRouters from "./routes/tasksRouters.js";
 import voiceTaskRouters from "./routes/voiceTaskRouters.js";
 import sttRouters from "./routes/sttRouter.js";
@@ -14,6 +17,7 @@ import profileRouters, {
 } from "./routes/profileRouters.js";
 import auditLogsRouters from "./routes/auditLogsRouters.js";
 import adminRouters from "./routes/adminRouters.js";
+import publicUsersRouters from "./routes/publicUsersRouters.js";
 import projectsRouters from "./routes/projectsRouters.js";
 import authMiddleware, { requireRole } from "./middleware/authMiddleware.js";
 import connectDB from "./config/db.js";
@@ -80,8 +84,6 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
     process.exit(1);
   }
 }
-
-
 
 const PORT = process.env.PORT || 5001;
 
@@ -163,6 +165,54 @@ app.all("/api/v1/auth/core/*", (req, res, next) => {
 });
 
 app.use(express.json());
+
+// Global visit logging middleware (non-blocking)
+app.use(async (req, res, next) => {
+  const pathName = req.path || req.url || "";
+  
+  // Skip analytics, dashboard, static assets, and preflight OPTIONS requests
+  if (
+    pathName.startsWith("/api/v1/admin/analytics") ||
+    pathName.startsWith("/api/v1/admin/dashboard") ||
+    pathName.includes("assets") ||
+    pathName.includes("favicon") ||
+    req.method === "OPTIONS"
+  ) {
+    return next();
+  }
+
+  // Record asynchronously to prevent holding up client response
+  try {
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+        userId = decoded.userId || null;
+      } catch (err) {
+        // Suppress token verification errors in logger
+      }
+    }
+
+    const ip = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
+    const userAgent = req.headers["user-agent"] || "";
+
+    await VisitLog.create({
+      userId,
+      path: pathName,
+      ipHash,
+      userAgent,
+      createdAt: new Date(),
+    });
+  } catch (err) {
+    console.error("Lỗi ghi log truy cập:", err.message);
+  }
+
+  next();
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(frontendDistPath));
@@ -172,11 +222,18 @@ app.use("/api/v1/auth", authRouters);
 app.use("/api/v1/profile", publicProfileRouter);
 
 // Protected routes
-app.use("/api/v1/profile", authMiddleware, requireRole("user"), profileRouters);
+app.use(
+  "/api/v1/profile",
+  authMiddleware,
+  requireRole("user", "admin"),
+  profileRouters,
+);
 app.use("/api/v1/tasks", authMiddleware, requireRole("user"), tasksRouters);
 app.use("/api/v1/voice-task", authMiddleware, voiceTaskRouters);
 app.use("/api/v1/voice/stt", authMiddleware, sttRouters);
 app.use("/api/v1/admin", authMiddleware, adminRouters);
+// Public fallback for user list (development / unauthenticated clients)
+app.use("/api/v1/public", publicUsersRouters);
 app.use(
   "/api/v1/audit-logs",
   authMiddleware,
