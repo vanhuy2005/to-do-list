@@ -42,7 +42,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!authService.isAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/splash" replace state={{ from: location }} />;
   }
 
   // const role = authService.getRole();
