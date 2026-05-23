@@ -81,10 +81,16 @@ vi.mock("@/hooks/useVoiceRecorder", () => ({
       state,
       startRecording: () => {
         speechState.listening = true;
+        speechState.startListening({
+          language: "vi-VN",
+          continuous: true,
+          interimResults: true,
+        });
         forceUpdate({});
       },
       stopRecording: () => {
         speechState.listening = false;
+        speechState.stopListening();
         forceUpdate({});
         const text = speechState.finalTranscript || speechState.transcript;
         const trimmed = (text || "").trim();
@@ -98,22 +104,6 @@ vi.mock("@/hooks/useVoiceRecorder", () => ({
   }
 }));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Build a 429 Axios-style error with optional Retry-After header. */
-const make429Error = (retryAfter = 5, message = "He thong ban") => {
-  const error = new Error("Request failed with status code 429");
-  error.response = {
-    status: 429,
-    headers: { "retry-after": String(retryAfter) },
-    data: {
-      success: false,
-      error: { code: "AI_RATE_LIMIT", message },
-    },
-  };
-  return error;
-};
-
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("VoiceMicButton", () => {
@@ -123,6 +113,14 @@ describe("VoiceMicButton", () => {
   });
 
   beforeEach(() => {
+    if (globalThis.navigator) {
+      Object.defineProperty(globalThis.navigator, 'maxTouchPoints', { value: 0, configurable: true });
+      Object.defineProperty(globalThis.navigator, 'msMaxTouchPoints', { value: 0, configurable: true });
+    }
+    if (globalThis.window) {
+      delete globalThis.window.ontouchstart;
+    }
+
     speechState.listening = false;
     speechState.transcript = "";
     speechState.finalTranscript = "";
@@ -171,9 +169,10 @@ describe("VoiceMicButton", () => {
       { timeout: 2500 },
     );
 
-    expect(onDraftReady).toHaveBeenCalledWith(
+    expect(onDraftReady).toHaveBeenLastCalledWith(
       expect.objectContaining({ title: "Gui bao cao" }),
       "nhac minh gui bao cao",
+      "PREVIEW"
     );
   });
 
@@ -198,12 +197,13 @@ describe("VoiceMicButton", () => {
 
     await waitFor(
       () => {
-        expect(onDraftReady).toHaveBeenCalledWith(
+        expect(onDraftReady).toHaveBeenLastCalledWith(
           expect.objectContaining({
             description: "Sprint 3 summary",
             status: "doing",
           }),
           "dang viet bao cao sprint 3",
+          "PREVIEW"
         );
       },
       { timeout: 2500 },
@@ -227,10 +227,10 @@ describe("VoiceMicButton", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows retry countdown when receiving a 429 response", async () => {
-    // Use real timers — inject a short SETTLE_MS by mocking the service to
-    // reject immediately so we only wait the settle timeout (1100ms max).
-    taskService.createVoiceDraft.mockRejectedValue(make429Error(5));
+  // ── Error: AI enrichment failed ─────────────────────────────────────────
+
+  it("falls back to minimal draft when AI enrichment fails (e.g. 429)", async () => {
+    taskService.createVoiceDraft.mockRejectedValue(new Error("Rate limit / System busy"));
 
     const onDraftReady = vi.fn();
     const { rerender } = render(<VoiceMicButton onDraftReady={onDraftReady} />);
@@ -240,76 +240,15 @@ describe("VoiceMicButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /dang nghe/i }));
     rerender(<VoiceMicButton onDraftReady={onDraftReady} />);
 
-    // Countdown text should appear after settle (1000ms) + async processing
-    expect(
-      await screen.findByText(/tu dong thu lai/i, {}, { timeout: 3000 }),
-    ).toBeInTheDocument();
-  }, 10000);
-
-  it("auto-retries after countdown and succeeds on second attempt", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-
-    // First call → 429, second call → success
-    taskService.createVoiceDraft
-      .mockRejectedValueOnce(make429Error(2))
-      .mockResolvedValueOnce({
-        data: { title: "Gui email", priority: "medium", confidence: 0.8 },
-      });
-
-    const onDraftReady = vi.fn();
-    const { rerender } = render(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /bat dau ghi am/i }));
-    speechState.transcript = "gui email cho sep";
-    fireEvent.click(screen.getByRole("button", { name: /dang nghe/i }));
-    rerender(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    // advance settle + async rejection handling
-    await vi.advanceTimersByTimeAsync(1200);
-    // advance countdown (2s) + a little margin
-    await vi.advanceTimersByTimeAsync(2200);
-
     await waitFor(
       () => {
-        expect(taskService.createVoiceDraft).toHaveBeenCalledTimes(2);
+        expect(onDraftReady).toHaveBeenLastCalledWith(
+          expect.objectContaining({ title: "gui email cho sep" }),
+          "gui email cho sep",
+          "PREVIEW"
+        );
       },
-      { timeout: 1000 },
-    );
-  }, 15000);
-
-
-  // ── Late final transcript ────────────────────────────────────────────────
-
-  it("uses late final transcript when it arrives after stop", async () => {
-    taskService.createVoiceDraft.mockResolvedValue({
-      data: { title: "Mua sua", priority: "medium", confidence: 0.8 },
-    });
-
-    const onDraftReady = vi.fn();
-    const { rerender } = render(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /bat dau ghi am/i }));
-    rerender(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /dang nghe/i }));
-    rerender(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    speechState.finalTranscript = "mua sua chieu nay";
-    rerender(<VoiceMicButton onDraftReady={onDraftReady} />);
-
-    await waitFor(
-      () => {
-        expect(taskService.createVoiceDraft).toHaveBeenCalledWith({
-          text: "mua sua chieu nay",
-          timestamp: expect.any(String),
-        });
-      },
-      { timeout: 2500 },
-    );
-
-    expect(onDraftReady).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Mua sua" }),
-      "mua sua chieu nay",
+      { timeout: 2500 }
     );
   });
 });

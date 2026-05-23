@@ -1325,9 +1325,15 @@ const taskViewModel = {
   },
 
   async acceptTaskInvitation(token, userId) {
+    if (!token || typeof token !== "string") {
+      throw new ViewModelError(400, "MISSING_TOKEN", "Mã lời mời là bắt buộc");
+    }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const invitation = await TaskInvitation.findOne({
-      tokenHash,
+      $or: [
+        { tokenHash },
+        { _id: mongoose.isValidObjectId(token) ? token : new mongoose.Types.ObjectId() }
+      ],
       status: "pending",
       expiresAt: { $gt: new Date() }
     });
@@ -1374,9 +1380,15 @@ const taskViewModel = {
   },
 
   async declineTaskInvitation(token, userId) {
+    if (!token || typeof token !== "string") {
+      throw new ViewModelError(400, "MISSING_TOKEN", "Mã lời mời là bắt buộc");
+    }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const invitation = await TaskInvitation.findOne({
-      tokenHash,
+      $or: [
+        { tokenHash },
+        { _id: mongoose.isValidObjectId(token) ? token : new mongoose.Types.ObjectId() }
+      ],
       status: "pending",
       expiresAt: { $gt: new Date() }
     });

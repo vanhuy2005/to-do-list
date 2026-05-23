@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   ActivityIcon,
   HouseIcon,
@@ -8,6 +9,8 @@ import {
 import { Link, NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
+import authService from "@/services/authService";
+import UserAvatar from "@/components/UserAvatar";
 
 const navItems = [
   { to: "/", label: "Trang chủ", icon: HouseIcon },
@@ -17,6 +20,18 @@ const navItems = [
 ];
 
 export default function BottomNav({ fixed = true }) {
+  const [currentUser, setCurrentUser] = useState(() => authService.getUser());
+
+  useEffect(() => {
+    const handleUserChanged = () => {
+      setCurrentUser(authService.getUser());
+    };
+    window.addEventListener("auth_user_changed", handleUserChanged);
+    return () => {
+      window.removeEventListener("auth_user_changed", handleUserChanged);
+    };
+  }, []);
+
   return (
     <footer
       className={cn(
@@ -59,6 +74,7 @@ export default function BottomNav({ fixed = true }) {
 
         {navItems.slice(2).map((item) => {
           const Icon = item.icon;
+          const isProfile = item.to === "/profile";
 
           return (
             <NavLink
@@ -71,7 +87,17 @@ export default function BottomNav({ fixed = true }) {
                 )
               }
             >
-              <Icon className="size-5" />
+              {isProfile ? (
+                <UserAvatar
+                  avatarUrl={currentUser?.avatarUrl}
+                  displayName={currentUser?.displayName}
+                  email={currentUser?.email}
+                  sizeClassName="size-5"
+                  className="shadow-[1px_1px_0px_0px_#000000] border border-border"
+                />
+              ) : (
+                <Icon className="size-5" />
+              )}
               <span className="whitespace-nowrap">{item.label}</span>
             </NavLink>
           );

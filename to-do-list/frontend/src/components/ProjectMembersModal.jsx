@@ -92,7 +92,7 @@ export default function ProjectMembersModal({
       });
       toast.success("Đã gửi lời mời và thêm thành viên thành công!");
       setEmail("");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Không thể gửi lời mời.");
     } finally {
@@ -105,7 +105,7 @@ export default function ProjectMembersModal({
     try {
       await projectService.updateMember(project._id, memberId, { role: newRole });
       toast.success("Đã cập nhật vai trò thành viên!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Cập nhật vai trò thất bại.");
     }
@@ -117,7 +117,7 @@ export default function ProjectMembersModal({
     try {
       await projectService.removeMember(project._id, memberId);
       toast.success("Đã xóa thành viên khỏi dự án.");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Xóa thành viên thất bại.");
     }
@@ -129,7 +129,7 @@ export default function ProjectMembersModal({
     try {
       await projectService.transferOwnership(project._id, targetUserId);
       toast.success("Đã chuyển giao quyền sở hữu dự án thành công!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Chuyển giao quyền sở hữu thất bại.");
     }
@@ -147,7 +147,7 @@ export default function ProjectMembersModal({
         expiresAt,
       });
       toast.success("Tạo link mời an toàn thành công!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Tạo link mời thất bại.");
     } finally {
@@ -160,7 +160,7 @@ export default function ProjectMembersModal({
     try {
       await projectService.revokeShareLink(project._id, linkId);
       toast.success("Đã thu hồi link mời lập tức!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Thu hồi link mời thất bại.");
     }
@@ -177,7 +177,7 @@ export default function ProjectMembersModal({
         expiresAt,
       });
       toast.success("Tạo mã mời 6 ký tự thành công!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Tạo mã mời thất bại.");
     } finally {
@@ -190,7 +190,7 @@ export default function ProjectMembersModal({
     try {
       await projectService.revokeInviteCode(project._id);
       toast.success("Đã hủy bỏ mã mời lập tức!");
-      onMembersUpdated && onMembersUpdated();
+      onMembersUpdated && onMembersUpdated(true);
     } catch (err) {
       toast.error(err?.response?.data?.error?.message || "Hủy mã mời thất bại.");
     }
@@ -198,59 +198,64 @@ export default function ProjectMembersModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={true} className="sm:max-w-2xl border-4 border-border bg-card p-6 rounded-[2rem] comic-shadow">
-        <DialogHeader className="border-b border-border/10 pb-4">
-          <DialogTitle className="text-2xl font-black uppercase text-foreground flex items-center gap-2">
-            <span className="flex items-center gap-1.5"><FolderIcon className="size-6 text-foreground fill-[#FFD400]/25 stroke-[2.5]" /> Thiết Lập Không Gian</span>
-            <Badge className="border-[2px] border-border bg-[#ffd400] text-foreground text-xs uppercase px-2 font-black">
-              {project?.name}
+      <DialogContent showCloseButton={true} className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border-4 border-border bg-card !p-0 !gap-0 rounded-[2rem] comic-shadow">
+        <DialogHeader className="!m-0 border-b-[3px] border-border bg-[#ff3b57] px-6 py-4 text-white shrink-0 flex flex-col gap-1">
+          <DialogTitle className="text-2xl font-black uppercase text-white flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5"><FolderIcon className="size-6 text-white fill-white/20 stroke-[2.5]" /> Thiết Lập Không Gian</span>
+            <Badge className="border-[2px] border-white/50 bg-[#ffd400] text-foreground text-xs uppercase px-2 font-black">
+              Dự án: {project?.name}
             </Badge>
           </DialogTitle>
         </DialogHeader>
 
         {/* Tab Buttons (Pop Art Style) */}
-        <div className="flex gap-2 p-1 border-[3px] border-border rounded-xl bg-white comic-shadow mt-2">
-          <button
-            onClick={() => setActiveTab("members")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
-              activeTab === "members"
-                ? "bg-[#00C2FF] text-white border-border comic-shadow -translate-y-0.5"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <UsersIcon className="size-4" />
-            Thành viên ({(project?.members || []).length})
-          </button>
-          {canManage && (
-            <>
-              <button
-                onClick={() => setActiveTab("email")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
-                  activeTab === "email"
-                    ? "bg-[#FF2D55] text-white border-border comic-shadow -translate-y-0.5"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <MailIcon className="size-4" />
-                Mời Email
-              </button>
-              <button
-                onClick={() => setActiveTab("invites")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
-                  activeTab === "invites"
-                    ? "bg-[#7DE228] text-foreground border-border comic-shadow -translate-y-0.5"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <LinkIcon className="size-4" />
-                Mã & Link Mời
-              </button>
-            </>
-          )}
+        <div className="px-6 mt-4 shrink-0">
+          <div className="flex gap-2 p-1 border-[3px] border-border rounded-xl bg-white comic-shadow">
+            <button
+              type="button"
+              onClick={() => setActiveTab("members")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
+                activeTab === "members"
+                  ? "bg-[#00C2FF] text-white border-border comic-shadow -translate-y-0.5"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <UsersIcon className="size-4" />
+              Thành viên ({(project?.members || []).length})
+            </button>
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("email")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
+                    activeTab === "email"
+                      ? "bg-[#FF2D55] text-white border-border comic-shadow -translate-y-0.5"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <MailIcon className="size-4" />
+                  Mời Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("invites")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black uppercase rounded-lg border-2 border-transparent transition-all ${
+                    activeTab === "invites"
+                      ? "bg-[#7DE228] text-foreground border-border comic-shadow -translate-y-0.5"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <LinkIcon className="size-4" />
+                  Mã & Link Mời
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Modal content body */}
-        <div className="min-h-[250px] max-h-[400px] overflow-y-auto pr-1 py-4 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide">
           
           {/* TAB 1: MEMBERS LIST */}
           {activeTab === "members" && (
@@ -330,6 +335,7 @@ export default function ProjectMembersModal({
                         <div className="flex gap-1.5">
                           {!m.isPending && (
                             <Button
+                              type="button"
                               size="icon-xs"
                               variant="secondary"
                               onClick={() => handleTransferOwnership(memberId)}
@@ -340,6 +346,7 @@ export default function ProjectMembersModal({
                             </Button>
                           )}
                           <Button
+                            type="button"
                             size="icon-xs"
                             onClick={() => handleRemoveMember(memberId)}
                             title={m.isPending ? "Thu hồi lời mời" : "Xóa khỏi dự án"}
@@ -443,6 +450,7 @@ export default function ProjectMembersModal({
                       
                       <div className="flex gap-2">
                         <Button
+                          type="button"
                           size="sm"
                           onClick={() => handleCopyText(project.inviteCode.code, "code")}
                           className="h-9 rounded-lg border-2 border-border uppercase font-black text-[10px]"
@@ -452,6 +460,7 @@ export default function ProjectMembersModal({
                         </Button>
                         {isOwner && (
                           <Button
+                            type="button"
                             size="sm"
                             variant="secondary"
                             onClick={handleRevokeCode}
@@ -572,6 +581,7 @@ export default function ProjectMembersModal({
 
                             <div className="flex gap-1.5 shrink-0 self-end sm:self-auto">
                               <Button
+                                type="button"
                                 size="xs"
                                 variant="secondary"
                                 onClick={() => handleCopyText(joinUrl, "link", link._id)}
@@ -581,6 +591,7 @@ export default function ProjectMembersModal({
                                 Copy
                               </Button>
                               <Button
+                                type="button"
                                 size="xs"
                                 onClick={() => handleRevokeLink(link._id)}
                                 className="h-7 bg-[#ff3b57] text-white hover:bg-[#ff3b57]/90 uppercase font-black text-[9px]"
@@ -602,11 +613,11 @@ export default function ProjectMembersModal({
 
         </div>
 
-        <DialogFooter className="border-t border-border/10 pt-4 flex gap-2">
+        <DialogFooter className="border-t border-border/10 p-6 mx-0 mb-0 flex gap-2 shrink-0">
           <Button
-            variant="secondary"
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="w-full border-[3px] border-border rounded-xl uppercase font-black comic-shadow active:translate-y-0.5"
+            className="w-full bg-[#00c2ff] hover:bg-[#00afe6] text-foreground border-[3px] border-border rounded-xl uppercase font-black comic-shadow active:translate-y-0.5"
           >
             Hoàn tất
           </Button>

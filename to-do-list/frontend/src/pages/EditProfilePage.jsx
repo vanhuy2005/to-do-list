@@ -66,6 +66,17 @@ export default function EditProfilePage() {
       const response = await api.put("/profile", updates);
       const nextProfile = response?.data || null;
       setProfile(nextProfile);
+      
+      // Update session user details
+      if (nextProfile) {
+        const currentUser = authService.getUser();
+        if (currentUser) {
+          currentUser.displayName = nextProfile.displayName;
+          currentUser.avatarUrl = nextProfile.avatarUrl;
+          authService.setUser(currentUser);
+        }
+      }
+
       toast.success("Đã cập nhật hồ sơ thành công");
     } catch (error) {
       toast.error("Cập nhật thất bại", {
@@ -123,6 +134,11 @@ export default function EditProfilePage() {
               displayName={profile?.displayName}
               onAvatarChange={(newUrl) => {
                 setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
+                const currentUser = authService.getUser();
+                if (currentUser) {
+                  currentUser.avatarUrl = newUrl;
+                  authService.setUser(currentUser);
+                }
                 toast.success("Đã tải ảnh đại diện lên");
               }}
             />

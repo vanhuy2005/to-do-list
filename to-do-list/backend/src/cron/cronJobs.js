@@ -9,7 +9,7 @@ import emailViewModel from "../viewmodels/emailViewModel.js";
  * Chạy mỗi 1 phút — quét task có dueDate đã qua và đánh dấu isOverdue
  */
 const startOverdueEvaluator = () => {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/30 * * * * *", async () => {
     try {
       const now = new Date();
 
@@ -54,15 +54,15 @@ const startOverdueEvaluator = () => {
     }
   });
 
-  console.log("[Cron] Overdue evaluator đã khởi chạy (mỗi 1 phút)");
+  console.log("[Cron] Overdue evaluator đã khởi chạy (mỗi 30 giây)");
 };
 
 /**
  * Cron Job: Overdue Email Sender
- * Chạy mỗi 15 phút — Quét các task quá hạn và xử lý gửi email pending
+ * Chạy mỗi 30 giây — Quét các task quá hạn và xử lý gửi email pending
  */
 const startOverdueEmailSender = () => {
-  cron.schedule("*/15 * * * *", async () => {
+  cron.schedule("*/30 * * * * *", async () => {
     try {
       await emailViewModel.queueOverdueNotifications();
       await emailViewModel.processEmailQueue();
@@ -71,7 +71,7 @@ const startOverdueEmailSender = () => {
     }
   });
 
-  console.log("[Cron] Overdue email sender đã khởi chạy (mỗi 15 phút)");
+  console.log("[Cron] Overdue email sender đã khởi chạy (mỗi 30 giây)");
 };
 
 /**

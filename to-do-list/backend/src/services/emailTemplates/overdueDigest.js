@@ -66,20 +66,20 @@ export const getOverdueDigestTemplate = (user, tasksWithFormattedDates, unsubscr
     }
 
     rowsHtml += `
-      <tr style="border-bottom: 2px solid #000000;">
-        <td style="padding: 12px 8px; font-weight: 800; font-size: 13px; text-align: center; border-right: 2px solid #000000; border-bottom: 2px solid #000000;">
+      <tr style="border-bottom: 2px solid #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <td style="padding: 12px 8px; font-weight: 800; font-size: 13px; text-align: center; border-right: 2px solid #000000; border-bottom: 2px solid #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ${index + 1}
         </td>
-        <td style="padding: 12px 10px; font-weight: 700; font-size: 14px; border-right: 2px solid #000000; border-bottom: 2px solid #000000; color: #000000;">
+        <td style="padding: 12px 10px; font-weight: 700; font-size: 14px; border-right: 2px solid #000000; border-bottom: 2px solid #000000; color: #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ${escapeHtml(task.title)}
-          ${task.description ? `<br><span style="font-size: 11px; font-weight: 500; color: #555555;">${escapeHtml(task.description)}</span>` : ""}
+          ${task.description ? `<br><span style="font-size: 11px; font-weight: 500; color: #555555; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">${escapeHtml(task.description)}</span>` : ""}
         </td>
-        <td style="padding: 12px 8px; text-align: center; border-right: 2px solid #000000; border-bottom: 2px solid #000000;">
-          <span style="display: inline-block; background-color: ${badgeColor}; border: 1.5px solid #000000; color: ${textColor}; font-size: 11px; font-weight: 800; padding: 2px 6px; box-shadow: 1.5px 1.5px 0px #000000; text-transform: uppercase; white-space: nowrap;">
+        <td style="padding: 12px 8px; text-align: center; border-right: 2px solid #000000; border-bottom: 2px solid #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <span style="display: inline-block; background-color: ${badgeColor}; border: 1.5px solid #000000; color: ${textColor}; font-size: 11px; font-weight: 800; padding: 2px 6px; box-shadow: 1.5px 1.5px 0px #000000; text-transform: uppercase; white-space: nowrap; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             ${priorityLabel}
           </span>
         </td>
-        <td style="padding: 12px 10px; font-weight: 700; font-size: 12px; border-bottom: 2px solid #000000; color: #FF5A5F; white-space: nowrap;">
+        <td style="padding: 12px 10px; font-weight: 700; font-size: 12px; border-bottom: 2px solid #000000; color: #FF5A5F; white-space: nowrap; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           ${escapeHtml(task.formattedDueDate)}
         </td>
       </tr>
@@ -87,30 +87,30 @@ export const getOverdueDigestTemplate = (user, tasksWithFormattedDates, unsubscr
   });
 
   const contentHtml = `
-    <h2 style="font-size: 22px; font-weight: 800; text-align: center; color: #000000; margin: 10px 0 20px 0; text-transform: uppercase;">
+    <h2 style="font-size: 22px; font-weight: 800; text-align: center; color: #000000; margin: 10px 0 20px 0; text-transform: uppercase; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       ${title}
     </h2>
 
-    <p style="font-size: 15px; line-height: 1.6; font-weight: 500; color: #333333; margin-bottom: 25px;">
+    <p style="font-size: 15px; line-height: 1.6; font-weight: 500; color: #333333; margin-bottom: 25px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       ${text.greeting}<br><br>
       ${text.intro}
     </p>
 
     <!-- Table of Tasks in Pop Art style -->
-    <div style="border: 3px solid #000000; box-shadow: 4px 4px 0px #000000; background-color: #FFFFFF; overflow-x: auto; margin-bottom: 30px;">
-      <table style="width: 100%; border-collapse: collapse; border-spacing: 0;">
+    <div style="border: 3px solid #000000; box-shadow: 4px 4px 0px #000000; background-color: #FFFFFF; overflow-x: auto; margin-bottom: 30px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <table style="width: 100%; border-collapse: collapse; border-spacing: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <thead>
-          <tr style="background-color: #FFDE47; border-bottom: 3px solid #000000;">
-            <th style="padding: 10px 8px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: center; width: 8%;">
+          <tr style="background-color: #FFDE47; border-bottom: 3px solid #000000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <th style="padding: 10px 8px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: center; width: 8%; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.thNo}
             </th>
-            <th style="padding: 10px 10px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: left;">
+            <th style="padding: 10px 10px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: left; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.thTitle}
             </th>
-            <th style="padding: 10px 8px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: center; width: 22%;">
+            <th style="padding: 10px 8px; font-size: 12px; font-weight: 800; border-right: 2px solid #000000; text-transform: uppercase; text-align: center; width: 22%; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.thPriority}
             </th>
-            <th style="padding: 10px 10px; font-size: 12px; font-weight: 800; text-transform: uppercase; text-align: left; width: 25%;">
+            <th style="padding: 10px 10px; font-size: 12px; font-weight: 800; text-transform: uppercase; text-align: left; width: 25%; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
               ${text.thDueDate}
             </th>
           </tr>
@@ -122,8 +122,8 @@ export const getOverdueDigestTemplate = (user, tasksWithFormattedDates, unsubscr
     </div>
 
     <!-- CTA Button -->
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${appUrl}/" style="display: inline-block; background-color: #FF5A5F; border: 3px solid #000000; color: #FFFFFF; font-size: 16px; font-weight: 900; text-decoration: none; padding: 14px 28px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 1px;">
+    <div style="text-align: center; margin: 30px 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <a href="${appUrl}/" style="display: inline-block; background-color: #FF5A5F; border: 3px solid #000000; color: #FFFFFF; font-size: 16px; font-weight: 900; text-decoration: none; padding: 14px 28px; box-shadow: 4px 4px 0px #000000; text-transform: uppercase; letter-spacing: 1px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         🚀 ${text.ctaButton} 🚀
       </a>
     </div>

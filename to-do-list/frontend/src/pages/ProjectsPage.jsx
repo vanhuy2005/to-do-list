@@ -109,10 +109,15 @@ export default function ProjectsPage() {
     setIsJoining(true);
     try {
       const res = await projectService.joinByCode(cleanCode);
-      const proj = res?.data || res;
-      toast.success(`Đã tham gia dự án: ${proj.name}`);
+      const projectData = res?.data?.project || res?.data || res;
+      const projectId = res?.data?.projectId || projectData?._id || projectData?.id;
+      toast.success(`Đã tham gia dự án: ${projectData?.name || "Thành công"}`);
       setInviteCode("");
-      navigate(`/projects/${proj._id || proj.id}`);
+      if (projectId) {
+        navigate(`/projects/${projectId}`);
+      } else {
+        toast.error("Không tìm thấy ID dự án.");
+      }
     } catch (err) {
       toast.error(
         err?.response?.data?.error?.message ||

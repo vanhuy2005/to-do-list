@@ -264,8 +264,8 @@ export default function AvatarUpload({ avatarUrl, displayName, onAvatarChange })
 
       {/* Pop Art styled confirm delete dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="border-[3px] border-border comic-shadow rounded-[1.4rem] bg-[#fffaf0] p-0 overflow-hidden">
-          <DialogHeader className="bg-[#ff3b57] text-white px-5 py-4 border-b-[3px] border-border">
+        <DialogContent className="border-[3px] border-border comic-shadow rounded-[1.4rem] bg-[#fffaf0] !p-0 !gap-0 overflow-hidden">
+          <DialogHeader className="!m-0 bg-[#ff3b57] text-white px-5 py-4 border-b-[3px] border-border">
             <DialogTitle className="font-heading text-lg font-black uppercase tracking-tight">
               Xác nhận xóa ảnh
             </DialogTitle>
